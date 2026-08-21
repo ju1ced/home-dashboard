@@ -8,6 +8,24 @@ const errors = [];
 const required = [
   "README.md",
   "AGENTS.md",
+  "CHANGELOG.md",
+  "LICENSE",
+  "SECURITY.md",
+  "hacs.json",
+  "tsconfig.json",
+  "pnpm-workspace.yaml",
+  ".github/workflows/ci.yaml",
+  ".github/workflows/hacs.yaml",
+  ".github/workflows/release.yaml",
+  ".github/PULL_REQUEST_TEMPLATE.md",
+  "src/index.ts",
+  "dist/home-dashboard.js",
+  "scripts/build.mjs",
+  "scripts/verify-dist.mjs",
+  "scripts/create-release-assets.mjs",
+  "tests/foundation.test.mjs",
+  "docs/installation/hacs.md",
+  "docs/releases/testing-v0.1.0-alpha.1.md",
   "docs/discovery/current-state.md",
   "docs/discovery/current-dashboard-information-parity.md",
   "docs/discovery/source-and-evidence-matrix.md",
@@ -84,7 +102,7 @@ for (const [file, expected] of renderSizes) {
 
 const allFiles = await walk(root);
 const markdownFiles = allFiles.filter((file) => file.endsWith(".md"));
-const textExtensions = new Set([".md", ".html", ".css", ".js", ".mjs", ".json", ".yaml", ".yml"]);
+const textExtensions = new Set([".md", ".html", ".css", ".js", ".mjs", ".ts", ".json", ".yaml", ".yml"]);
 const textFiles = allFiles.filter((file) => textExtensions.has(path.extname(file).toLowerCase()));
 
 for (const file of markdownFiles) {

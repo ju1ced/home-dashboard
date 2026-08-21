@@ -20,8 +20,9 @@ Deze repo ontwerpt en bouwt later een privacyveilig centraal Home Assistant-dash
 ## Commando's
 
 ```sh
-npm test       # syntax, deliverables, links, privacy, fixtures en PNG-afmetingen
-npm run serve  # statisch prototype op http://127.0.0.1:4173/
+pnpm install   # dependencies uit de lockfile
+pnpm test      # types, bundle, deliverables, links, privacy, fixtures en renders
+pnpm run serve # statisch prototype op http://127.0.0.1:4173/
 ```
 
 ## Privacyregels
@@ -51,5 +52,5 @@ npm run serve  # statisch prototype op http://127.0.0.1:4173/
 - Volg de volledige definition of done in `docs/design/implementation-plan.md`.
 - Iedere wijziging heeft fixtures/tests voor normal, warning, missing en unavailable waar relevant.
 - Review actionscope, confirmation, autorisatie, responsive gedrag, toegankelijkheid, performance en fallback expliciet.
-- `npm test` en `git diff --check` moeten slagen.
+- `pnpm test` en `git diff --check` moeten slagen.
 - Geen deployment, push, PR of release zonder expliciete toestemming.
