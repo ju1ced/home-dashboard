@@ -39,7 +39,7 @@ Open daarna `http://127.0.0.1:4173/`. De fixtureselector wisselt tussen normaal,
 
 ## HACS-installatie
 
-De geplande `v0.1.0-alpha.1` is de eerste installatiesmoke. Zie [Installatie via HACS](docs/installation/hacs.md) en de bijbehorende [testchecklist](docs/releases/testing-v0.1.0-alpha.1.md). De foundationbundle maakt nog geen dashboard; de strategy en volledige grafische editor volgen in de volgende PR's.
+[`v0.1.0-alpha.1`](https://github.com/ju1ced/home-dashboard/releases/tag/v0.1.0-alpha.1) is de eerste installatiesmoke. Zie [Installatie via HACS](docs/installation/hacs.md) en de bijbehorende [testchecklist](docs/releases/testing-v0.1.0-alpha.1.md). De foundationbundle maakt nog geen dashboard; de strategy en volledige grafische editor volgen in de volgende PR's.
 
 ## Checks
 
@@ -79,4 +79,4 @@ scripts/          lokale preview en repositorychecks
 
 ## Status
 
-De ontwerpbaseline en deliveryroadmap zijn goedgekeurd. Delivery-PR 1 bouwt de HACS-, build- en CI-fundering voor de custom dashboard strategy. Home Assistant-writes en deployment starten niet automatisch en behouden hun afzonderlijke menselijke gates.
+De ontwerpbaseline, deliveryroadmap en HACS-fundering zijn gepubliceerd. De HACS-installatiesmoke voor `v0.1.0-alpha.1` is de gate vóór delivery-PR 2 voor het schema en de volledige grafische configuratie-editor. Home Assistant-writes en deployment starten niet automatisch en behouden hun afzonderlijke menselijke gates.
