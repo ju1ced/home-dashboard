@@ -14,7 +14,8 @@ Deze repo ontwerpt en bouwt later een privacyveilig centraal Home Assistant-dash
 6. `docs/design/design-system.md`
 7. `docs/design/integration-strategy.md`
 8. `docs/design/implementation-plan.md`
-9. `docs/design/decision-log.md`
+9. `docs/design/delivery-roadmap.md`
+10. `docs/design/decision-log.md`
 
 ## Commando's
 

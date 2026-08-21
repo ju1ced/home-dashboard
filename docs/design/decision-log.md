@@ -131,3 +131,9 @@
 - **Status:** besloten voor bouwstart
 - **Besluit:** de eerste Home-acties zijn `Avondscene` en een expliciet gemapt `Lichten beneden uit`; diagnostiek/beheer gaat naar een afzonderlijk `require_admin`-dashboard.
 - **Reden:** hiermee zijn de twee resterende conceptbeslissingen opgelost. Testdeployment blijft afzonderlijk goedkeuringsplichtig.
+
+## D-023 — HACS custom dashboard strategy met volledige GUI
+
+- **Status:** besloten voor uitvoering
+- **Besluit:** het centrale dashboard wordt als HACS Dashboard-plugin geleverd. Een `custom:home-dashboard` strategy genereert de volledige native Sections-configuratie en biedt via `getConfigElement()` een grafische editor voor alle ondersteunde instellingen. Iedere testbare implementatiestap krijgt na merge een echte GitHub prerelease.
+- **Reden:** een dashboard strategy combineert HACS-installatie, Community dashboards-picker, dashboardbrede GUI-configuratie en native Home Assistant-views zonder een tweede sidebar, custom panel of automatische write naar het default dashboard.

@@ -21,6 +21,7 @@ const required = [
   "docs/design/design-system.md",
   "docs/design/integration-strategy.md",
   "docs/design/implementation-plan.md",
+  "docs/design/delivery-roadmap.md",
   "docs/design/decision-log.md",
   "prototype/index.html",
   "prototype/styles.css",

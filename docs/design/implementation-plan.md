@@ -2,6 +2,8 @@
 
 Dit plan beschrijft de latere bouwfase. Het autoriseert nog geen Home Assistant-write, deployment of productiecutover.
 
+De operationele afspraken voor de custom dashboard strategy, volledige GUI-configuratie, agentrollen, PR/releasekoppeling en HACS-distributie staan in de [deliveryroadmap](delivery-roadmap.md). Bij een verschil geldt die roadmap voor leveringsvolgorde en dit document voor de technische definition of done.
+
 ## Strategie en critical path
 
 ```text
@@ -34,34 +36,34 @@ Critical path: foundation → capability/mappingcontract → native HA-shell/vie
 
 ## Fasen en PR-volgorde
 
-### PR 1 — Repositoryfundering, tooling en privacyguards
+### PR 1 — Repositoryfundering, HACS, tooling en privacyguards
 
 - **Doel:** veilige, reproduceerbare basis.
 - **Eigenaar:** foundation/tooling-agent; exclusief eigendom op rootconfig, `scripts/`, tests en CI.
 - **Inputs:** discovery, `../juiced-dashboard` toolingpatronen, dit plan.
-- **Scope:** package/runtimekeuze, lint/format, Markdown/linkcheck, fixtureconventie, `.gitignore`, privacyguard, AGENTS-commando's.
-- **Outputs/bestanden:** `package.json` of gelijkwaardig, `scripts/`, `test/`, `.github/workflows/ci.yaml`, `.gitignore`, bijgewerkt `AGENTS.md`.
+- **Scope:** package/runtimekeuze, TypeScript/bundle, HACS Dashboard-pluginmanifest, releaseworkflow, lint/format, Markdown/linkcheck, fixtureconventie, `.gitignore`, privacyguard, AGENTS-commando's.
+- **Outputs/bestanden:** `dist/home-dashboard.js`, `hacs.json`, package/buildconfig, `scripts/`, `test/`, `.github/workflows/`, `.gitignore`, licentie en bijgewerkt `AGENTS.md`.
 - **Tests:** syntax, Markdown, interne links, voorbeeldfixtures, privacypositief en bewust negatieve privacyfixtures.
 - **Acceptatie:** één lokaal commando voert alle statische checks uit; geen echte identifiers in tracked files.
 - **Rollback:** PR revert; geen externe toestand geraakt.
 
-### PR 2 — Entitymapping, room-/capabilitymodel en configuratie
+### PR 2 — Entitymapping, room-/capabilitymodel en volledige GUI-configuratie
 
 - **Doel:** kleine, declaratieve bron van waarheid zonder runtimeherkenning.
 - **Eigenaar:** schema/mapping-agent; exclusief op `config/`, `schemas/`, mappingcompiler en golden fixtures.
 - **Inputs:** bevestigde navigeerbare area-lijst, current-to-target matrix, action- en statuscontracten.
-- **Scope:** logical keys, optionele capabilities, locale labels, operationele allowlists, severity/fallback, lokale mappingtemplate.
-- **Outputs/bestanden:** tracked voorbeeldconfig, JSON Schema, gitignored local-configpad, compiler/validator, generated-outputmanifest.
+- **Scope:** logical keys, optionele capabilities, locale labels, operationele allowlists, severity/fallback, lokale mappingtemplate, versioned strategyconfig en grafische strategy-editor met native selectors.
+- **Outputs/bestanden:** tracked voorbeeldconfig, JSON Schema, editorcomponenten, GUI-coveragecontract, migratieharnas, gitignored local-configpad, compiler/validator en generated-outputmanifest.
 - **Tests:** schema, duplicate keys, onbekende capability, missing required, optional missing, unavailable/unknown semantics, mappingcompleetheid.
 - **Acceptatie:** fictieve woning compileert; echte lokale mapping compileert zonder dat identifiers in logs of artifacts lekken.
 - **Rollback:** gegenereerde output verwijderen; terug naar tracked fixtures.
 
-### PR 3 — Design tokens, HA-shellgrens en navigatie
+### PR 3 — Custom dashboard strategy, design tokens, HA-shellgrens en navigatie
 
 - **Doel:** native Sections-shell met vijf hoofdviews en semantische subviews, binnen de gewone HA-sidebar.
 - **Eigenaar:** shell-agent; exclusief op composition root, navigation en theme.
 - **Inputs:** PR 1–2, designsysteem, minimale HA-versie.
-- **Scope:** `home`, `rooms`, `energy`, `domains`, `more`; native viewnavigation; view includes; `back_path`; light/dark tokens; native fallbackkaarten. Geen tweede custom sidebar of bottom dock.
+- **Scope:** registratie in `window.customStrategies`, Community dashboards-picker, dashboard- en lazy view strategies voor `home`, `rooms`, `energy`, `domains`, `more`; native viewnavigation; `back_path`; light/dark tokens; native fallbackkaarten. Geen tweede custom sidebar of bottom dock.
 - **Outputs/bestanden:** dashboard composition root, viewskeletons, theme, navigationtests.
 - **Tests:** unique/stable paths, geen indexnavigation, Sections-grid, themevars, missing subview, tabvisibility ≠ auth-documentatie.
 - **Acceptatie:** alle routes renderen met fixtures op mobiel/desktop; toetsenbordvolgorde volgt bronvolgorde.
