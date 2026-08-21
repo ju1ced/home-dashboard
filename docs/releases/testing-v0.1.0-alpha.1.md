@@ -1,6 +1,6 @@
 # Testchecklist v0.1.0-alpha.1 — HACS foundation
 
-Deze geplande prerelease test uitsluitend verpakking en distributie. Zij bevat nog geen dashboard strategy of grafische configuratie-editor.
+Deze gepubliceerde prerelease test uitsluitend verpakking en distributie. Zij bevat nog geen dashboard strategy of grafische configuratie-editor.
 
 ## Voorwaarden
 
