@@ -17,6 +17,7 @@ V1 bevat geen custom panel en geen extra summary-component. De minimale onderste
 - [Designsysteem](docs/design/design-system.md)
 - [Integratiestrategie](docs/design/integration-strategy.md)
 - [Multi-agent implementatieplan](docs/design/implementation-plan.md)
+- [Deliveryroadmap: agents, PR's, GUI, HACS en releases](docs/design/delivery-roadmap.md)
 - [Requirements en evidence](docs/discovery/requirements.md)
 - [Informatiepariteit huidige dashboard](docs/discovery/current-dashboard-information-parity.md)
 
@@ -66,4 +67,4 @@ scripts/          lokale preview en repositorychecks
 
 ## Status
 
-De conceptfase is gereed en wacht op menselijke goedkeuring van de richting en de open beslissingen in het [dashboardvoorstel](docs/design/dashboard-proposal.md#open-beslissingen). De bouwfase start niet automatisch.
+De ontwerpbaseline is goedgekeurd. De volgende stap is PR 1 uit de [deliveryroadmap](docs/design/delivery-roadmap.md): HACS-, build- en CI-fundering voor de custom dashboard strategy. Home Assistant-writes en deployment starten niet automatisch en behouden hun afzonderlijke menselijke gates.
