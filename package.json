@@ -1,0 +1,14 @@
+{
+  "name": "home-dashboard-design",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Research, design and static prototype for a central Home Assistant dashboard",
+  "scripts": {
+    "check": "node --check prototype/app.js && node --check prototype/fixtures.js && node scripts/check-repo.mjs",
+    "test": "node --check prototype/app.js && node --check prototype/fixtures.js && node scripts/check-repo.mjs",
+    "serve": "node scripts/serve-prototype.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

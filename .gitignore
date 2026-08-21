@@ -1,0 +1,23 @@
+node_modules/
+.pnpm-store/
+.env
+.env.*
+!.env.example
+
+# Installatiegebonden Home Assistant-data
+config/local.*
+config/**/*.local.*
+*.local.yaml
+*.local.yml
+*.local.json
+generated/
+snapshots/
+exports/
+
+# Lokale opdrachtbrief bevat installatiepaden en blijft buiten de publieke repo
+codex-home-dashboard-design-prompt.md
+
+# Lokale tooling
+.DS_Store
+Thumbs.db
+*.log
