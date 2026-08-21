@@ -1,0 +1,2 @@
+/*! Home Dashboard 0.1.0-alpha.1 | MIT License | https://github.com/ju1ced/home-dashboard */
+var o=Object.freeze({name:"Home Dashboard",version:"0.1.0-alpha.1",phase:"foundation",minimumHomeAssistant:"2026.8.2"});typeof window<"u"&&(window.__HOME_DASHBOARD_BUILD__=o,console.info("%c HOME DASHBOARD %c "+o.version,"color: white; background: #276b5b; font-weight: 700; padding: 2px 6px; border-radius: 4px 0 0 4px;","color: #276b5b; background: #dcefe8; font-weight: 700; padding: 2px 6px; border-radius: 0 4px 4px 0;"));export{o as buildInfo};

@@ -1,14 +1,25 @@
 {
-  "name": "home-dashboard-design",
-  "version": "0.1.0",
+  "name": "home-dashboard",
+  "version": "0.1.0-alpha.1",
   "private": true,
-  "description": "Research, design and static prototype for a central Home Assistant dashboard",
+  "type": "module",
+  "description": "HACS-installable community dashboard strategy for Home Assistant",
+  "license": "MIT",
+  "packageManager": "pnpm@11.19.0",
   "scripts": {
-    "check": "node --check prototype/app.js && node --check prototype/fixtures.js && node scripts/check-repo.mjs",
-    "test": "node --check prototype/app.js && node --check prototype/fixtures.js && node scripts/check-repo.mjs",
+    "build": "node scripts/build.mjs",
+    "check": "pnpm typecheck && pnpm build && node scripts/verify-dist.mjs && node --check prototype/app.js && node --check prototype/fixtures.js && node scripts/check-repo.mjs",
+    "test": "pnpm check && node --test tests/*.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "release:assets": "node scripts/create-release-assets.mjs",
     "serve": "node scripts/serve-prototype.mjs"
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2"
   }
 }

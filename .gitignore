@@ -21,3 +21,7 @@ codex-home-dashboard-design-prompt.md
 .DS_Store
 Thumbs.db
 *.log
+
+# Gegenereerde release-artifacts; de HACS-bundle zelf blijft tracked
+dist/*.sha256
+dist/release-manifest.json

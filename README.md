@@ -1,6 +1,6 @@
 # Home Dashboard — ontwerpvoorstel
 
-Deze repository bevat de afgeronde onderzoeks-, concept- en planningsfase voor een nieuw centraal Home Assistant-dashboard. Er is **nog geen productiedashboard gebouwd** en Home Assistant is niet gewijzigd.
+Deze repository bouwt een HACS-installeerbare community dashboard strategy voor een centraal Home Assistant-dashboard. De ontwerpbaseline is afgerond; de productcode zit in de foundationfase. Home Assistant is niet gewijzigd.
 
 ## Aanbevolen richting
 
@@ -26,7 +26,7 @@ V1 bevat geen custom panel en geen extra summary-component. De minimale onderste
 Het prototype is statische HTML/CSS/JavaScript met fictieve data en geen externe dependencies.
 
 ```sh
-npm run serve
+pnpm run serve
 ```
 
 Open daarna `http://127.0.0.1:4173/`. De fixtureselector wisselt tussen normaal, waarschuwing en unavailable; de modusknop wisselt light/dark. De volledige [rendermatrix](docs/renders/README.md) bevat reproduceerbare URLs en afmetingen.
@@ -37,24 +37,36 @@ Open daarna `http://127.0.0.1:4173/`. De fixtureselector wisselt tussen normaal,
 
 ![Energie desktop](docs/renders/energy-desktop.png)
 
+## HACS-installatie
+
+De geplande `v0.1.0-alpha.1` is de eerste installatiesmoke. Zie [Installatie via HACS](docs/installation/hacs.md) en de bijbehorende [testchecklist](docs/releases/testing-v0.1.0-alpha.1.md). De foundationbundle maakt nog geen dashboard; de strategy en volledige grafische editor volgen in de volgende PR's.
+
 ## Checks
 
-Node.js 20 of nieuwer:
+Node.js 20 of nieuwer en pnpm 11:
 
 ```sh
-npm test
+pnpm install --frozen-lockfile
+pnpm test
+pnpm build
 ```
 
-De check valideert JavaScript-syntax, vereiste deliverables, lokale Markdown-links, privacygevoelige patronen, prototypefixtures en de exacte PNG-afmetingen.
+De check valideert TypeScript, de reproduceerbare HACS-bundle, JavaScript-syntax, vereiste deliverables, lokale Markdown-links, privacygevoelige patronen, fixtures en exacte PNG-afmetingen.
 
 ## Repository-indeling
 
 ```text
 docs/discovery/   actuele toestand, evidence, referenties en requirements
 docs/design/      concepten, selectie, voorstel, IA, systeem en bouwplan
+docs/installation HACS-installatie en lifecycle
+docs/releases/    testchecklists per prerelease
 docs/renders/     gecontroleerde PNG-renders en rendermatrix
+src/              TypeScript-bron voor de HACS-resource
+dist/             getrackte reproduceerbare HACS-bundle
+tests/            foundation- en later producttests
 prototype/        interactieve statische high-fidelity prototype
 scripts/          lokale preview en repositorychecks
+.github/          CI, HACS-validatie, releaseflow en templates
 ```
 
 ## Privacy en veiligheid
@@ -67,4 +79,4 @@ scripts/          lokale preview en repositorychecks
 
 ## Status
 
-De ontwerpbaseline is goedgekeurd. De volgende stap is PR 1 uit de [deliveryroadmap](docs/design/delivery-roadmap.md): HACS-, build- en CI-fundering voor de custom dashboard strategy. Home Assistant-writes en deployment starten niet automatisch en behouden hun afzonderlijke menselijke gates.
+De ontwerpbaseline en deliveryroadmap zijn goedgekeurd. Delivery-PR 1 bouwt de HACS-, build- en CI-fundering voor de custom dashboard strategy. Home Assistant-writes en deployment starten niet automatisch en behouden hun afzonderlijke menselijke gates.
