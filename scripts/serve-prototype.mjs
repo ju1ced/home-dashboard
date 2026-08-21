@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../prototype");
+const repositoryRoot = path.resolve(root, "..");
 const port = Number.parseInt(process.env.HD_PROTOTYPE_PORT || "4173", 10);
 
 const contentTypes = new Map([
@@ -18,9 +19,12 @@ const server = http.createServer(async (request, response) => {
   try {
     const requestUrl = new URL(request.url || "/", "http://localhost");
     const relative = decodeURIComponent(requestUrl.pathname === "/" ? "/index.html" : requestUrl.pathname);
-    const target = path.resolve(root, `.${relative}`);
+    const target = relative.startsWith("/dist/")
+      ? path.resolve(repositoryRoot, `.${relative}`)
+      : path.resolve(root, `.${relative}`);
 
-    if (target !== root && !target.startsWith(`${root}${path.sep}`)) {
+    const allowed = target === root || target.startsWith(`${root}${path.sep}`) || target.startsWith(`${path.join(repositoryRoot, "dist")}${path.sep}`);
+    if (!allowed) {
       response.writeHead(403).end("Forbidden");
       return;
     }

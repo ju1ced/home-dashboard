@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "specialists": {
+    "pool": {
+      "enabled": true,
+      "card_type": "custom:pool-dashboard-card",
+      "minimum_version": "",
+      "mapping_keys": ["pool_water_quality", "pool_filter_mode"]
+    }
+  }
+}

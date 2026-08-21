@@ -1,6 +1,7 @@
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { findPrivacyMatches } from "./privacy-patterns.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const errors = [];
@@ -19,13 +20,38 @@ const required = [
   ".github/workflows/release.yaml",
   ".github/PULL_REQUEST_TEMPLATE.md",
   "src/index.ts",
+  "src/config/types.ts",
+  "src/config/defaults.ts",
+  "src/config/migrate.ts",
+  "src/config/validate.ts",
+  "src/config/schema-validator.ts",
+  "src/config/compiler.ts",
+  "src/editor/fields.ts",
+  "src/editor/home-dashboard-editor.ts",
+  "src/strategy/home-dashboard-strategy.ts",
+  "schemas/config.schema.json",
+  "config/examples/normal.json",
+  "config/examples/warning.json",
+  "config/examples/missing.json",
+  "config/examples/unavailable.json",
+  "config/mapping.example.json",
   "dist/home-dashboard.js",
   "scripts/build.mjs",
+  "scripts/privacy-patterns.mjs",
   "scripts/verify-dist.mjs",
   "scripts/create-release-assets.mjs",
   "tests/foundation.test.mjs",
+  "tests/config.test.mjs",
+  "tests/privacy-patterns.test.mjs",
   "docs/installation/hacs.md",
   "docs/releases/testing-v0.1.0-alpha.1.md",
+  "docs/releases/results-v0.1.0-alpha.1.md",
+  "docs/releases/testing-v0.2.0-alpha.1.md",
+  "docs/configuration/gui-overview.md",
+  "docs/guides/backup-upgrade-rollback.md",
+  "docs/reference/config-schema.md",
+  "docs/reference/compatibility.md",
+  "docs/troubleshooting.md",
   "docs/discovery/current-state.md",
   "docs/discovery/current-dashboard-information-parity.md",
   "docs/discovery/source-and-evidence-matrix.md",
@@ -44,7 +70,9 @@ const required = [
   "prototype/index.html",
   "prototype/styles.css",
   "prototype/app.js",
-  "prototype/fixtures.js"
+  "prototype/fixtures.js",
+  "prototype/editor.html",
+  "prototype/editor-harness.js"
 ];
 
 const renderSizes = new Map([
@@ -125,21 +153,12 @@ for (const file of markdownFiles) {
   }
 }
 
-const privacyPatterns = [
-  [/(?<![A-Za-z0-9_])(?:sensor|binary_sensor|light|switch|climate|cover|media_player|vacuum|person|device_tracker|camera|alarm_control_panel|lock|automation|script|scene|input_button|input_number|number|select|button|update)\.[a-z0-9_]{3,}/g, "mogelijk echte Home Assistant entity-ID"],
-  [/(?:[0-9A-F]{2}:){5}[0-9A-F]{2}/gi, "MAC-adres"],
-  [/https?:\/\/(?:10\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.)[^\s)"']*/gi, "interne URL"],
-  [/(?:access[_-]?token|api[_-]?key|client[_-]?secret|password)\s*[:=]\s*["'][^"']+["']/gi, "mogelijk secret"]
-];
-
 for (const file of textFiles) {
   const relative = path.relative(root, file).replaceAll("\\", "/");
-  if (["codex-home-dashboard-design-prompt.md", "scripts/check-repo.mjs"].includes(relative)) continue;
+  if (["codex-home-dashboard-design-prompt.md", "scripts/check-repo.mjs", "scripts/privacy-patterns.mjs", "tests/privacy-patterns.test.mjs"].includes(relative)) continue;
   const source = await readFile(file, "utf8");
-  for (const [pattern, label] of privacyPatterns) {
-    pattern.lastIndex = 0;
-    const hit = pattern.exec(source);
-    if (hit) errors.push(`${label} in ${relative}: ${hit[0]}`);
+  for (const { label } of findPrivacyMatches(source)) {
+    errors.push(`${label} in ${relative}; waarde bewust gemaskeerd`);
   }
 }
 

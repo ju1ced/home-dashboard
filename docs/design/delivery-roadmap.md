@@ -102,8 +102,8 @@ PR 0 is deze roadmap en heeft geen runtimeartifact. Vanaf PR 1 krijgt iedere sta
 | PR | Eigenaar | Scope en hoofdoutput | Release na merge | Verplichte testfocus |
 |---:|---|---|---|---|
 | 1 | Foundation & HACS | TypeScript/buildbasis, `dist/home-dashboard.js`, `hacs.json`, licentie, CI, HACS Action, releaseworkflow, checksum | `v0.1.0-alpha.1` | HACS custom-repo install/update/remove, resource load, min. HA 2026.8.2 |
-| 2 | GUI-config | versioned schema, defaults, strategy-editor skeleton, selectors, import/export en migratieharnas | `v0.2.0-alpha.1` | dashboard kiezen, GUI openen/opslaan/heropenen, invalid/missing, schema v1 round-trip |
-| 3 | Shell | `window.customStrategies`, dashboard + lazy view strategies, vijf native Sections-views, routes en tokens | `v0.3.0-alpha.1` | Community dashboard aanmaken, alle routes, mobiel/tablet/desktop, light/dark |
+| 2 | GUI-config | versioned schema, defaults, strategy-editor, selectors, import/export, migratieharnas en minimale Community-registratie/configpreview | `v0.2.0-alpha.1` | dashboard kiezen, GUI openen/opslaan/heropenen, invalid/missing, schema v1 round-trip |
+| 3 | Shell | minimale preview vervangen door dashboard + lazy view strategies, vijf native Sections-views, routes en tokens | `v0.3.0-alpha.1` | Community dashboard aanmaken, alle routes, mobiel/tablet/desktop, light/dark |
 | 4 | Home & security | Attention, Vandaag, persons, camera-carousel/privacy, alarm, Nu en twee starteractions; GUI-secties mee | `v0.4.0-alpha.1` | normal/warning/missing/unavailable, privacyconfirmation, mobiel gezin/security |
 | 5 | Rooms | flooroverzicht, quick actions, capabilitymodel, lichte/zware kamer en volledige room-GUI | `v0.5.0-alpha.1` | alle kamers, HVAC/media/covers/power/history, disclosure en 390×844 |
 | 6 | Energy & domains | volledige HA Energy-pariteit, lokaal piek/EV/UPS/fase, klimaat/water/security/meer; volledige Energie-GUI | `v0.6.0-alpha.1` | paritymanifest, date/compare, kosten, flows, batterij, water, devices, mobiel |

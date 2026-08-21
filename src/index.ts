@@ -1,9 +1,21 @@
 declare const __HOME_DASHBOARD_VERSION__: string;
 
+import { compileConfig, parseImportedConfig, serializeConfig } from "./config/compiler";
+import { createDefaultConfig } from "./config/defaults";
+import { migrateConfig } from "./config/migrate";
+import { validateConfig } from "./config/validate";
+import { validateConfigSchema } from "./config/schema-validator";
+import { EDITOR_COVERAGE } from "./editor/fields";
+import { HomeDashboardStrategyEditor, registerHomeDashboardEditor } from "./editor/home-dashboard-editor";
+import { HomeDashboardStrategy, registerHomeDashboardStrategy } from "./strategy/home-dashboard-strategy";
+
+export { compileConfig, createDefaultConfig, EDITOR_COVERAGE, HomeDashboardStrategy, HomeDashboardStrategyEditor, migrateConfig, parseImportedConfig, serializeConfig, validateConfig, validateConfigSchema };
+export type { HomeDashboardConfigV1, ValidationIssue } from "./config/types";
+
 export interface HomeDashboardBuildInfo {
   readonly name: "Home Dashboard";
   readonly version: string;
-  readonly phase: "foundation";
+  readonly phase: "configuration";
   readonly minimumHomeAssistant: "2026.8.2";
 }
 
@@ -16,11 +28,13 @@ declare global {
 export const buildInfo: HomeDashboardBuildInfo = Object.freeze({
   name: "Home Dashboard",
   version: __HOME_DASHBOARD_VERSION__,
-  phase: "foundation",
+  phase: "configuration",
   minimumHomeAssistant: "2026.8.2"
 });
 
 if (typeof window !== "undefined") {
+  registerHomeDashboardEditor();
+  registerHomeDashboardStrategy();
   window.__HOME_DASHBOARD_BUILD__ = buildInfo;
   console.info(
     "%c HOME DASHBOARD %c " + buildInfo.version,
