@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "persons": [
+    {
+      "key": "resident_primary",
+      "entity": "person_primary",
+      "label": "Bewoner",
+      "show_location": true,
+      "zone_entities": ["zone_work"],
+      "freshness_minutes": 30,
+      "battery_entities": ["phone_battery_primary"]
+    }
+  ],
+  "rooms": [
+    {
+      "key": "living_room",
+      "name": "Woonkamer",
+      "icon": "mdi:sofa",
+      "floor_id": "ground_floor",
+      "area_id": "living_area",
+      "device_ids": [],
+      "capabilities": ["lights", "climate", "media"],
+      "quick_actions": ["living_lights"],
+      "light_entities": ["living_lights"],
+      "cover_entities": [],
+      "media_entities": ["living_media"],
+      "safety_entities": [],
+      "camera_entities": [],
+      "power_entities": ["living_power"],
+      "history_entities": ["living_air_quality"],
+      "hvac": {
+        "entity": "living_hvac",
+        "comfort_entities": ["living_temperature", "living_humidity"],
+        "history_entities": ["living_temperature", "living_air_quality"],
+        "modes": ["heat", "cool"],
+        "presets": ["eco"],
+        "fan_modes": ["auto"],
+        "swing_modes": []
+      }
+    }
+  ],
+  "actions": [
+    {
+      "key": "living_lights",
+      "label": "Lichten woonkamer",
+      "sequence": [{ "action": "light.toggle", "target": { "entity_id": ["living_light_state"] } }],
+      "risk": "safe",
+      "confirmation_text": "",
+      "hold_required": false,
+      "verification_entity": "living_light_state"
+    }
+  ]
+}

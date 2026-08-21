@@ -137,3 +137,9 @@
 - **Status:** besloten voor uitvoering
 - **Besluit:** het centrale dashboard wordt als HACS Dashboard-plugin geleverd. Een `custom:home-dashboard` strategy genereert de volledige native Sections-configuratie en biedt via `getConfigElement()` een grafische editor voor alle ondersteunde instellingen. Iedere testbare implementatiestap krijgt na merge een echte GitHub prerelease.
 - **Reden:** een dashboard strategy combineert HACS-installatie, Community dashboards-picker, dashboardbrede GUI-configuratie en native Home Assistant-views zonder een tweede sidebar, custom panel of automatische write naar het default dashboard.
+
+## D-024 — Schema v1 en GUI zijn één contract
+
+- **Status:** besloten en geïmplementeerd in delivery-PR 2
+- **Besluit:** defaults, uitgevoerd JSON Schema, migratie, runtimevalidatie en editorcoverage gebruiken dezelfde tien configuratieonderdelen. Ongeldige tussenstanden blijven lokaal in de editor en sturen geen `config-changed`-event naar Home Assistant; toekomstige schema's blokkeren de editor zonder downgrade.
+- **Reden:** dit voorkomt stille configuratiedrift, maakt upgrades testbaar en houdt riskante acties, drie camera's en maximaal twee kameracties expliciet valideerbaar.

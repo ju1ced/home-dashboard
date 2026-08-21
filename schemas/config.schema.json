@@ -1,0 +1,202 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ju1ced/home-dashboard/schemas/config.schema.json",
+  "title": "Home Dashboard configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "schema_version", "general", "today", "persons", "security", "rooms", "energy", "actions", "specialists", "layout", "diagnostics"],
+  "properties": {
+    "type": { "const": "custom:home-dashboard", "x-editor": "system" },
+    "schema_version": { "const": 1, "x-editor": "system" },
+    "general": {
+      "type": "object", "additionalProperties": false,
+      "required": ["title", "language", "time_format", "start_view", "theme_mode", "density"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1, "x-editor": "general" },
+        "language": { "enum": ["nl", "en"], "x-editor": "general" },
+        "time_format": { "enum": ["system", "12", "24"], "x-editor": "general" },
+        "start_view": { "$ref": "#/$defs/viewPath", "x-editor": "general" },
+        "theme_mode": { "enum": ["system", "light", "dark"], "x-editor": "general" },
+        "density": { "enum": ["comfortable", "compact"], "x-editor": "general" }
+      }
+    },
+    "today": {
+      "type": "object", "additionalProperties": false,
+      "required": ["enabled", "weather_entity", "forecast_days", "waste_entities", "energy_context_entities"],
+      "properties": {
+        "enabled": { "type": "boolean", "x-editor": "today" },
+        "weather_entity": { "$ref": "#/$defs/entityReference", "x-editor": "today" },
+        "forecast_days": { "type": "integer", "minimum": 1, "maximum": 10, "x-editor": "today" },
+        "waste_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "today" },
+        "energy_context_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "today" }
+      }
+    },
+    "persons": {
+      "type": "array", "x-editor": "persons",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["key", "entity", "label", "show_location", "zone_entities", "freshness_minutes", "battery_entities"],
+        "properties": {
+          "key": { "$ref": "#/$defs/logicalKey", "x-editor": "persons" },
+          "entity": { "$ref": "#/$defs/entityReference", "x-editor": "persons" },
+          "label": { "type": "string", "x-editor": "persons" },
+          "show_location": { "type": "boolean", "x-editor": "persons" },
+          "zone_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "persons" },
+          "freshness_minutes": { "type": "integer", "minimum": 1, "x-editor": "persons" },
+          "battery_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "persons" }
+        }
+      }
+    },
+    "security": {
+      "type": "object", "additionalProperties": false,
+      "required": ["enabled", "alarm_entity", "cameras"],
+      "properties": {
+        "enabled": { "type": "boolean", "x-editor": "security" },
+        "alarm_entity": { "$ref": "#/$defs/entityReference", "x-editor": "security" },
+        "cameras": {
+          "type": "array", "maxItems": 3, "x-editor": "security",
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["key", "name", "camera_entity", "privacy_entity", "privacy_action_key", "fallback", "confirm_privacy_disable"],
+            "properties": {
+              "key": { "$ref": "#/$defs/logicalKey", "x-editor": "security" },
+              "name": { "type": "string", "x-editor": "security" },
+              "camera_entity": { "$ref": "#/$defs/entityReference", "x-editor": "security" },
+              "privacy_entity": { "$ref": "#/$defs/entityReference", "x-editor": "security" },
+              "privacy_action_key": { "type": "string", "x-editor": "security" },
+              "fallback": { "enum": ["placeholder", "last_image", "hidden"], "x-editor": "security" },
+              "confirm_privacy_disable": { "type": "boolean", "x-editor": "security" }
+            }
+          }
+        }
+      }
+    },
+    "rooms": {
+      "type": "array", "x-editor": "rooms",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "anyOf": [
+          { "type": "object", "required": ["area_id"], "properties": { "area_id": { "type": "string", "minLength": 1 } } },
+          { "type": "object", "required": ["device_ids"], "properties": { "device_ids": { "type": "array", "minItems": 1 } } }
+        ],
+        "required": ["key", "name", "icon", "floor_id", "area_id", "device_ids", "capabilities", "quick_actions", "light_entities", "cover_entities", "media_entities", "safety_entities", "camera_entities", "power_entities", "history_entities", "hvac"],
+        "properties": {
+          "key": { "$ref": "#/$defs/logicalKey", "x-editor": "rooms" },
+          "name": { "type": "string", "minLength": 1, "x-editor": "rooms" },
+          "icon": { "type": "string", "x-editor": "rooms" },
+          "floor_id": { "type": "string", "x-editor": "rooms" },
+          "area_id": { "type": "string", "x-editor": "rooms" },
+          "device_ids": { "type": "array", "uniqueItems": true, "items": { "type": "string" }, "x-editor": "rooms" },
+          "capabilities": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/roomCapability" }, "x-editor": "rooms" },
+          "quick_actions": { "type": "array", "maxItems": 2, "uniqueItems": true, "items": { "$ref": "#/$defs/logicalKey" }, "x-editor": "rooms" },
+          "light_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "rooms" },
+          "cover_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "rooms" },
+          "media_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "rooms" },
+          "safety_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "rooms" },
+          "camera_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "rooms" },
+          "power_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "rooms" },
+          "history_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "rooms" },
+          "hvac": {
+            "type": "object", "additionalProperties": false, "x-editor": "rooms",
+            "required": ["entity", "comfort_entities", "history_entities", "modes", "presets", "fan_modes", "swing_modes"],
+            "properties": {
+              "entity": { "$ref": "#/$defs/entityReference", "x-editor": "rooms" },
+              "comfort_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "rooms" },
+              "history_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "rooms" },
+              "modes": { "$ref": "#/$defs/stringList", "x-editor": "rooms" },
+              "presets": { "$ref": "#/$defs/stringList", "x-editor": "rooms" },
+              "fan_modes": { "$ref": "#/$defs/stringList", "x-editor": "rooms" },
+              "swing_modes": { "$ref": "#/$defs/stringList", "x-editor": "rooms" }
+            }
+          }
+        }
+      }
+    },
+    "energy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["enabled", "show_standard_dashboard_link", "default_period", "electricity_entities", "solar_entities", "battery_entities", "gas_entities", "water_entities", "device_entities", "capacity_peak_entity", "ev_power_entity", "ups_entity", "phase_entities"],
+      "properties": {
+        "enabled": { "type": "boolean", "x-editor": "energy" },
+        "show_standard_dashboard_link": { "type": "boolean", "x-editor": "energy" },
+        "default_period": { "enum": ["day", "week", "month", "year"], "x-editor": "energy" },
+        "electricity_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "energy" },
+        "solar_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "energy" },
+        "battery_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "energy" },
+        "gas_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "energy" },
+        "water_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "energy" },
+        "device_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "energy" },
+        "capacity_peak_entity": { "$ref": "#/$defs/entityReference", "x-editor": "energy" },
+        "ev_power_entity": { "$ref": "#/$defs/entityReference", "x-editor": "energy" },
+        "ups_entity": { "$ref": "#/$defs/entityReference", "x-editor": "energy" },
+        "phase_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "energy" }
+      }
+    },
+    "actions": {
+      "type": "array", "x-editor": "actions",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["key", "label", "sequence", "risk", "confirmation_text", "hold_required", "verification_entity"],
+        "properties": {
+          "key": { "$ref": "#/$defs/logicalKey", "x-editor": "actions" },
+          "label": { "type": "string", "minLength": 1, "x-editor": "actions" },
+          "sequence": { "type": "array", "minItems": 1, "items": { "type": "object", "required": ["action"] }, "x-editor": "actions" },
+          "risk": { "enum": ["safe", "privacy", "costly", "destructive"], "x-editor": "actions" },
+          "confirmation_text": { "type": "string", "x-editor": "actions" },
+          "hold_required": { "type": "boolean", "x-editor": "actions" },
+          "verification_entity": { "type": "string", "minLength": 1, "x-editor": "actions" }
+        }
+      }
+    },
+    "specialists": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kia", "robot", "garden", "pool"],
+      "properties": {
+        "kia": { "$ref": "#/$defs/specialist", "x-editor": "specialists" },
+        "robot": { "$ref": "#/$defs/specialist", "x-editor": "specialists" },
+        "garden": { "$ref": "#/$defs/specialist", "x-editor": "specialists" },
+        "pool": { "$ref": "#/$defs/specialist", "x-editor": "specialists" }
+      }
+    },
+    "layout": {
+      "type": "object", "additionalProperties": false,
+      "required": ["view_order", "mobile_disclosure", "show_weather", "show_persons", "show_security", "show_quick_actions"],
+      "properties": {
+        "view_order": { "type": "array", "minItems": 5, "maxItems": 5, "uniqueItems": true, "items": { "$ref": "#/$defs/viewPath" }, "x-editor": "layout" },
+        "mobile_disclosure": { "enum": ["progressive", "expanded"], "x-editor": "layout" },
+        "show_weather": { "type": "boolean", "x-editor": "layout" },
+        "show_persons": { "type": "boolean", "x-editor": "layout" },
+        "show_security": { "type": "boolean", "x-editor": "layout" },
+        "show_quick_actions": { "type": "boolean", "x-editor": "layout" }
+      }
+    },
+    "diagnostics": {
+      "type": "object", "additionalProperties": false,
+      "required": ["admin_dashboard_path", "show_config_health", "stale_after_minutes", "unavailable_policy", "operational_entities"],
+      "properties": {
+        "admin_dashboard_path": { "type": "string", "x-editor": "diagnostics" },
+        "show_config_health": { "type": "boolean", "x-editor": "diagnostics" },
+        "stale_after_minutes": { "type": "integer", "minimum": 1, "x-editor": "diagnostics" },
+        "unavailable_policy": { "enum": ["operational_only", "all", "hidden"], "x-editor": "diagnostics" },
+        "operational_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "diagnostics" }
+      }
+    }
+  },
+  "$defs": {
+    "logicalKey": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "entityReference": { "type": "string" },
+    "entityReferences": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/entityReference" } },
+    "stringList": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "viewPath": { "enum": ["home", "rooms", "energy", "domains", "more"] },
+    "roomCapability": { "enum": ["lights", "covers", "climate", "media", "security", "power", "air_quality", "presence"] },
+    "specialist": {
+      "type": "object", "additionalProperties": false,
+      "required": ["enabled", "card_type", "minimum_version", "mapping_keys"],
+      "properties": {
+        "enabled": { "type": "boolean", "x-editor": "specialists" },
+        "card_type": { "type": "string", "pattern": "^custom:", "x-editor": "system" },
+        "minimum_version": { "type": "string", "x-editor": "specialists" },
+        "mapping_keys": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/logicalKey" }, "x-editor": "specialists" }
+      }
+    }
+  }
+}

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Home Dashboard editorharnas</title>
+    <style>
+      :root {
+        --primary-color: #276b5b;
+        --primary-text-color: #17201d;
+        --secondary-text-color: #56645f;
+        --text-primary-color: #fff;
+        --card-background-color: #fff;
+        --secondary-background-color: #f3f6f5;
+        --divider-color: #d8e0dd;
+        --error-color: #b3261e;
+        --warning-color: #9a5b00;
+      }
+      body { margin: 0; padding: 24px; background: #eaf0ee; font-family: system-ui, sans-serif; }
+      main { max-width: 980px; margin: auto; }
+      #events { margin: 0 0 12px; padding: 10px 14px; border-radius: 10px; background: #dcefe8; color: #174a3e; }
+      @media (max-width: 600px) { body { padding: 8px; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p id="events">Fictief editorharnas — geen verbinding met Home Assistant.</p>
+      <home-dashboard-strategy-editor></home-dashboard-strategy-editor>
+    </main>
+    <script type="module" src="./editor-harness.js"></script>
+  </body>
+</html>

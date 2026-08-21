@@ -1,6 +1,6 @@
 {
   "name": "home-dashboard",
-  "version": "0.1.0-alpha.1",
+  "version": "0.2.0-alpha.1",
   "private": true,
   "type": "module",
   "description": "HACS-installable community dashboard strategy for Home Assistant",
@@ -8,7 +8,7 @@
   "packageManager": "pnpm@11.19.0",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "check": "pnpm typecheck && pnpm build && node scripts/verify-dist.mjs && node --check prototype/app.js && node --check prototype/fixtures.js && node scripts/check-repo.mjs",
+    "check": "pnpm typecheck && pnpm build && node scripts/verify-dist.mjs && node --check prototype/app.js && node --check prototype/fixtures.js && node --check prototype/editor-harness.js && node scripts/check-repo.mjs",
     "test": "pnpm check && node --test tests/*.test.mjs",
     "typecheck": "tsc --noEmit",
     "release:assets": "node scripts/create-release-assets.mjs",

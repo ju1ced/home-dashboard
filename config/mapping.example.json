@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "entities": {
+    "weather_primary": "SELECT_IN_GUI",
+    "resident_primary": "SELECT_IN_GUI",
+    "camera_entry": "SELECT_IN_GUI",
+    "alarm_home": "SELECT_IN_GUI",
+    "grid_import_power": "SELECT_IN_GUI",
+    "solar_power": "SELECT_IN_GUI",
+    "battery_state": "SELECT_IN_GUI"
+  },
+  "areas": {
+    "living_room": "SELECT_IN_GUI"
+  },
+  "floors": {
+    "ground_floor": "SELECT_IN_GUI"
+  },
+  "actions": {
+    "living_lights": "CONFIGURE_IN_GUI"
+  }
+}

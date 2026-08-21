@@ -1,6 +1,6 @@
 # Home Dashboard — ontwerpvoorstel
 
-Deze repository bouwt een HACS-installeerbare community dashboard strategy voor een centraal Home Assistant-dashboard. De ontwerpbaseline is afgerond; de productcode zit in de foundationfase. Home Assistant is niet gewijzigd.
+Deze repository bouwt een HACS-installeerbare community dashboard strategy voor een centraal Home Assistant-dashboard. De HACS-foundation is in Home Assistant gevalideerd; de productcode zit nu in de GUI-configuratiefase. Home Assistant is niet door deze repository gewijzigd.
 
 ## Aanbevolen richting
 
@@ -18,6 +18,9 @@ V1 bevat geen custom panel en geen extra summary-component. De minimale onderste
 - [Integratiestrategie](docs/design/integration-strategy.md)
 - [Multi-agent implementatieplan](docs/design/implementation-plan.md)
 - [Deliveryroadmap: agents, PR's, GUI, HACS en releases](docs/design/delivery-roadmap.md)
+- [Grafische configuratie](docs/configuration/gui-overview.md)
+- [Configuratieschema v1](docs/reference/config-schema.md)
+- [Compatibility](docs/reference/compatibility.md)
 - [Requirements en evidence](docs/discovery/requirements.md)
 - [Informatiepariteit huidige dashboard](docs/discovery/current-dashboard-information-parity.md)
 
@@ -39,7 +42,7 @@ Open daarna `http://127.0.0.1:4173/`. De fixtureselector wisselt tussen normaal,
 
 ## HACS-installatie
 
-[`v0.1.0-alpha.1`](https://github.com/ju1ced/home-dashboard/releases/tag/v0.1.0-alpha.1) is de eerste installatiesmoke. Zie [Installatie via HACS](docs/installation/hacs.md) en de bijbehorende [testchecklist](docs/releases/testing-v0.1.0-alpha.1.md). De foundationbundle maakt nog geen dashboard; de strategy en volledige grafische editor volgen in de volgende PR's.
+[`v0.1.0-alpha.1`](https://github.com/ju1ced/home-dashboard/releases/tag/v0.1.0-alpha.1) heeft de volledige HACS-lifecycle doorlopen: installatie, update, verwijdering en herinstallatie. Zie [het geanonimiseerde resultaat](docs/releases/results-v0.1.0-alpha.1.md). `v0.2.0-alpha.1` voegt het versioned schema, de volledige grafische editor en een minimale Community dashboard-preview toe; de vijf productviews volgen in `v0.3.0-alpha.1`.
 
 ## Checks
 
@@ -64,7 +67,9 @@ docs/renders/     gecontroleerde PNG-renders en rendermatrix
 src/              TypeScript-bron voor de HACS-resource
 dist/             getrackte reproduceerbare HACS-bundle
 tests/            foundation- en later producttests
-prototype/        interactieve statische high-fidelity prototype
+prototype/        interactieve high-fidelity prototype en fictief editorharnas
+schemas/          versioned publieke JSON Schema's
+config/examples/  privacyveilige normal/warning/missing/unavailable-fixtures
 scripts/          lokale preview en repositorychecks
 .github/          CI, HACS-validatie, releaseflow en templates
 ```
@@ -79,4 +84,4 @@ scripts/          lokale preview en repositorychecks
 
 ## Status
 
-De ontwerpbaseline, deliveryroadmap en HACS-fundering zijn gepubliceerd. De HACS-installatiesmoke voor `v0.1.0-alpha.1` is de gate vóór delivery-PR 2 voor het schema en de volledige grafische configuratie-editor. Home Assistant-writes en deployment starten niet automatisch en behouden hun afzonderlijke menselijke gates.
+De ontwerpbaseline, deliveryroadmap en HACS-fundering zijn gepubliceerd; de lifecycle-smoke van `v0.1.0-alpha.1` is geslaagd. Delivery-PR 2 levert schema v1, de grafische configuratie-editor en een veilige preview voor `v0.2.0-alpha.1`. Home Assistant-writes en deployment starten niet automatisch en behouden hun afzonderlijke menselijke gates.
