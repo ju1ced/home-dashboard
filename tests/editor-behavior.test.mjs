@@ -98,6 +98,11 @@ const {
   createDefaultConfig
 } = await import("../dist/home-dashboard.js?editor-behavior");
 
+test("dashboard- en view-strategy zijn beide geregistreerd", () => {
+  assert.ok(registry.has("ll-strategy-dashboard-home-dashboard"));
+  assert.ok(registry.has("ll-strategy-view-home-dashboard-view"));
+});
+
 function room(key) {
   return {
     key, name: key, icon: "mdi:sofa", floor_id: "", area_id: "living_area", device_ids: [], capabilities: [], quick_actions: [],

@@ -183,13 +183,13 @@ test("native service-action zonder target en verificatie wordt geblokkeerd", () 
   assert.ok(validateConfig(config).some((issue) => issue.code === "target_required"));
 });
 
-test("minimale strategy maakt een read-only configuratiepreview", async () => {
+test("strategy maakt vijf echte views en behoudt veilige foutpreviews", async () => {
   assert.equal(HomeDashboardStrategy.configRequired, true);
   assert.deepEqual(HomeDashboardStrategy.getCreateSuggestions(), { title: "Home Dashboard", icon: "mdi:home-assistant" });
   const generated = await HomeDashboardStrategy.generate(createDefaultConfig());
-  assert.equal(generated.views.length, 1);
-  assert.equal(generated.views[0].type, "sections");
-  assert.match(generated.views[0].sections[0].cards[0].content, /geen acties of Home Assistant-writes/);
+  assert.equal(generated.views.length, 5);
+  assert.deepEqual(generated.views.map((view) => view.path), ["home", "rooms", "energy", "domains", "more"]);
+  assert.ok(generated.views.every((view) => view.strategy?.type === "custom:home-dashboard-view"));
 
   const duplicate = createDefaultConfig();
   duplicate.today.waste_entities = ["waste_primary", "waste_primary"];

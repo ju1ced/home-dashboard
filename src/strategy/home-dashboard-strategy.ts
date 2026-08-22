@@ -1,6 +1,8 @@
 import { migrateConfig } from "../config/migrate";
 import { validateConfig } from "../config/validate";
 import { validateConfigSchema } from "../config/schema-validator";
+import type { HomeDashboardConfigV1, ViewPath } from "../config/types";
+import type { HomeDashboardViewConfig } from "./home-dashboard-view-strategy";
 
 interface StrategyMetadata {
   type: string;
@@ -40,6 +42,7 @@ function preview(title: string, status: string): Record<string, unknown> {
 
 export class HomeDashboardStrategy extends HTMLElementBase {
   public static readonly configRequired = true;
+  public static readonly registryDependencies: string[] = [];
 
   public static getCreateSuggestions(): { title: string; icon: string } {
     return { title: "Home Dashboard", icon: "mdi:home-assistant" };
@@ -58,11 +61,40 @@ export class HomeDashboardStrategy extends HTMLElementBase {
       return preview("Home Dashboard", `Open de dashboardinstellingen: de configuratie is geblokkeerd (${message}).`);
     }
     const errors = [...validateConfigSchema(config), ...validateConfig(config)].filter((candidate) => candidate.severity === "error");
-    const status = errors.length === 0
-      ? "De configuratie is geldig. De vijf volledige views volgen in v0.3.0-alpha.1."
-      : `Open de dashboardinstellingen: ${errors.length} configuratiefout(en) blokkeren de opbouw.`;
-    return preview(config.general.title, status);
+    if (errors.length > 0) return preview(config.general.title, `Open de dashboardinstellingen: ${errors.length} configuratiefout(en) blokkeren de opbouw.`);
+    const orderedPaths = [config.general.start_view, ...config.layout.view_order.filter((path) => path !== config.general.start_view)];
+    return {
+      title: config.general.title,
+      views: orderedPaths.map((path) => createView(path, config))
+    };
   }
+}
+
+const viewMetadata: Record<ViewPath, { title: string; icon: string }> = {
+  home: { title: "Home", icon: "mdi:home" },
+  rooms: { title: "Kamers", icon: "mdi:floor-plan" },
+  energy: { title: "Energie", icon: "mdi:lightning-bolt" },
+  domains: { title: "Domeinen", icon: "mdi:view-grid-outline" },
+  more: { title: "Meer", icon: "mdi:dots-horizontal-circle-outline" }
+};
+
+function createViewStrategy(path: ViewPath, config: HomeDashboardConfigV1): HomeDashboardViewConfig {
+  const base: HomeDashboardViewConfig = { type: "custom:home-dashboard-view", view: path, density: config.general.density };
+  if (path === "home") return { ...base, today: config.today, show_weather: config.layout.show_weather, persons: config.layout.show_persons ? config.persons : [], security: config.layout.show_security ? config.security : { ...config.security, enabled: false }, rooms: config.rooms.slice(0, 4), specialists: config.specialists };
+  if (path === "rooms" || path === "domains") return { ...base, rooms: config.rooms };
+  if (path === "energy") return { ...base, energy: config.energy };
+  return { ...base, specialists: config.specialists, counts: { rooms: config.rooms.length, persons: config.persons.length, cameras: config.security.cameras.length } };
+}
+
+function createView(path: ViewPath, config: HomeDashboardConfigV1): Record<string, unknown> {
+  return {
+    title: viewMetadata[path].title,
+    path,
+    icon: viewMetadata[path].icon,
+    show_icon_and_title: true,
+    subview: false,
+    strategy: createViewStrategy(path, config)
+  };
 }
 
 export function registerHomeDashboardStrategy(): void {
