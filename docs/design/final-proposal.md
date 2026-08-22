@@ -23,7 +23,7 @@ Dit document sluit de conceptgate. Het autoriseert nog geen Home Assistant-write
 1. **Aandacht:** kritieke items en maximaal drie niet-kritieke uitzonderingen.
 2. **Vandaag:** compacte weersverwachting, volgende relevante afvalophaling en globale energie-/laadstatus.
 3. **Gezin:** individuele person cards met thuis, benoemde zone, onderweg of onbekend; dataversheid en alleen relevante device-batterijwaarschuwingen.
-4. **Beveiliging & privacy:** drie horizontaal scrollbare camera's/fallbacks, privacystand per camera en alarmstatus met veilige route naar modi.
+4. **Beveiliging & privacy:** alle geconfigureerde camera's/fallbacks horizontaal scrollbaar, privacystand per camera en alarmstatus met veilige route naar modi.
 5. **Nu actief:** maximaal vier echte uitzonderingen.
 6. **Snelle acties:** start met `Avondscene` en het expliciet gemapte script `Lichten beneden uit`; ontbrekende of niet-goedgekeurde mapping verbergt de actie.
 7. **Actieve ruimtes:** maximaal vier contextuele kamers en `Alle kamers`.
@@ -100,7 +100,7 @@ Als een officiële Energy-card niet bruikbaar blijkt in een gewone Lovelace-view
 
 ## Security en privacy
 
-- De drie geselecteerde camera's blijven op Home scrollbaar op mobiel en naast elkaar op brede schermen.
+- Alle geselecteerde camera's blijven op Home scrollbaar op mobiel en worden responsief over de beschikbare breedte verdeeld.
 - Iedere stream faalt zelfstandig met freshness/fallback; andere camera's en alarmbediening blijven bruikbaar.
 - Privacy aan/uit is per camera ondubbelzinnig zichtbaar. Privacy uitschakelen vereist confirmation en backendautorisatie.
 - Alarmstatus staat vóór de moduscontrols. Arm/disarm en lockacties gebruiken duidelijke labels, confirmation en een actuele resultaatstatus.

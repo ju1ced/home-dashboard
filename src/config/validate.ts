@@ -62,16 +62,13 @@ export function validateConfig(config: HomeDashboardConfigV1): ValidationIssue[]
   });
 
   issues.push(...validateKeys(config.security.cameras, "security.cameras"));
-  if (config.security.cameras.length > 3) {
-    issues.push(issue("security.cameras", "camera_limit", "De Home-sectie ondersteunt exact drie camerakaarten."));
-  }
-  if (config.security.enabled && config.security.cameras.length !== 3) {
-    issues.push(issue("security.cameras", "camera_count", "Geactiveerde security vereist exact drie camera's."));
+  if (config.security.enabled && config.security.cameras.length === 0) {
+    issues.push(issue("security.cameras", "camera_required", "Geactiveerde security vereist minstens één camera."));
   }
   config.security.cameras.forEach((cameraConfig, index) => {
     if (!cameraConfig.camera_entity) issues.push(issue(`security.cameras[${index}].camera_entity`, "required", "Kies een camera-entiteit."));
     if (cameraConfig.privacy_entity && !cameraConfig.privacy_action_key) {
-      issues.push(issue(`security.cameras[${index}].privacy_action_key`, "required", "Koppel een privacy-actie aan de privacyinstelling."));
+      issues.push(issue(`security.cameras[${index}].privacy_action_key`, "required", "Maak onder Acties een privacyactie en koppel die hier aan de privacyinstelling."));
     }
     const fallbackIssue = validateEnum(`security.cameras[${index}].fallback`, cameraConfig.fallback, ["placeholder", "last_image", "hidden"]);
     if (fallbackIssue) issues.push(fallbackIssue);
@@ -137,8 +134,16 @@ export function validateConfig(config: HomeDashboardConfigV1): ValidationIssue[]
   });
 
   for (const cameraConfig of config.security.cameras) {
-    if (cameraConfig.privacy_action_key && !actionKeys.has(cameraConfig.privacy_action_key)) {
-      issues.push(issue("security.cameras", "unknown_action", `Privacy-actie '${cameraConfig.privacy_action_key}' bestaat niet.`));
+    if (cameraConfig.privacy_entity && !cameraConfig.confirm_privacy_disable) {
+      issues.push(issue("security.cameras", "privacy_confirmation_required", "Privacybediening vereist bevestiging voordat de privacystand kan worden gewijzigd."));
+    }
+    if (cameraConfig.privacy_action_key) {
+      const privacyAction = config.actions.find((action) => action.key === cameraConfig.privacy_action_key);
+      if (!privacyAction) {
+        issues.push(issue("security.cameras", "unknown_action", `Privacy-actie '${cameraConfig.privacy_action_key}' bestaat niet.`));
+      } else if (privacyAction.risk !== "privacy") {
+        issues.push(issue("security.cameras", "privacy_action_risk", `Actie '${cameraConfig.privacy_action_key}' moet risicoklasse privacy gebruiken.`));
+      }
     }
   }
 

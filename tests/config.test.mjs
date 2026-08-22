@@ -64,11 +64,62 @@ test("warning, missing en unavailable fixtures behouden hun bedoelde semantiek",
   assert.ok(warning.some((issue) => issue.severity === "warning" && issue.code === "version_recommended"));
 
   const missing = validateConfig(migrateConfig(await fixture("missing")).config);
-  assert.ok(missing.some((issue) => issue.severity === "error" && issue.code === "camera_count"));
+  assert.ok(missing.some((issue) => issue.severity === "error" && issue.code === "camera_required"));
 
   const unavailable = migrateConfig(await fixture("unavailable")).config;
   assert.equal(unavailable.diagnostics.unavailable_policy, "operational_only");
   assert.equal(validateConfig(unavailable).length, 0);
+});
+
+test("Security accepteert ieder positief aantal camera's", () => {
+  for (const count of [1, 2, 3, 6]) {
+    const config = createDefaultConfig();
+    config.security.enabled = true;
+    config.security.alarm_entity = "alarm_primary";
+    config.security.cameras = Array.from({ length: count }, (_, index) => ({
+      key: `camera_${index + 1}`,
+      name: `Camera ${index + 1}`,
+      camera_entity: `camera_${index + 1}`,
+      privacy_entity: "",
+      privacy_action_key: "",
+      fallback: "placeholder",
+      confirm_privacy_disable: true
+    }));
+    assert.deepEqual(validateConfigSchema(config), [], `${count} camera's moeten in het schema passen`);
+    assert.equal(validateConfig(config).filter((issue) => issue.severity === "error").length, 0, `${count} camera's moeten semantisch geldig zijn`);
+  }
+
+  const disabled = createDefaultConfig();
+  assert.equal(validateConfig(disabled).some((issue) => issue.code === "camera_required"), false);
+
+  const enabled = createDefaultConfig();
+  enabled.security.enabled = true;
+  assert.equal(validateConfig(enabled).some((issue) => issue.code === "camera_required"), true);
+  assert.ok(validateConfigSchema(enabled).some((issue) => issue.path === "security" && issue.code === "schema_any_of"));
+});
+
+test("privacybediening vereist een privacyactie en confirmation", () => {
+  const config = createDefaultConfig();
+  config.security.enabled = true;
+  config.security.cameras.push({
+    key: "camera_primary", name: "Camera", camera_entity: "camera_primary", privacy_entity: "privacy_primary",
+    privacy_action_key: "privacy_toggle", fallback: "placeholder", confirm_privacy_disable: false
+  });
+  config.actions.push({
+    key: "privacy_toggle", label: "Privacy", sequence: [{ action: "switch.toggle", target: { entity_id: "privacy_primary" } }],
+    risk: "safe", confirmation_text: "", hold_required: false, verification_entity: "privacy_primary"
+  });
+
+  const codes = validateConfig(config).map((issue) => issue.code);
+  assert.ok(codes.includes("privacy_confirmation_required"));
+  assert.ok(codes.includes("privacy_action_risk"));
+  assert.ok(validateConfigSchema(config).some((issue) => issue.code === "schema_any_of"));
+
+  config.security.cameras[0].confirm_privacy_disable = true;
+  config.actions[0].risk = "privacy";
+  config.actions[0].confirmation_text = "Privacy aanpassen?";
+  assert.deepEqual(validateConfigSchema(config), []);
+  assert.equal(validateConfig(config).filter((issue) => issue.severity === "error").length, 0);
 });
 
 test("export en import hebben een verliesvrije schema-v1-roundtrip", async () => {
@@ -151,7 +202,7 @@ test("minimale strategy maakt een read-only configuratiepreview", async () => {
 
 test("editorbundle bevat ordering, focus- en live-feedbackcontracten", async () => {
   const bundle = await readFile(new URL("../dist/home-dashboard.js", import.meta.url), "utf8");
-  for (const marker of ["data-room-move", "data-view-move", "data-section-nav", "data-section-step", "role=\"tabpanel\"", "queueMicrotask", "aria-live", "config-changed", "home-dashboard-strategy-editor"]) assert.match(bundle, new RegExp(marker));
+  for (const marker of ["data-room-move", "data-view-move", "data-section-nav", "data-section-step", "data-go-section", "Maak onder Acties een privacyactie", "role=\"tabpanel\"", "queueMicrotask", "aria-live", "config-changed", "home-dashboard-strategy-editor"]) assert.match(bundle, new RegExp(marker));
 });
 
 test("editornavigatie en open itemtokens overleven HA-configroundtrips", () => {

@@ -134,7 +134,7 @@ Numerieke waarden gebruiken tabular numbers waar vergelijking nuttig is.
 
 ### Camera en privacystand
 
-- Home toont exact drie eigenaar-gekozen camera's in een horizontaal scrollbare strook; iedere kaart heeft preview of zelfstandige fallback, naam, status en privacystand.
+- Home toont alle eigenaar-gekozen camera's in een horizontaal scrollbare strook; iedere kaart heeft preview of zelfstandige fallback, naam, status en privacystand.
 - De privacycontrol staat los van het previewvlak. `Privacy aan` is positief en ondubbelzinnig zichtbaar; privacy uitschakelen gebruikt confirmation en backendautorisatie.
 - Tracked fixtures en renders gebruiken uitsluitend fictieve, getekende scènes. Live beelden, namen, adressen en bronidentifiers worden nooit in repository-artifacts vastgelegd.
 

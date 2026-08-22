@@ -19,7 +19,7 @@ Drie onafhankelijke concepten zijn op dezelfde discoverybasis uitgewerkt. De vol
 
 Het gekozen concept gebruikt de App-like hiërarchie **Aandacht → Nu → Acties → Actieve ruimtes → Specialistische ingangen → Domeinen**, uitgevoerd op de Native-first dependencygrens. Uit Hybrid worden de integratie-, lifecycle- en fallbackcontracten overgenomen, maar niet de lokale summary-component.
 
-Na eigenaarreview is dit aangescherpt: de gewone HA-sidebar blijft buiten het dashboard; de native hoofdviews zijn Home, Kamers, Energie, Domeinen en Meer. Kamers wordt een volledig overzicht met quick actions, Home behoudt person cards plus een scrollbare strook met drie camera's en afzonderlijke privacycontrols, en zwembad krijgt een vierde specialistische card.
+Na eigenaarreview is dit aangescherpt: de gewone HA-sidebar blijft buiten het dashboard; de native hoofdviews zijn Home, Kamers, Energie, Domeinen en Meer. Kamers wordt een volledig overzicht met quick actions, Home behoudt person cards plus een scrollbare strook met alle geconfigureerde camera's en afzonderlijke privacycontrols, en zwembad krijgt een vierde specialistische card.
 
 De specialistische summaries in v1 zijn native Heading/Tile/Badge-composities. Alleen als een getest native prototype aantoonbaar faalt op compactheid of begrijpelijkheid, mag een kleine presentational summary-component als afzonderlijk experiment terugkomen.
 

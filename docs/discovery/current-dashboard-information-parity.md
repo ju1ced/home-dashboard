@@ -17,7 +17,7 @@ De screenshots zelf worden niet in de repository opgeslagen. Persoonsnamen, foto
 | alle kamers per verdieping | Kamers | floor-gegroepeerd; mobiel samenvatting-eerst en inklapbaar |
 | temperatuur, vocht en waar aanwezig CO₂ op roomsummaries | Kamers en kamerdetail | alleen geconfigureerde comfortwaarden; ontbrekende waarden niet als normale nul tonen |
 | licht, covers, scènes, klimaat, media, aanwezigheid en safety per kamer | kamerdetail | vaste capabilityvolgorde; lege secties verdwijnen |
-| cameracarrousel, drie privacycontrols en alarmstatus/-modi | Home → Beveiliging & privacy; volledig op Security | camera-uitval is lokaal; privacy uit en alarmwijziging vragen confirmation/autorisatie |
+| cameracarrousel, configureerbare privacycontrols en alarmstatus/-modi | Home → Beveiliging & privacy; volledig op Security | camera-uitval is lokaal; privacy uit en alarmwijziging vragen confirmation/autorisatie |
 | actueel huisverbruik, netflow, solar, batterij, capaciteitspiek en EV-laden | Energie → Nu | actuele waarden met freshness en richting, niet uitsluitend een gaugekleur |
 | fasewaarden, bron-/verbruiksflow, koolstofarm aandeel en water | Energie → Nu/Overzicht | compacte KPI's en officiële flowcards; fases alleen bij afwijking prominent |
 | dag-/maand-/jaarhistorie en kosten | Energie → Historie | officiële HA Energy-cards met gedeelde datumselectie en vergelijking |

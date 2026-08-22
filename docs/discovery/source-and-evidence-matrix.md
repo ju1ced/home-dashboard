@@ -89,4 +89,4 @@ Alle vier referentieprojecten hebben een MIT-licentie. In deze fase is geen code
 - Energie is een zelfstandige volledige hoofdview.
 - Kia-, robot- en tuindetails renderen de volledige bestaande cards.
 - Zwembad krijgt een nieuwe volledige specialistische card in dezelfde stijl en met dezelfde dependencygrenzen.
-- Home behoudt individuele person cards en een horizontaal scrollbare strook met drie camera's en afzonderlijke privacystanden; privacy uitschakelen vraagt expliciete bevestiging.
+- Home behoudt individuele person cards en een horizontaal scrollbare strook met alle geconfigureerde camera's en afzonderlijke privacystanden; privacy uitschakelen vraagt expliciete bevestiging.

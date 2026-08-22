@@ -4,7 +4,7 @@ Deze repository bouwt een HACS-installeerbare community dashboard strategy voor 
 
 ## Aanbevolen richting
 
-**Huis in beeld** gebruikt een app-like informatiehiërarchie op een native Home Assistant Sections-shell. De gewone Home Assistant-sidebar blijft de buitenste applicatieshell; binnen het dashboard staan vijf native views: Home, Kamers, Energie, Domeinen en Meer. Home toont aandacht, person cards en een scrollbare beveiligingsstrook met drie camera's en hun privacystand. Kamers biedt het volledige overzicht met veilige quick actions. Kia, robotstofzuiger en tuin openen hun volledige bestaande HACS-card; voor zwembad wordt een vierde specialistische card in dezelfde familie gepland.
+**Huis in beeld** gebruikt een app-like informatiehiërarchie op een native Home Assistant Sections-shell. De gewone Home Assistant-sidebar blijft de buitenste applicatieshell; binnen het dashboard staan vijf native views: Home, Kamers, Energie, Domeinen en Meer. Home toont aandacht, person cards en een scrollbare beveiligingsstrook met alle geconfigureerde camera's en hun privacystand. Kamers biedt het volledige overzicht met veilige quick actions. Kia, robotstofzuiger en tuin openen hun volledige bestaande HACS-card; voor zwembad wordt een vierde specialistische card in dezelfde familie gepland.
 
 V1 bevat geen custom panel en geen extra summary-component. De minimale ondersteunde versie is Home Assistant 2026.8.2. Diagnostiek verhuist bij voorkeur naar een apart admin-dashboard. Het default dashboard blijft read-only; een latere bouwfase werkt eerst op een vers, expliciet goedgekeurd testdashboard met snapshot en rollback.
 
@@ -42,7 +42,7 @@ Open daarna `http://127.0.0.1:4173/`. De fixtureselector wisselt tussen normaal,
 
 ## HACS-installatie
 
-[`v0.1.0-alpha.1`](https://github.com/ju1ced/home-dashboard/releases/tag/v0.1.0-alpha.1) heeft de volledige HACS-lifecycle doorlopen: installatie, update, verwijdering en herinstallatie. Zie [het geanonimiseerde resultaat](docs/releases/results-v0.1.0-alpha.1.md). `v0.2.0-alpha.1` valideerde schema, preview, import/export en mobiel bewerken; `v0.2.0-alpha.2` maakt de editor compact met sectienavigatie. De vijf productviews volgen in `v0.3.0-alpha.1`.
+[`v0.1.0-alpha.1`](https://github.com/ju1ced/home-dashboard/releases/tag/v0.1.0-alpha.1) heeft de volledige HACS-lifecycle doorlopen: installatie, update, verwijdering en herinstallatie. Zie [het geanonimiseerde resultaat](docs/releases/results-v0.1.0-alpha.1.md). `v0.2.0-alpha.1` valideerde schema, preview, import/export en mobiel bewerken; `v0.2.0-alpha.2` maakte de editor compact; `v0.2.0-alpha.3` ondersteunt een flexibel aantal camera's en maakt de route naar privacyacties expliciet. De eerste echt renderende productviews volgen in `v0.3.0-alpha.1`.
 
 ## Checks
 
@@ -84,4 +84,4 @@ scripts/          lokale preview en repositorychecks
 
 ## Status
 
-De ontwerpbaseline, deliveryroadmap en HACS-fundering zijn gepubliceerd; de lifecycle-smoke van `v0.1.0-alpha.1` en de configuratie-smoke van `v0.2.0-alpha.1` zijn geslaagd. De compacte editorpatch wordt als `v0.2.0-alpha.2` getest. Home Assistant-writes en deployment starten niet automatisch en behouden hun afzonderlijke menselijke gates.
+De ontwerpbaseline, deliveryroadmap en HACS-fundering zijn gepubliceerd; de lifecycle-smoke van `v0.1.0-alpha.1`, de configuratie-smoke van `v0.2.0-alpha.1` en de compacte editorproef van `v0.2.0-alpha.2` zijn geslaagd. `v0.2.0-alpha.3` corrigeert het cameracontract en de privacyactieroute. Home Assistant-writes en deployment starten niet automatisch en behouden hun afzonderlijke menselijke gates.

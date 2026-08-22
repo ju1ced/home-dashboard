@@ -42,7 +42,7 @@ De normale gebruiker hoeft geen YAML of JSON te schrijven. De grafische strategy
 | Algemeen | titel, taal, tijdnotatie, startview, light/dark/auto, compacte of comfortabele density |
 | Vandaag | weatherbron, forecastlengte, afvalbronnen, globale energiestatus en zichtbaarheid |
 | Personen | personselectie, zichtbare status, benoemde zones, freshness en relevante batterijbronnen |
-| Security | drie cameraselectors, privacy-entiteiten/actions, alarm, streamfallback en confirmationbeleid |
+| Security | configureerbare cameralijst, privacy-entiteiten/actions, alarm, streamfallback en confirmationbeleid |
 | Kamers | floors/areas kiezen, ordenen, naam/icon override, capabilities en maximaal twee quick actions |
 | Klimaat | klimaatbron, modes, presets, fan, swing, comfort- en historybronnen per kamer |
 | Energie | standaard Energy-bronnen, datumcollectie, solar, batterij, water/gas, apparatenhiërarchie en lokale KPI's |
