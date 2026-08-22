@@ -6,6 +6,22 @@ Alle betekenisvolle wijzigingen worden hier bijgehouden. Het project gebruikt Se
 
 Nog geen wijzigingen.
 
+## 0.3.0-alpha.1 — 2026-08-22
+
+### Added
+
+- Vervangt de configuratiepreview door vijf echte native Sections-views: Home, Kamers, Energie, Domeinen en Meer.
+- Registreert een afzonderlijke view strategy en genereert de gekozen startview als eerste stabiele view.
+- Toont lokaal geselecteerde Vandaag-, person-, camera-, privacy-, kamer-, energie- en domeinbronnen.
+- Ondersteunt alle geconfigureerde camera's in bronvolgorde en houdt verborgen personlocaties ook visueel verborgen.
+- Biedt veilige navigatie naar Kamers, Meer en het standaard Home Assistant Energie-dashboard.
+
+### Safety and validation
+
+- Alle entitykaarten zijn in deze alpha read-only; tap, hold en double-tap voeren geen actie uit.
+- Alleen expliciete `navigate`-acties zijn toegestaan; er wordt geen service, target of actionsequence gegenereerd.
+- Test vijf stabiele views, Sections-output, zes camera's, startviewvolgorde, privacy, fixtures, registratie, serialisatie en determinisme.
+
 ## 0.2.0-alpha.3 — 2026-08-22
 
 ### Changed

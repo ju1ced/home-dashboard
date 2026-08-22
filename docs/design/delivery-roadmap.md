@@ -14,7 +14,7 @@ De roadmap autoriseert ontwikkeling en publicatie van testbare artifacts. Zij au
 - de bundle registreert `custom:home-dashboard` in `window.customStrategies` als `dashboard` strategy;
 - Home Assistant toont het project in de Community dashboards-kiezer;
 - de strategy genereert de vijf native Sections-views Home, Kamers, Energie, Domeinen en Meer;
-- afzonderlijke view strategies houden de eerste laadbeurt klein en bouwen een view pas wanneer die nodig is;
+- een afzonderlijke view strategy houdt viewcomposition begrensd; lazy first-loadwinst wordt pas na een echte frontendmeting geclaimd;
 - `getConfigElement()` levert de grafische dashboardconfiguratie;
 - `configRequired = true` voorkomt dat een onvolledig dashboard zonder editorconfig wordt aangemaakt;
 - de bestaande Home Assistant-sidebar blijft de applicatieshell;

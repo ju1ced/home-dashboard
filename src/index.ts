@@ -8,14 +8,15 @@ import { validateConfigSchema } from "./config/schema-validator";
 import { EDITOR_COVERAGE } from "./editor/fields";
 import { EDITOR_SECTION_KEYS, getEditorItemToken, getEditorSectionForKey, HomeDashboardStrategyEditor, registerHomeDashboardEditor } from "./editor/home-dashboard-editor";
 import { HomeDashboardStrategy, registerHomeDashboardStrategy } from "./strategy/home-dashboard-strategy";
+import { buildView, HomeDashboardViewStrategy, registerHomeDashboardViewStrategy } from "./strategy/home-dashboard-view-strategy";
 
-export { compileConfig, createDefaultConfig, EDITOR_COVERAGE, EDITOR_SECTION_KEYS, getEditorItemToken, getEditorSectionForKey, HomeDashboardStrategy, HomeDashboardStrategyEditor, migrateConfig, parseImportedConfig, serializeConfig, validateConfig, validateConfigSchema };
+export { buildView, compileConfig, createDefaultConfig, EDITOR_COVERAGE, EDITOR_SECTION_KEYS, getEditorItemToken, getEditorSectionForKey, HomeDashboardStrategy, HomeDashboardStrategyEditor, HomeDashboardViewStrategy, migrateConfig, parseImportedConfig, serializeConfig, validateConfig, validateConfigSchema };
 export type { HomeDashboardConfigV1, ValidationIssue } from "./config/types";
 
 export interface HomeDashboardBuildInfo {
   readonly name: "Home Dashboard";
   readonly version: string;
-  readonly phase: "configuration";
+  readonly phase: "shell";
   readonly minimumHomeAssistant: "2026.8.2";
 }
 
@@ -28,12 +29,13 @@ declare global {
 export const buildInfo: HomeDashboardBuildInfo = Object.freeze({
   name: "Home Dashboard",
   version: __HOME_DASHBOARD_VERSION__,
-  phase: "configuration",
+  phase: "shell",
   minimumHomeAssistant: "2026.8.2"
 });
 
 if (typeof window !== "undefined") {
   registerHomeDashboardEditor();
+  registerHomeDashboardViewStrategy();
   registerHomeDashboardStrategy();
   window.__HOME_DASHBOARD_BUILD__ = buildInfo;
   console.info(

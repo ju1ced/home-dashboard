@@ -149,3 +149,9 @@
 - **Status:** besloten en geïmplementeerd in `v0.2.0-alpha.3`
 - **Besluit:** een camera met privacyinstelling verwijst naar een vooraf onder **Acties** aangemaakte actie. Security legt dat model uit en biedt een directe, toetsenbordvriendelijke route naar die sectie.
 - **Reden:** de centrale actionallowlist bewaart bevestiging, targetscope en verificatie op één plaats, terwijl de editor de relatie voortaan zichtbaar maakt.
+
+## D-026 — Eerste echte shell is read-only
+
+- **Status:** besloten voor `v0.3.0-alpha.1`
+- **Besluit:** de eerste vijf renderende Sections-views tonen alleen geselecteerde states, camerabeelden en navigatie. Entitytap, hold en double-tap zijn uitgeschakeld; actionsequences en servicecalls worden nog niet gegenereerd.
+- **Reden:** hiermee kan de eigenaar routes, informatiekeuze, responsive gedrag en echte entityweergave testen voordat bediening en specialistische kaarten hun afzonderlijke veiligheidsgates doorlopen.
