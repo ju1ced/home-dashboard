@@ -1,6 +1,6 @@
 # Grafische configuratie
 
-## Reikwijdte van v0.2.0-alpha.2
+## Reikwijdte van v0.2.0-alpha.3
 
 De editor registreert zich als `home-dashboard-strategy-editor` en beheert schema v1 zonder handgeschreven YAML of JSON. De Community dashboard-kiezer kan de strategy al aanmaken en toont daarna één read-only configuratiepreview. De vijf productviews volgen in `v0.3.0-alpha.1`.
 
@@ -9,7 +9,7 @@ De editor heeft tien onderdelen:
 1. **Algemeen:** titel, taal, tijdnotatie, startview, thema en informatiedichtheid.
 2. **Vandaag:** weer, forecast, afval en compacte energiecontext.
 3. **Personen:** personselectie, label, privacyveilige toegestane zones, thuis/zone/andere locatie, freshness en batterijen.
-4. **Security:** alarm en exact drie camera's met privacyinstelling, actie, fallback en bevestiging.
+4. **Security:** alarm en een vrij aantal camera's met privacyinstelling, actie, fallback en bevestiging.
 5. **Kamers:** logische sleutel, naam, icon, floor, area, extra devices, capabilities, maximaal twee quick actions en expliciete bronnen voor licht, covers/openingen, media, safety, camera, power, historie en volledige klimaatdetails.
 6. **Energie:** volledige bronselectie voor elektriciteit, zon, batterij, gas, water, apparaten, capaciteitspiek, EV, UPS en fases.
 7. **Acties:** native HA action selector, expliciete targetscope, risicoklasse, bevestiging, hold en verplichte resultaatcontrole.
@@ -27,7 +27,8 @@ Herhaalbare items zoals personen, camera's, kamers en acties zijn inklapbaar. Ee
 
 Geldige wijzigingen versturen het publieke Home Assistant-event `config-changed`. Een ongeldige tussenstand blijft zichtbaar in de editor en wordt niet opgeslagen. Belangrijke regels zijn:
 
-- security is alleen geldig met exact drie camera's;
+- ingeschakelde security is geldig met minstens één camera; er is geen vaste bovengrens;
+- een privacyinstelling wordt gekoppeld aan een actie die eerst onder **Acties** is aangemaakt; die actie gebruikt risicoklasse `privacy`, bevestiging en resultaatcontrole; de knop **Ga naar Acties** opent die sectie rechtstreeks;
 - iedere collectie gebruikt unieke logische keys;
 - een kamer heeft maximaal twee quick actions;
 - privacy-, kostelijke en destructieve acties hebben bevestigingstekst;

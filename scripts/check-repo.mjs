@@ -50,6 +50,8 @@ const required = [
   "docs/releases/results-v0.2.0-alpha.1.md",
   "docs/releases/testing-v0.2.0-alpha.1.md",
   "docs/releases/testing-v0.2.0-alpha.2.md",
+  "docs/releases/results-v0.2.0-alpha.2.md",
+  "docs/releases/testing-v0.2.0-alpha.3.md",
   "docs/configuration/gui-overview.md",
   "docs/guides/backup-upgrade-rollback.md",
   "docs/reference/config-schema.md",

@@ -114,7 +114,7 @@ function renderCameras(config: HomeDashboardConfigV1, expandedItems: Set<string>
     <label>Naam<input data-collection="security.cameras" data-index="${index}" data-field="name" value="${escapeHtml(cameraConfig.name)}"></label>
     <label>Camera${renderSelector("security.cameras", index, "camera_entity", cameraConfig.camera_entity, { entity: { domain: "camera" } })}</label>
     <label>Privacyinstelling${renderSelector("security.cameras", index, "privacy_entity", cameraConfig.privacy_entity, { entity: { domain: ["switch", "input_boolean", "binary_sensor"] } })}</label>
-    <label>Privacyactie<select data-collection="security.cameras" data-index="${index}" data-field="privacy_action_key">${actionOptions.replace(`value="${escapeHtml(cameraConfig.privacy_action_key)}"`, `value="${escapeHtml(cameraConfig.privacy_action_key)}" selected`)}</select></label>
+    <label>Privacyactie <small>Maak deze eerst in het onderdeel Acties en selecteer ze daarna hier.</small><select data-collection="security.cameras" data-index="${index}" data-field="privacy_action_key">${actionOptions.replace(`value="${escapeHtml(cameraConfig.privacy_action_key)}"`, `value="${escapeHtml(cameraConfig.privacy_action_key)}" selected`)}</select></label>
     <label>Fallback<select data-collection="security.cameras" data-index="${index}" data-field="fallback">${["placeholder", "last_image", "hidden"].map((value) => `<option ${cameraConfig.fallback === value ? "selected" : ""}>${value}</option>`).join("")}</select></label>
     <label class="check"><input type="checkbox" data-collection="security.cameras" data-index="${index}" data-field="confirm_privacy_disable" ${cameraConfig.confirm_privacy_disable ? "checked" : ""}> Bevestig privacy uitschakelen</label>
   </div></details>`).join("");
@@ -264,7 +264,7 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
       const person: PersonConfig = { key: `person_${this._config.persons.length + 1}`, entity: "", label: "", show_location: true, zone_entities: [], freshness_minutes: 30, battery_entities: [] };
       this._config.persons.push(person);
       this.expandedItems.add(getEditorItemToken(collection, person, this._config.persons.length - 1));
-    } else if (collection === "security.cameras" && this._config.security.cameras.length < 3) {
+    } else if (collection === "security.cameras") {
       const camera = createCameraConfig(this._config.security.cameras.length);
       this._config.security.cameras.push(camera);
       this.expandedItems.add(getEditorItemToken(collection, camera, this._config.security.cameras.length - 1));
@@ -376,6 +376,13 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
       this.activeSection = EDITOR_SECTION_KEYS[Math.max(0, Math.min(EDITOR_SECTION_KEYS.length - 1, current + direction))] ?? "general";
       this.render();
     }));
+    this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-go-section]").forEach((controlButton) => controlButton.addEventListener("click", () => {
+      const section = controlButton.dataset.goSection;
+      if (!section || !EDITOR_SECTION_KEYS.includes(section)) return;
+      this.activeSection = section;
+      this.focusActiveSection = true;
+      this.render();
+    }));
     this.shadowRoot.querySelectorAll<HTMLInputElement>("[data-specialist]").forEach((element) => element.addEventListener("change", () => {
       const specialist = this._config.specialists[element.dataset.specialist as keyof typeof this._config.specialists];
       const field = element.dataset.field as "enabled" | "minimum_version" | "mapping_keys";
@@ -426,7 +433,7 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
     const active = this.shadowRoot.activeElement as HTMLElement | null;
     const focusData = active ? { ...active.dataset, id: active.id } : undefined;
     const issues = [...validateConfigSchema(this._config), ...validateConfig(this._config)];
-    const summary = `${this._config.rooms.length} kamers · ${this._config.persons.length} personen · ${this._config.security.cameras.length}/3 camera's · ${this._config.actions.length} acties`;
+    const summary = `${this._config.rooms.length} kamers · ${this._config.persons.length} personen · ${this._config.security.cameras.length} camera's · ${this._config.actions.length} acties`;
     if (!EDITOR_SECTION_KEYS.includes(this.activeSection)) this.activeSection = "general";
     const sectionIndex = EDITOR_SECTION_KEYS.indexOf(this.activeSection);
     const sectionForIssue = (path: string) => EDITOR_SECTION_KEYS.find((key) => path === key || path.startsWith(`${key}.`) || path.startsWith(`${key}[`)) ?? "general";
@@ -435,7 +442,7 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
       general: { body: "" },
       today: { body: "" },
       persons: { body: `<div class="items">${renderPersons(this._config, this.expandedItems)}</div>`, extra: `<button class="add" type="button" data-add="persons">Persoon toevoegen</button>` },
-      security: { body: `<div class="items">${renderCameras(this._config, this.expandedItems)}</div>`, extra: `<button class="add" type="button" data-add="security.cameras" ${this._config.security.cameras.length >= 3 ? "disabled" : ""}>Camera toevoegen</button>` },
+      security: { body: `<aside class="guidance"><strong>Privacyacties configureer je onder Acties</strong><p>Maak daar eerst de serviceactie met target, risico, bevestiging en resultaatcontrole. Keer daarna terug om ze per camera te selecteren.</p><button type="button" data-go-section="actions">Ga naar Acties →</button></aside><div class="items">${renderCameras(this._config, this.expandedItems)}</div>`, extra: `<button class="add" type="button" data-add="security.cameras">Camera toevoegen</button>` },
       rooms: { body: `<div class="items">${renderRooms(this._config, this.expandedItems)}</div>`, extra: `<button class="add" type="button" data-add="rooms">Kamer toevoegen</button>` },
       energy: { body: "" },
       actions: { body: `<div class="items">${renderActions(this._config, this.expandedItems)}</div>`, extra: `<button class="add" type="button" data-add="actions">Actie toevoegen</button>` },
@@ -464,7 +471,7 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
       input,select{width:100%;padding:10px;border:1px solid var(--divider-color);border-radius:8px;background:var(--secondary-background-color);color:inherit}input[type=checkbox]{width:22px;height:22px}.check{display:flex;align-items:center;gap:8px}
       .items{display:grid;gap:10px}.item{margin:0;border:1px solid var(--divider-color);border-radius:12px;background:var(--secondary-background-color);overflow:hidden}.item summary{padding:12px;font-weight:700;cursor:pointer}.item-body{display:grid;gap:10px;padding:0 12px 12px}.item-toolbar{display:flex;justify-content:flex-end}.item-actions{display:flex;gap:4px}.item button{color:var(--error-color);background:transparent;border:0;min-width:40px;min-height:40px;cursor:pointer}.item button[disabled]{opacity:.35;cursor:not-allowed}code{display:block;overflow-wrap:anywhere;color:var(--secondary-text-color)}
       fieldset.config{border:0;margin:0;padding:0;min-width:0}.config[disabled]{pointer-events:none;opacity:.72}.order{display:grid;gap:6px}.order>div{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border:1px solid var(--divider-color);border-radius:8px}.order button{min-width:40px;min-height:40px;border:0;border-radius:8px;margin-left:4px}.fatal{color:var(--error-color);font-weight:700}
-      .add{justify-self:start;padding:9px 12px;border:0;border-radius:9px;background:var(--accent);color:var(--text-primary-color,#fff);cursor:pointer}.issues{margin:0;padding-left:20px}.error{color:var(--error-color)}.warning{color:var(--warning-color,#b26a00)}.section-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;border-top:1px solid var(--divider-color)}.section-footer button{min-height:42px;padding:8px 14px;border:1px solid var(--divider-color);border-radius:9px;background:var(--secondary-background-color);color:inherit}.section-footer button[disabled]{opacity:.45}
+      .add{justify-self:start;padding:9px 12px;border:0;border-radius:9px;background:var(--accent);color:var(--text-primary-color,#fff);cursor:pointer}.guidance{display:grid;gap:8px;padding:12px;border:1px solid color-mix(in srgb,var(--accent) 35%,var(--divider-color));border-radius:12px;background:color-mix(in srgb,var(--accent) 8%,var(--card-background-color))}.guidance button{justify-self:start;min-height:42px;padding:8px 12px;border:1px solid var(--accent);border-radius:9px;background:var(--card-background-color);color:var(--accent);font-weight:700;cursor:pointer}.issues{margin:0;padding-left:20px}.error{color:var(--error-color)}.warning{color:var(--warning-color,#b26a00)}.section-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;border-top:1px solid var(--divider-color)}.section-footer button{min-height:42px;padding:8px 14px;border:1px solid var(--divider-color);border-radius:9px;background:var(--secondary-background-color);color:inherit}.section-footer button[disabled]{opacity:.45}
       @media(max-width:800px){.editor-layout{grid-template-columns:1fr}.section-nav{display:flex;overflow-x:auto;position:sticky;top:0;z-index:2;padding:6px;background:var(--primary-background-color);scrollbar-width:thin}.section-tab{flex:0 0 auto;width:auto}.field{grid-template-columns:1fr}.section{padding-inline:10px}header{padding:12px}.toolbar{align-items:stretch}.toolbar>*{flex:1 1 180px}}
     </style>
     <header><div><h2>Home Dashboard configuratie</h2><p>${escapeHtml(summary)}</p></div><div class="toolbar"><button id="export" type="button" ${this.blocked ? "disabled" : ""}>Exporteer privé-back-up</button><label>Importeer JSON<input id="import" type="file" accept="application/json"></label><button id="reset" type="button" ${this.blocked ? "disabled" : ""}>Herstel standaard</button></div><p role="status" aria-live="polite" class="${this.blocked ? "fatal" : ""}">${escapeHtml(this.message)}</p>${this.blocked ? "" : `<p>${escapeHtml(issueSummary)}</p>`}</header>

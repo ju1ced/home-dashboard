@@ -30,14 +30,14 @@ Home gebruikt een vaste, niet-algoritmische volgorde:
 1. **Aandacht** — kritieke items altijd; maximaal drie niet-kritieke waarschuwingen.
 2. **Vandaag** — compacte weersverwachting, volgende relevante afvalinfo en globale energie-/laadstatus.
 3. **Gezin** — individuele person cards met thuis, benoemde zone, onderweg/onbekend en dataversheid; device-batterij alleen bij aandacht.
-4. **Beveiliging & privacy** — een horizontaal scrollbare strook met exact drie eigenaar-gekozen camera's, streamfallback, zichtbare privacystand en alarmstatus.
+4. **Beveiliging & privacy** — een horizontaal scrollbare strook met alle geconfigureerde camera's, streamfallback, zichtbare privacystand en alarmstatus.
 5. **Nu** — maximaal vier actieve uitzonderingen, zoals laden, schoonmaken of irrigeren.
 6. **Acties** — start met `Avondscene` en een expliciet gemapt `Lichten beneden uit`-script.
 7. **Actieve ruimtes** — maximaal vier contextuele kamers plus `Alle kamers`.
 8. **Specialisten** — compacte native ingangen naar Kia, robot, tuin en zwembad.
 9. **Domeinen** — maximaal vijf primaire ingangen; de rest onder Meer.
 
-Normale toestand laat geen leeg waarschuwingsvak achter. Kritieke items verdwijnen nooit achter de limiet. Home toont uitsluitend de drie gekozen camera-previews, geen andere camerainventaris, uitgebreide grafieken, batterij-/updatelijsten, netwerkstatus, inventaris of volledige specialistische kaart. Privacy uitschakelen is een gevoelige actie met expliciete confirmation en backendautorisatie; een defecte stream blokkeert de overige kaarten niet.
+Normale toestand laat geen leeg waarschuwingsvak achter. Kritieke items verdwijnen nooit achter de limiet. Home toont uitsluitend de geconfigureerde camera-previews, geen andere camerainventaris, uitgebreide grafieken, batterij-/updatelijsten, netwerkstatus, inventaris of volledige specialistische kaart. Privacy uitschakelen is een gevoelige actie met expliciete confirmation en backendautorisatie; een defecte stream blokkeert de overige kaarten niet.
 
 ![Home desktop](../renders/home-desktop.png)
 

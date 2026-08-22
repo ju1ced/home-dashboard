@@ -1,5 +1,7 @@
 # Testchecklist v0.2.0-alpha.1 — schema en GUI-configuratie
 
+> Historisch releasecontract: de vaste eis van drie camera's is vanaf `v0.2.0-alpha.3` vervangen door minimaal één camera wanneer Security actief is.
+
 Deze prerelease test het configuratieschema, de editor en de minimale Community dashboard-registratie. De vijf productviews volgen in `v0.3.0-alpha.1`; maak daarom uitsluitend een expliciet tijdelijk dashboard aan en overschrijf nooit het default dashboard.
 
 ## Voorwaarden

@@ -27,13 +27,13 @@ Home bevat in deze volgorde:
 1. kritieke en relevante waarschuwingen;
 2. `Vandaag` met compacte weersverwachting, tijdige afvalinfo en actuele globale energie-/laadcontext;
 3. privacyveilige person cards, met alleen relevante gekoppelde device-batterijwaarschuwingen;
-4. een horizontaal scrollbare beveiligingsstrook met live-preview/fallback voor drie eigenaar-gekozen camera's, zichtbare privacystand en alarmstatus;
+4. een horizontaal scrollbare beveiligingsstrook met live-preview/fallback voor alle eigenaar-gekozen camera's, zichtbare privacystand en alarmstatus;
 5. actieve uitzonderingen en maximaal enkele echte quick actions;
 6. kamers met actieve/relevante toestand, zonder volledige kamerlijst te dupliceren;
 7. compacte Kia-, robot-, tuin- en zwembadingangen;
 8. secundaire domeinnavigatie.
 
-Home bevat geen uitgebreide grafieken, inventarislijsten, alle batterijen, alle updates, netwerkdetails of volledige specialistische kaarten. Camera's buiten de drie expliciet gekozen previews blijven op beveiligings- of kamerdetail.
+Home bevat geen uitgebreide grafieken, inventarislijsten, alle batterijen, alle updates, netwerkdetails of volledige specialistische kaarten. Camera's die niet voor de Home-strook zijn geconfigureerd blijven op beveiligings- of kamerdetail.
 
 ## Kamermodel
 
@@ -101,7 +101,7 @@ Home bevat geen uitgebreide grafieken, inventarislijsten, alle batterijen, alle 
 - Minimale ondersteunde versie is Home Assistant 2026.8.2, de actuele live versie op de peildatum.
 - Energie is een zelfstandige, volledige hoofdview en geen secundaire ingang onder Domeinen.
 - `Open details` voor Kia, robot en tuin opent de volledige bestaande specialistische card. Voor zwembad opent dezelfde route later de nieuwe volledige zwembadcard.
-- De drie bestaande camera-previews en hun afzonderlijke privacystanden blijven een cruciaal Home-onderdeel; privacy uitschakelen vereist confirmation en autorisatie in de backend.
+- Alle geconfigureerde camera-previews en hun afzonderlijke privacystanden blijven een cruciaal Home-onderdeel; privacy uitschakelen vereist confirmation en autorisatie in de backend.
 - De twee initiële Home-acties zijn `Avondscene` en het expliciet gemapte script `Lichten beneden uit`; zonder goedgekeurde mapping wordt een actie verborgen.
 - Diagnostiek en beheer gaan naar een afzonderlijk `require_admin`-dashboard.
 

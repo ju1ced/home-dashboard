@@ -74,9 +74,9 @@ Critical path: foundation → capability/mappingcontract → native HA-shell/vie
 - **Doel:** operationeel overzicht binnen harde contentbudgetten.
 - **Eigenaar:** home-agent; exclusief op Home-view, alert/statuscontracten en Home-fixtures.
 - **Inputs:** eigenaarselectie quick actions, PR 2–3.
-- **Scope:** Aandacht; Vandaag met weer/afval/globale energiecontext; privacyveilige person cards; scrollbare strook met drie gekozen camera's, privacystand en alarmstatus; Nu; `Avondscene` en gemapt `Lichten beneden uit`; actieve ruimtes; vier vaste native summaries en domeinlinks; normal/warning/critical/unavailable fixtures.
+- **Scope:** Aandacht; Vandaag met weer/afval/globale energiecontext; privacyveilige person cards; scrollbare strook met alle gekozen camera's, privacystand en alarmstatus; Nu; `Avondscene` en gemapt `Lichten beneden uit`; actieve ruimtes; vier vaste native summaries en domeinlinks; normal/warning/critical/unavailable fixtures.
 - **Tests:** prioriteit, tijdige Vandaag-content, person states thuis/zone/onderweg/onbekend, relevante device-batterijwarning, geen precieze locatielekken, camerastreamfallback per kaart, privacystatus, alarmstatus, confirmation/autorisatie bij privacy uit, action missing-mapping, niet-kritieke maxima, unknown-filtering, unavailable allowlist en empty states.
-- **Acceptatie:** eerste mobiele viewport toont aandacht/context; Vandaag, gezin en de drie camera's zijn vlot bereikbaar; geen uitgebreide grafieken/diagnoselijsten; exact de twee goedgekeurde algemene actions verschijnen alleen met geldige mapping.
+- **Acceptatie:** eerste mobiele viewport toont aandacht/context; Vandaag, gezin en de geconfigureerde camera's zijn vlot bereikbaar; geen uitgebreide grafieken/diagnoselijsten; exact de twee goedgekeurde algemene actions verschijnen alleen met geldige mapping.
 - **Rollback:** Home vervangen door minimale navigatieview in het testdashboard.
 
 ### PR 5 — Volledig Kamers-overzicht, kamermodel en kamerpagina's
@@ -233,7 +233,7 @@ Niet parallel schrijven:
 - Alle bevestigde kamers en domeinen hebben een consistente, conditionele pagina.
 - Kia, robot en tuin hebben summary, hun volledige bestaande card, fallback en compatibiliteitsbewijs; robotgate is groen.
 - Zwembad heeft een zelfstandige volledige card, specialistview, veilige acties, fallback en HACS-/versiecontract.
-- Home bevat Vandaag, privacyveilige person cards, alarmstatus en de drie gekozen camerakaarten met afzonderlijke privacystand; Kamers bevat alle bevestigde kamers met passende quick actions; zware kamerdetails behouden HVAC, comfort/safety, apparaten/power en historie; Energie slaagt op het standaard-HA-plus-lokaal paritymanifest.
+- Home bevat Vandaag, privacyveilige person cards, alarmstatus en alle gekozen camerakaarten met afzonderlijke privacystand; Kamers bevat alle bevestigde kamers met passende quick actions; zware kamerdetails behouden HVAC, comfort/safety, apparaten/power en historie; Energie slaagt op het standaard-HA-plus-lokaal paritymanifest.
 - Light/dark, mobiel/tablet/desktop, keyboard/screenreader, contrast en touch targets zijn gevalideerd.
 - Performance is gemeten met vaste methode en binnen goedgekeurde budgets.
 - Tracked bron, logs, fixtures en renders zijn privacyveilig.

@@ -9,7 +9,7 @@ De canonieke machineleesbare bron is [`schemas/config.schema.json`](../../schema
 | `general` | globale presentatie en stabiele startview |
 | `today` | weer, afval en energiecontext |
 | `persons` | lokale person- en batterijreferenties |
-| `security` | alarm en maximaal drie camera's/privacycontrols |
+| `security` | alarm en een vrij aantal camera's/privacycontrols; bij ingeschakelde Security minimaal één camera |
 | `rooms` | area/floor mapping, capabilities en quick actions |
 | `energy` | standaard Energy-bronnen plus lokale KPI's |
 | `actions` | expliciete actionallowlist en veiligheidsbeleid |

@@ -75,7 +75,7 @@ domain-pool
 1. Kritiek en relevante warnings.
 2. Vandaag: weer, afval en compacte energie-/laadcontext.
 3. Woningcontext en privacyveilige person cards: thuis, benoemde zone, onderweg of onbekend.
-4. Horizontaal scrollbare beveiligingsstrook: drie gekozen camera's, streamfallback, expliciete privacystand en alarmstatus.
+4. Horizontaal scrollbare beveiligingsstrook: alle gekozen camera's, streamfallback, expliciete privacystand en alarmstatus.
 5. Actieve uitzonderingen.
 6. Twee initiële quick actions: `Avondscene` en expliciet gemapt `Lichten beneden uit`.
 7. Maximaal vier actieve ruimtes.
@@ -163,7 +163,7 @@ De live inventaris bevat 26 geregistreerde areas. Zes lijken voorraad- of beheer
 | media/multiroom | alleen actieve relevante kamer | kamer | volledige spelerinventaris |
 | alarm en lock | kritieke/waarschuwingsstatus | `domain-security` | onduidelijke one-tapbediening |
 | openingen, beweging, rook en water | allowlisted warning | kamer + `domain-security` | alle binary sensors |
-| camera's | drie eigenaar-gekozen previews met privacystatus; fallback per stream | `domain-security` + passende kamer | overige streams, historie en camerabeheer |
+| camera's | alle eigenaar-gekozen previews met privacystatus; fallback per stream | `domain-security` + passende kamer | historie en camerabeheer |
 | aanwezigheid/person cards | individuele kaart met fictieve/gelokaliseerde naam, thuis/zone/onderweg/onbekend en dataversheid | `domain-presence` | adres, coördinaten en trackerhistorie |
 | weer | compacte context of echte warning | `domain-weather-waste` | volledige sensorlijst |
 | afval | tijdige uitzondering | `domain-weather-waste` | permanente kalenderkaart |

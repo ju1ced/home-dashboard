@@ -39,7 +39,7 @@
 ## D-007 — Home heeft harde inhoudsbudgetten
 
 - **Status:** besloten
-- **Besluit:** maximaal drie niet-kritieke alerts, vier actieve uitzonderingen, twee initiële algemene quick actions, vier actieve ruimtes, vier specialistische summaries en vijf domeinlinks. De door de eigenaar vereiste person cards en drie camerakaarten hebben afzonderlijke vaste budgetten.
+- **Besluit:** maximaal drie niet-kritieke alerts, vier actieve uitzonderingen, twee initiële algemene quick actions, vier actieve ruimtes, vier specialistische summaries en vijf domeinlinks. De door de eigenaar vereiste person cards en camerastrook hebben afzonderlijke vaste budgetten.
 - **Reden:** voorkomt terugval naar een inventarisdashboard.
 
 ## D-008 — Diagnostiek bij voorkeur apart en admin-only
@@ -111,7 +111,7 @@
 ## D-019 — Beveiligings- en camerastrook op Home
 
 - **Status:** besloten
-- **Besluit:** Home behoudt een horizontaal scrollbare strook met drie eigenaar-gekozen camerabeelden/fallbacks en een afzonderlijk zichtbare privacystand per camera. Privacy uitschakelen vereist expliciete confirmation en backendautorisatie.
+- **Besluit:** Home behoudt een horizontaal scrollbare strook met alle eigenaar-gekozen camerabeelden/fallbacks en een afzonderlijk zichtbare privacystand per camera. Ingeschakelde Security vereist minstens één camera, zonder vaste bovengrens. Privacy uitschakelen vereist expliciete confirmation en backendautorisatie.
 - **Reden:** snel cameratoezicht en privacybediening zijn cruciale dagelijkse functies; een algemene beveiligingslink is onvoldoende.
 
 ## D-020 — Informatiedekking huidige dashboard blijft behouden
@@ -142,4 +142,10 @@
 
 - **Status:** besloten en geïmplementeerd in delivery-PR 2
 - **Besluit:** defaults, uitgevoerd JSON Schema, migratie, runtimevalidatie en editorcoverage gebruiken dezelfde tien configuratieonderdelen. Ongeldige tussenstanden blijven lokaal in de editor en sturen geen `config-changed`-event naar Home Assistant; toekomstige schema's blokkeren de editor zonder downgrade.
-- **Reden:** dit voorkomt stille configuratiedrift, maakt upgrades testbaar en houdt riskante acties, drie camera's en maximaal twee kameracties expliciet valideerbaar.
+- **Reden:** dit voorkomt stille configuratiedrift, maakt upgrades testbaar en houdt riskante acties, de configureerbare camerastrook en maximaal twee kameracties expliciet valideerbaar.
+
+## D-025 — Privacyacties hebben een expliciete configuratieroute
+
+- **Status:** besloten en geïmplementeerd in `v0.2.0-alpha.3`
+- **Besluit:** een camera met privacyinstelling verwijst naar een vooraf onder **Acties** aangemaakte actie. Security legt dat model uit en biedt een directe, toetsenbordvriendelijke route naar die sectie.
+- **Reden:** de centrale actionallowlist bewaart bevestiging, targetscope en verificatie op één plaats, terwijl de editor de relatie voortaan zichtbaar maakt.

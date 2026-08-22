@@ -49,14 +49,22 @@
     },
     "security": {
       "type": "object", "additionalProperties": false,
+      "anyOf": [
+        { "type": "object", "required": ["enabled"], "properties": { "enabled": { "const": false } } },
+        { "type": "object", "required": ["enabled", "cameras"], "properties": { "enabled": { "const": true }, "cameras": { "type": "array", "minItems": 1 } } }
+      ],
       "required": ["enabled", "alarm_entity", "cameras"],
       "properties": {
         "enabled": { "type": "boolean", "x-editor": "security" },
         "alarm_entity": { "$ref": "#/$defs/entityReference", "x-editor": "security" },
         "cameras": {
-          "type": "array", "maxItems": 3, "x-editor": "security",
+          "type": "array", "x-editor": "security",
           "items": {
             "type": "object", "additionalProperties": false,
+            "anyOf": [
+              { "type": "object", "required": ["privacy_entity"], "properties": { "privacy_entity": { "const": "" } } },
+              { "type": "object", "required": ["privacy_entity", "privacy_action_key", "confirm_privacy_disable"], "properties": { "privacy_entity": { "type": "string", "minLength": 1 }, "privacy_action_key": { "type": "string", "minLength": 1 }, "confirm_privacy_disable": { "const": true } } }
+            ],
             "required": ["key", "name", "camera_entity", "privacy_entity", "privacy_action_key", "fallback", "confirm_privacy_disable"],
             "properties": {
               "key": { "$ref": "#/$defs/logicalKey", "x-editor": "security" },
@@ -135,6 +143,10 @@
       "type": "array", "x-editor": "actions",
       "items": {
         "type": "object", "additionalProperties": false,
+        "anyOf": [
+          { "type": "object", "required": ["risk"], "properties": { "risk": { "const": "safe" } } },
+          { "type": "object", "required": ["risk", "confirmation_text"], "properties": { "risk": { "enum": ["privacy", "costly", "destructive"] }, "confirmation_text": { "type": "string", "minLength": 1 } } }
+        ],
         "required": ["key", "label", "sequence", "risk", "confirmation_text", "hold_required", "verification_entity"],
         "properties": {
           "key": { "$ref": "#/$defs/logicalKey", "x-editor": "actions" },

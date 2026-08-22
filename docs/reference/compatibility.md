@@ -1,6 +1,6 @@
 # Compatibility
 
-| Component | Ondersteund in v0.2.0-alpha.2 | Opmerking |
+| Component | Ondersteund in v0.2.0-alpha.3 | Opmerking |
 |---|---:|---|
 | Home Assistant Core/frontend | 2026.8.2 of nieuwer | 2026.8.2 is de minimale en huidige ontwikkelbaseline |
 | HACS | actuele ondersteunde release | custom repository, categorie Dashboard |

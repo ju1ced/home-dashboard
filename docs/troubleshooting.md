@@ -11,7 +11,8 @@
 
 De editor bewaart een ongeldige tussenstand lokaal en verstuurt dan geen `config-changed`. Los alle rode fouten bovenaan op. Veelvoorkomend:
 
-- security is ingeschakeld zonder exact drie camera's;
+- security is ingeschakeld zonder camera;
+- een camera heeft een privacyinstelling, maar geen privacyactie die onder **Acties** is aangemaakt en daarna bij de camera is geselecteerd;
 - een logical key ontbreekt, is ongeldig of komt dubbel voor;
 - een room verwijst naar een onbekende quick action;
 - een privacy-, kostelijke of destructieve actie mist bevestigingstekst;

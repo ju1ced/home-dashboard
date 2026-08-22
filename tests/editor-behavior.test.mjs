@@ -26,6 +26,7 @@ class FakeShadowRoot {
   constructor() {
     this.activeElement = null;
     this.navigation = [];
+    this.sectionLinks = [];
     this.items = [];
     this._innerHTML = "";
   }
@@ -40,6 +41,9 @@ class FakeShadowRoot {
         dataset: { sectionNav: match[2] }
       });
     });
+    this.sectionLinks = Array.from(value.matchAll(/<button\b([^>]*)data-go-section="([^"]+)"([^>]*)>/g), (match) => new FakeElement(this, {
+      dataset: { goSection: match[2] }
+    }));
     this.items = Array.from(value.matchAll(/<details\b([^>]*)data-item-token="([^"]+)"([^>]*)>/g), (match) => {
       const attributes = `${match[1]}${match[3]}`;
       return new FakeElement(this, {
@@ -55,6 +59,7 @@ class FakeShadowRoot {
 
   querySelectorAll(selector) {
     if (selector === "[data-section-nav]" || selector === "input,select,button,ha-selector") return this.navigation;
+    if (selector === "[data-go-section]") return this.sectionLinks;
     if (selector === "details[data-item-token]") return this.items;
     return [];
   }
@@ -147,4 +152,21 @@ test("tab-keypress verplaatst selectie en focus na de microtask", async () => {
   findTab(editor, "diagnostics").emit("keydown", { key: "Home" });
   await Promise.resolve();
   assert.equal(editor.shadowRoot.activeElement.dataset.sectionNav, "general");
+});
+
+test("Security laat zes camera's toe en verwijst rechtstreeks naar Acties", async () => {
+  const editor = new HomeDashboardStrategyEditor();
+  editor.connectedCallback();
+  editor.setConfig(createDefaultConfig());
+
+  for (let index = 0; index < 6; index += 1) editor.addItem("security.cameras");
+  assert.equal(editor._config.security.cameras.length, 6);
+
+  findTab(editor, "security").emit("click");
+  const link = editor.shadowRoot.sectionLinks.find((element) => element.dataset.goSection === "actions");
+  assert.ok(link);
+  link.emit("click");
+  await Promise.resolve();
+  assert.equal(findTab(editor, "actions").ariaSelected, "true");
+  assert.equal(editor.shadowRoot.activeElement.dataset.sectionNav, "actions");
 });

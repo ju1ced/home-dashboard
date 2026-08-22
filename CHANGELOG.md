@@ -6,6 +6,20 @@ Alle betekenisvolle wijzigingen worden hier bijgehouden. Het project gebruikt Se
 
 Nog geen wijzigingen.
 
+## 0.2.0-alpha.3 — 2026-08-22
+
+### Changed
+
+- Laat Security met ieder geconfigureerd aantal camera's werken; bij ingeschakelde Security is alleen minstens één camera vereist.
+- Verwijdert de eerdere vaste limiet van drie camera's uit schema, runtimevalidatie en grafische editor.
+- Legt bij privacybediening expliciet uit dat de gekoppelde privacyactie eerst onder **Acties** wordt aangemaakt.
+- Voegt in Security een directe knop toe die naar de sectie **Acties** navigeert en die sectie focust.
+
+### Validation
+
+- Legt vast dat de compacte configuratiemethode en kamerconfiguratie in `v0.2.0-alpha.2` praktisch goedgekeurd zijn.
+- Test configuraties met één, twee, drie en zes camera's en de navigatie van Security naar Acties.
+
 ## 0.2.0-alpha.2 — 2026-08-22
 
 ### Changed
@@ -25,7 +39,7 @@ Nog geen wijzigingen.
 ### Added
 
 - Versioned configuratieschema v1 met defaults, validatie, migratie en privacyveilig compilermanifest.
-- Volledige grafische strategy-editor voor algemeen, Vandaag, personen, drie camera's/privacy, kamers, Energie, acties, specialisten, layout en diagnostiek.
+- Volledige grafische strategy-editor voor algemeen, Vandaag, personen, camera's/privacy, kamers, Energie, acties, specialisten, layout en diagnostiek.
 - Minimale Community dashboard-registratie met verplichte editor en read-only configuratiepreview.
 - Native Home Assistant-selectors voor entities, areas, floors, icons en actions.
 - Lokale JSON-import/export met privacywaarschuwing en geblokkeerde ongeldige tussenstanden.
