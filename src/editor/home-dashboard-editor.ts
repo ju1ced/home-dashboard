@@ -1,7 +1,7 @@
 import { createCameraConfig, createDefaultConfig } from "../config/defaults";
 import { migrateConfig } from "../config/migrate";
 import { parseImportedConfig, serializeConfig } from "../config/compiler";
-import { ROOM_CAPABILITIES, type ActionConfig, type HomeDashboardConfigV1, type PersonConfig, type RoomConfig } from "../config/types";
+import { ROOM_CAPABILITIES, type ActionConfig, type HomeDashboardConfigV1, type PersonConfig, type RoomConfig, type ValidationIssue } from "../config/types";
 import { validateConfig } from "../config/validate";
 import { validateConfigSchema } from "../config/schema-validator";
 import { FIELD_DEFINITIONS, type FieldDefinition } from "./fields";
@@ -37,6 +37,13 @@ export function getEditorSectionForKey(current: string, key: string): string {
   if (key === "End") return EDITOR_SECTION_KEYS.at(-1) ?? "general";
   const direction = ["ArrowLeft", "ArrowUp"].includes(key) ? -1 : ["ArrowRight", "ArrowDown"].includes(key) ? 1 : 0;
   return EDITOR_SECTION_KEYS[(currentIndex + direction + EDITOR_SECTION_KEYS.length) % EDITOR_SECTION_KEYS.length] ?? "general";
+}
+
+export function mergeEditorIssues(schemaIssues: ValidationIssue[], semanticIssues: ValidationIssue[]): ValidationIssue[] {
+  const usefulSchemaIssues = schemaIssues.filter((schemaIssue) => schemaIssue.code !== "schema_any_of" || !semanticIssues.some((semanticIssue) =>
+    semanticIssue.path === schemaIssue.path || semanticIssue.path.startsWith(`${schemaIssue.path}.`) || semanticIssue.path.startsWith(`${schemaIssue.path}[`)
+  ));
+  return [...usefulSchemaIssues, ...semanticIssues];
 }
 
 function clone<T>(value: T): T {
@@ -106,7 +113,7 @@ function renderPersons(config: HomeDashboardConfigV1, expandedItems: Set<string>
 }
 
 function renderCameras(config: HomeDashboardConfigV1, expandedItems: Set<string>): string {
-  const actionOptions = [`<option value="">Geen</option>`, ...config.actions.map((action) => `<option value="${escapeHtml(action.key)}">${escapeHtml(action.label || action.key)}</option>`)].join("");
+  const actionOptions = [`<option value="">Geen</option>`, ...config.actions.map((action) => `<option value="${escapeHtml(action.key)}">${escapeHtml(action.label || action.key)} · risico: ${escapeHtml(action.risk)}</option>`)].join("");
   return config.security.cameras.map((cameraConfig, index) => `<details class="item" data-item-token="${escapeHtml(getEditorItemToken("security.cameras", cameraConfig, index))}" ${expandedItems.has(getEditorItemToken("security.cameras", cameraConfig, index)) ? "open" : ""}>
     <summary>${escapeHtml(cameraConfig.name || cameraConfig.key || `Camera ${index + 1}`)}</summary><div class="item-body">
     <div class="item-toolbar"><button type="button" aria-label="Verwijder camera ${escapeHtml(cameraConfig.name || cameraConfig.key || index + 1)}" data-remove="security.cameras" data-index="${index}">Verwijder</button></div>
@@ -114,9 +121,9 @@ function renderCameras(config: HomeDashboardConfigV1, expandedItems: Set<string>
     <label>Naam<input data-collection="security.cameras" data-index="${index}" data-field="name" value="${escapeHtml(cameraConfig.name)}"></label>
     <label>Camera${renderSelector("security.cameras", index, "camera_entity", cameraConfig.camera_entity, { entity: { domain: "camera" } })}</label>
     <label>Privacyinstelling${renderSelector("security.cameras", index, "privacy_entity", cameraConfig.privacy_entity, { entity: { domain: ["switch", "input_boolean", "binary_sensor"] } })}</label>
-    <label>Privacyactie <small>Maak deze eerst in het onderdeel Acties en selecteer ze daarna hier.</small><select data-collection="security.cameras" data-index="${index}" data-field="privacy_action_key">${actionOptions.replace(`value="${escapeHtml(cameraConfig.privacy_action_key)}"`, `value="${escapeHtml(cameraConfig.privacy_action_key)}" selected`)}</select></label>
+    <label>Privacyactie <small>Optioneel. Laat op Geen voor alleen status; maak een bedieningsactie eerst onder Acties.</small><select data-collection="security.cameras" data-index="${index}" data-field="privacy_action_key">${actionOptions.replace(`value="${escapeHtml(cameraConfig.privacy_action_key)}"`, `value="${escapeHtml(cameraConfig.privacy_action_key)}" selected`)}</select></label>
     <label>Fallback<select data-collection="security.cameras" data-index="${index}" data-field="fallback">${["placeholder", "last_image", "hidden"].map((value) => `<option ${cameraConfig.fallback === value ? "selected" : ""}>${value}</option>`).join("")}</select></label>
-    <label class="check"><input type="checkbox" data-collection="security.cameras" data-index="${index}" data-field="confirm_privacy_disable" ${cameraConfig.confirm_privacy_disable ? "checked" : ""}> Bevestig privacy uitschakelen</label>
+    <label class="check"><input type="checkbox" data-collection="security.cameras" data-index="${index}" data-field="confirm_privacy_disable" ${cameraConfig.confirm_privacy_disable ? "checked" : ""}> Extra bevestiging bij privacy uitschakelen <small>De privacyactie zelf vereist altijd risicoklasse privacy en bevestigingstekst.</small></label>
   </div></details>`).join("");
 }
 
@@ -432,7 +439,7 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
     if (!this.shadowRoot) return;
     const active = this.shadowRoot.activeElement as HTMLElement | null;
     const focusData = active ? { ...active.dataset, id: active.id } : undefined;
-    const issues = [...validateConfigSchema(this._config), ...validateConfig(this._config)];
+    const issues = mergeEditorIssues(validateConfigSchema(this._config), validateConfig(this._config));
     const summary = `${this._config.rooms.length} kamers · ${this._config.persons.length} personen · ${this._config.security.cameras.length} camera's · ${this._config.actions.length} acties`;
     if (!EDITOR_SECTION_KEYS.includes(this.activeSection)) this.activeSection = "general";
     const sectionIndex = EDITOR_SECTION_KEYS.indexOf(this.activeSection);
@@ -442,7 +449,7 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
       general: { body: "" },
       today: { body: "" },
       persons: { body: `<div class="items">${renderPersons(this._config, this.expandedItems)}</div>`, extra: `<button class="add" type="button" data-add="persons">Persoon toevoegen</button>` },
-      security: { body: `<aside class="guidance"><strong>Privacyacties configureer je onder Acties</strong><p>Maak daar eerst de serviceactie met target, risico, bevestiging en resultaatcontrole. Keer daarna terug om ze per camera te selecteren.</p><button type="button" data-go-section="actions">Ga naar Acties →</button></aside><div class="items">${renderCameras(this._config, this.expandedItems)}</div>`, extra: `<button class="add" type="button" data-add="security.cameras">Camera toevoegen</button>` },
+      security: { body: `<aside class="guidance"><strong>Privacybediening is optioneel</strong><p>Laat Privacyactie op Geen om alleen de status te tonen. Wil je bedienen, maak dan onder Acties een privacyactie met target, bevestiging en resultaatcontrole en selecteer ze daarna bij de camera.</p><button type="button" data-go-section="actions">Ga naar Acties →</button></aside><div class="items">${renderCameras(this._config, this.expandedItems)}</div>`, extra: `<button class="add" type="button" data-add="security.cameras">Camera toevoegen</button>` },
       rooms: { body: `<div class="items">${renderRooms(this._config, this.expandedItems)}</div>`, extra: `<button class="add" type="button" data-add="rooms">Kamer toevoegen</button>` },
       energy: { body: "" },
       actions: { body: `<div class="items">${renderActions(this._config, this.expandedItems)}</div>`, extra: `<button class="add" type="button" data-add="actions">Actie toevoegen</button>` },

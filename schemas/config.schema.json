@@ -61,10 +61,6 @@
           "type": "array", "x-editor": "security",
           "items": {
             "type": "object", "additionalProperties": false,
-            "anyOf": [
-              { "type": "object", "required": ["privacy_entity"], "properties": { "privacy_entity": { "const": "" } } },
-              { "type": "object", "required": ["privacy_entity", "privacy_action_key", "confirm_privacy_disable"], "properties": { "privacy_entity": { "type": "string", "minLength": 1 }, "privacy_action_key": { "type": "string", "minLength": 1 }, "confirm_privacy_disable": { "const": true } } }
-            ],
             "required": ["key", "name", "camera_entity", "privacy_entity", "privacy_action_key", "fallback", "confirm_privacy_disable"],
             "properties": {
               "key": { "$ref": "#/$defs/logicalKey", "x-editor": "security" },

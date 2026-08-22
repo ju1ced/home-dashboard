@@ -6,6 +6,16 @@ Alle betekenisvolle wijzigingen worden hier bijgehouden. Het project gebruikt Se
 
 Nog geen wijzigingen.
 
+## 0.3.0-alpha.2 — 2026-08-22
+
+### Fixed
+
+- Maakt een gekozen privacyinstelling met **Privacyactie = Geen** geldig voor status-only gebruik.
+- Houdt de extra bevestigingskeuze per camera optioneel en gebruikt ze niet langer als opslagblokkade.
+- Controleert risicoklasse, targetscope, bevestiging en resultaatcontrole alleen wanneer een privacyactie daadwerkelijk is gekoppeld.
+- Vervangt generieke configuratievariantmeldingen door de precieze fout bij de betrokken camera of actie.
+- Toont de risicoklasse in de privacyactiekeuze en verduidelijkt in Security dat bediening optioneel is.
+
 ## 0.3.0-alpha.1 — 2026-08-22
 
 ### Added
