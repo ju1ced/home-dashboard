@@ -10,6 +10,7 @@ import {
   createDefaultConfig,
   getEditorItemToken,
   getEditorSectionForKey,
+  mergeEditorIssues,
   migrateConfig,
   parseImportedConfig,
   serializeConfig,
@@ -98,28 +99,37 @@ test("Security accepteert ieder positief aantal camera's", () => {
   assert.ok(validateConfigSchema(enabled).some((issue) => issue.path === "security" && issue.code === "schema_any_of"));
 });
 
-test("privacybediening vereist een privacyactie en confirmation", () => {
+test("privacystatus mag zonder actie; gekoppelde bediening vereist privacyrisico en confirmation", () => {
   const config = createDefaultConfig();
   config.security.enabled = true;
   config.security.cameras.push({
     key: "camera_primary", name: "Camera", camera_entity: "camera_primary", privacy_entity: "privacy_primary",
-    privacy_action_key: "privacy_toggle", fallback: "placeholder", confirm_privacy_disable: false
+    privacy_action_key: "", fallback: "placeholder", confirm_privacy_disable: false
   });
+  assert.deepEqual(validateConfigSchema(config), []);
+  assert.equal(validateConfig(config).filter((issue) => issue.severity === "error").length, 0);
+
   config.actions.push({
     key: "privacy_toggle", label: "Privacy", sequence: [{ action: "switch.toggle", target: { entity_id: "privacy_primary" } }],
     risk: "safe", confirmation_text: "", hold_required: false, verification_entity: "privacy_primary"
   });
 
+  config.security.cameras[0].privacy_action_key = "privacy_toggle";
   const codes = validateConfig(config).map((issue) => issue.code);
-  assert.ok(codes.includes("privacy_confirmation_required"));
   assert.ok(codes.includes("privacy_action_risk"));
-  assert.ok(validateConfigSchema(config).some((issue) => issue.code === "schema_any_of"));
+  assert.deepEqual(validateConfigSchema(config), []);
 
-  config.security.cameras[0].confirm_privacy_disable = true;
   config.actions[0].risk = "privacy";
   config.actions[0].confirmation_text = "Privacy aanpassen?";
   assert.deepEqual(validateConfigSchema(config), []);
   assert.equal(validateConfig(config).filter((issue) => issue.severity === "error").length, 0);
+});
+
+test("editor verbergt generieke anyOf-ruis wanneer een precieze fout bestaat", () => {
+  const schemaIssues = [{ path: "security.cameras[0]", code: "schema_any_of", message: "Generiek", severity: "error" }];
+  const semanticIssues = [{ path: "security.cameras[0].privacy_action_key", code: "required", message: "Kies een privacyactie", severity: "error" }];
+  assert.deepEqual(mergeEditorIssues(schemaIssues, semanticIssues), semanticIssues);
+  assert.deepEqual(mergeEditorIssues(schemaIssues, []), schemaIssues);
 });
 
 test("export en import hebben een verliesvrije schema-v1-roundtrip", async () => {
@@ -202,7 +212,7 @@ test("strategy maakt vijf echte views en behoudt veilige foutpreviews", async ()
 
 test("editorbundle bevat ordering, focus- en live-feedbackcontracten", async () => {
   const bundle = await readFile(new URL("../dist/home-dashboard.js", import.meta.url), "utf8");
-  for (const marker of ["data-room-move", "data-view-move", "data-section-nav", "data-section-step", "data-go-section", "Maak onder Acties een privacyactie", "role=\"tabpanel\"", "queueMicrotask", "aria-live", "config-changed", "home-dashboard-strategy-editor"]) assert.match(bundle, new RegExp(marker));
+  for (const marker of ["data-room-move", "data-view-move", "data-section-nav", "data-section-step", "data-go-section", "Privacybediening is optioneel", "Laat Privacyactie op Geen", "risico:", "role=\"tabpanel\"", "queueMicrotask", "aria-live", "config-changed", "home-dashboard-strategy-editor"]) assert.match(bundle, new RegExp(marker));
 });
 
 test("editornavigatie en open itemtokens overleven HA-configroundtrips", () => {

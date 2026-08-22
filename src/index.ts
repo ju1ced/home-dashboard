@@ -6,11 +6,11 @@ import { migrateConfig } from "./config/migrate";
 import { validateConfig } from "./config/validate";
 import { validateConfigSchema } from "./config/schema-validator";
 import { EDITOR_COVERAGE } from "./editor/fields";
-import { EDITOR_SECTION_KEYS, getEditorItemToken, getEditorSectionForKey, HomeDashboardStrategyEditor, registerHomeDashboardEditor } from "./editor/home-dashboard-editor";
+import { EDITOR_SECTION_KEYS, getEditorItemToken, getEditorSectionForKey, HomeDashboardStrategyEditor, mergeEditorIssues, registerHomeDashboardEditor } from "./editor/home-dashboard-editor";
 import { HomeDashboardStrategy, registerHomeDashboardStrategy } from "./strategy/home-dashboard-strategy";
 import { buildView, HomeDashboardViewStrategy, registerHomeDashboardViewStrategy } from "./strategy/home-dashboard-view-strategy";
 
-export { buildView, compileConfig, createDefaultConfig, EDITOR_COVERAGE, EDITOR_SECTION_KEYS, getEditorItemToken, getEditorSectionForKey, HomeDashboardStrategy, HomeDashboardStrategyEditor, HomeDashboardViewStrategy, migrateConfig, parseImportedConfig, serializeConfig, validateConfig, validateConfigSchema };
+export { buildView, compileConfig, createDefaultConfig, EDITOR_COVERAGE, EDITOR_SECTION_KEYS, getEditorItemToken, getEditorSectionForKey, HomeDashboardStrategy, HomeDashboardStrategyEditor, HomeDashboardViewStrategy, mergeEditorIssues, migrateConfig, parseImportedConfig, serializeConfig, validateConfig, validateConfigSchema };
 export type { HomeDashboardConfigV1, ValidationIssue } from "./config/types";
 
 export interface HomeDashboardBuildInfo {
