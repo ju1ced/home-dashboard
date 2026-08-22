@@ -1,8 +1,8 @@
 # Grafische configuratie
 
-## Reikwijdte van v0.3.0-alpha.2
+## Reikwijdte van v0.3.0-alpha.3
 
-De editor registreert zich als `home-dashboard-strategy-editor` en beheert schema v1 zonder handgeschreven YAML of JSON. De Community dashboard-kiezer maakt vijf echte native Sections-views: Home, Kamers, Energie, Domeinen en Meer. `v0.3.0-alpha.2` toont geselecteerde states en camerabeelden read-only; bediening en specialistische detailcards volgen via afzonderlijke releases.
+De editor registreert zich als `home-dashboard-strategy-editor` en beheert schema v1 zonder handgeschreven YAML of JSON. De Community dashboard-kiezer maakt vijf echte native Sections-views: Home, Kamers, Energie, Domeinen en Meer. `v0.3.0-alpha.3` toont geselecteerde states en camerabeelden read-only; bediening en specialistische detailcards volgen via afzonderlijke releases.
 
 De editor heeft tien onderdelen:
 
@@ -28,7 +28,7 @@ Herhaalbare items zoals personen, camera's, kamers en acties zijn inklapbaar. Ee
 Geldige wijzigingen versturen het publieke Home Assistant-event `config-changed`. Een ongeldige tussenstand blijft zichtbaar in de editor en wordt niet opgeslagen. Belangrijke regels zijn:
 
 - ingeschakelde security is geldig met minstens één camera; er is geen vaste bovengrens;
-- een privacyinstelling mag zonder actie als status-only worden gebruikt; bediening is optioneel en verwijst naar een vooraf onder **Acties** aangemaakte actie met risicoklasse `privacy`, bevestiging en resultaatcontrole; de knop **Ga naar Acties** opent die sectie rechtstreeks;
+- een privacyinstelling mag zonder actie als status-only worden gebruikt; bediening is optioneel en verwijst naar een vooraf onder **Acties** aangemaakte actie met expliciete target en resultaatcontrole; de actie behoudt haar eigen risicoklasse en bevestigingscontract; de knop **Ga naar Acties** opent die sectie rechtstreeks;
 - iedere collectie gebruikt unieke logische keys;
 - een kamer heeft maximaal twee quick actions;
 - privacy-, kostelijke en destructieve acties hebben bevestigingstekst;

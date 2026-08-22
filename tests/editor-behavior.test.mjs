@@ -28,6 +28,7 @@ class FakeShadowRoot {
     this.navigation = [];
     this.sectionLinks = [];
     this.items = [];
+    this.selectors = [];
     this._innerHTML = "";
   }
 
@@ -51,6 +52,16 @@ class FakeShadowRoot {
         dataset: { itemToken: match[2] }
       });
     });
+    this.selectors = Array.from(value.matchAll(/<ha-selector\b([^>]*)><\/ha-selector>/g), (match) => {
+      const attributes = match[1];
+      const decode = (input = "") => input.replaceAll("&quot;", '"').replaceAll("&#039;", "'").replaceAll("&lt;", "<").replaceAll("&gt;", ">").replaceAll("&amp;", "&");
+      return new FakeElement(this, {
+        dataset: {
+          path: attributes.match(/\bdata-path="([^"]*)"/)?.[1] ?? "",
+          value: decode(attributes.match(/\bdata-value="([^"]*)"/)?.[1] ?? "null")
+        }
+      });
+    });
   }
 
   get innerHTML() {
@@ -59,6 +70,7 @@ class FakeShadowRoot {
 
   querySelectorAll(selector) {
     if (selector === "[data-section-nav]" || selector === "input,select,button,ha-selector") return this.navigation;
+    if (selector === "ha-selector") return this.selectors;
     if (selector === "[data-go-section]") return this.sectionLinks;
     if (selector === "details[data-item-token]") return this.items;
     return [];
@@ -174,4 +186,32 @@ test("Security laat zes camera's toe en verwijst rechtstreeks naar Acties", asyn
   await Promise.resolve();
   assert.equal(findTab(editor, "actions").ariaSelected, "true");
   assert.equal(editor.shadowRoot.activeElement.dataset.sectionNav, "actions");
+});
+
+test("alarmselector bewaart de gekozen entiteit en verstuurt geldige configuratie", () => {
+  const config = createDefaultConfig();
+  config.security.enabled = true;
+  config.security.cameras.push({
+    key: "camera_primary", name: "Camera", camera_entity: "camera_primary", privacy_entity: "privacy_primary",
+    privacy_action_key: "privacy_toggle", fallback: "placeholder", confirm_privacy_disable: true
+  });
+  config.actions.push({
+    key: "privacy_toggle", label: "Privacy", sequence: [{ action: "switch.toggle", target: { entity_id: "privacy_primary" } }],
+    risk: "safe", confirmation_text: "", hold_required: false, verification_entity: "privacy_primary"
+  });
+
+  const editor = new HomeDashboardStrategyEditor();
+  editor.connectedCallback();
+  editor.setConfig(config);
+  findTab(editor, "security").emit("click");
+
+  let saved;
+  editor.addEventListener("config-changed", (event) => { saved = event.detail.config; });
+  const alarmSelector = editor.shadowRoot.selectors.find((element) => element.dataset.path === "security.alarm_entity");
+  assert.ok(alarmSelector);
+  alarmSelector.emit("value-changed", { detail: { value: "alarm_primary" } });
+
+  assert.equal(editor._config.security.alarm_entity, "alarm_primary");
+  assert.equal(saved.security.alarm_entity, "alarm_primary");
+  assert.equal(editor.shadowRoot.selectors.find((element) => element.dataset.path === "security.alarm_entity").value, "alarm_primary");
 });

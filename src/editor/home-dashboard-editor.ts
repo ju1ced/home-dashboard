@@ -123,7 +123,7 @@ function renderCameras(config: HomeDashboardConfigV1, expandedItems: Set<string>
     <label>Privacyinstelling${renderSelector("security.cameras", index, "privacy_entity", cameraConfig.privacy_entity, { entity: { domain: ["switch", "input_boolean", "binary_sensor"] } })}</label>
     <label>Privacyactie <small>Optioneel. Laat op Geen voor alleen status; maak een bedieningsactie eerst onder Acties.</small><select data-collection="security.cameras" data-index="${index}" data-field="privacy_action_key">${actionOptions.replace(`value="${escapeHtml(cameraConfig.privacy_action_key)}"`, `value="${escapeHtml(cameraConfig.privacy_action_key)}" selected`)}</select></label>
     <label>Fallback<select data-collection="security.cameras" data-index="${index}" data-field="fallback">${["placeholder", "last_image", "hidden"].map((value) => `<option ${cameraConfig.fallback === value ? "selected" : ""}>${value}</option>`).join("")}</select></label>
-    <label class="check"><input type="checkbox" data-collection="security.cameras" data-index="${index}" data-field="confirm_privacy_disable" ${cameraConfig.confirm_privacy_disable ? "checked" : ""}> Extra bevestiging bij privacy uitschakelen <small>De privacyactie zelf vereist altijd risicoklasse privacy en bevestigingstekst.</small></label>
+    <label class="check"><input type="checkbox" data-collection="security.cameras" data-index="${index}" data-field="confirm_privacy_disable" ${cameraConfig.confirm_privacy_disable ? "checked" : ""}> Extra bevestiging bij privacy uitschakelen <small>Optioneel en onafhankelijk van de risicoklasse van de gekozen actie.</small></label>
   </div></details>`).join("");
 }
 
@@ -449,7 +449,7 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
       general: { body: "" },
       today: { body: "" },
       persons: { body: `<div class="items">${renderPersons(this._config, this.expandedItems)}</div>`, extra: `<button class="add" type="button" data-add="persons">Persoon toevoegen</button>` },
-      security: { body: `<aside class="guidance"><strong>Privacybediening is optioneel</strong><p>Laat Privacyactie op Geen om alleen de status te tonen. Wil je bedienen, maak dan onder Acties een privacyactie met target, bevestiging en resultaatcontrole en selecteer ze daarna bij de camera.</p><button type="button" data-go-section="actions">Ga naar Acties →</button></aside><div class="items">${renderCameras(this._config, this.expandedItems)}</div>`, extra: `<button class="add" type="button" data-add="security.cameras">Camera toevoegen</button>` },
+      security: { body: `<aside class="guidance"><strong>Privacybediening is optioneel</strong><p>Laat Privacyactie op Geen om alleen de status te tonen. Wil je bedienen, maak dan onder Acties een actie met expliciete target en resultaatcontrole. Risicoklasse en bevestiging stel je bij de actie zelf in.</p><button type="button" data-go-section="actions">Ga naar Acties →</button></aside><div class="items">${renderCameras(this._config, this.expandedItems)}</div>`, extra: `<button class="add" type="button" data-add="security.cameras">Camera toevoegen</button>` },
       rooms: { body: `<div class="items">${renderRooms(this._config, this.expandedItems)}</div>`, extra: `<button class="add" type="button" data-add="rooms">Kamer toevoegen</button>` },
       energy: { body: "" },
       actions: { body: `<div class="items">${renderActions(this._config, this.expandedItems)}</div>`, extra: `<button class="add" type="button" data-add="actions">Actie toevoegen</button>` },

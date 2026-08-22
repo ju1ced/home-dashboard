@@ -6,13 +6,23 @@ Alle betekenisvolle wijzigingen worden hier bijgehouden. Het project gebruikt Se
 
 Nog geen wijzigingen.
 
+## 0.3.0-alpha.3 — 2026-08-22
+
+### Fixed
+
+- Accepteert een gekoppelde privacyactie met iedere geldige risicoklasse, inclusief `safe`.
+- Laat de actie zelf bepalen of bevestiging vereist is; de cameracheckbox blijft een onafhankelijke, optionele extra bevestiging.
+- Verwijdert de onterechte Security-blokkade voor een bestaande, volledig gescopete en verifieerbare actie.
+- Herstelt daardoor ook het opslaan van een gekozen alarmentiteit wanneer deze fout de enige resterende blokkade was.
+- Verduidelijkt het onderscheid tussen status-only, actierisico en de extra camerabevestiging in de editor.
+
 ## 0.3.0-alpha.2 — 2026-08-22
 
 ### Fixed
 
 - Maakt een gekozen privacyinstelling met **Privacyactie = Geen** geldig voor status-only gebruik.
 - Houdt de extra bevestigingskeuze per camera optioneel en gebruikt ze niet langer als opslagblokkade.
-- Controleert risicoklasse, targetscope, bevestiging en resultaatcontrole alleen wanneer een privacyactie daadwerkelijk is gekoppeld.
+- Controleert targetscope en resultaatcontrole alleen wanneer een privacyactie daadwerkelijk is gekoppeld; `v0.3.0-alpha.3` maakt de risicoklasse daarbij vrij.
 - Vervangt generieke configuratievariantmeldingen door de precieze fout bij de betrokken camera of actie.
 - Toont de risicoklasse in de privacyactiekeuze en verduidelijkt in Security dat bediening optioneel is.
 

@@ -1,6 +1,6 @@
 # Home Dashboard — ontwerpvoorstel
 
-Deze repository bouwt een HACS-installeerbare community dashboard strategy voor een centraal Home Assistant-dashboard. De HACS-foundation en grafische configuratie zijn in Home Assistant gevalideerd; `v0.3.0-alpha.2` levert de eerste echt renderende, read-only dashboardviews met gecorrigeerde optionele privacybediening. Home Assistant is niet door deze repository gewijzigd.
+Deze repository bouwt een HACS-installeerbare community dashboard strategy voor een centraal Home Assistant-dashboard. De HACS-foundation en grafische configuratie zijn in Home Assistant gevalideerd; `v0.3.0-alpha.3` levert de eerste echt renderende, read-only dashboardviews met optionele privacybediening. Home Assistant is niet door deze repository gewijzigd.
 
 ## Aanbevolen richting
 
@@ -43,7 +43,7 @@ Open daarna `http://127.0.0.1:4173/`. De fixtureselector wisselt tussen normaal,
 
 ## HACS-installatie
 
-[`v0.1.0-alpha.1`](https://github.com/ju1ced/home-dashboard/releases/tag/v0.1.0-alpha.1) heeft de volledige HACS-lifecycle doorlopen: installatie, update, verwijdering en herinstallatie. Zie [het geanonimiseerde resultaat](docs/releases/results-v0.1.0-alpha.1.md). `v0.2.0-alpha.1` valideerde schema, preview, import/export en mobiel bewerken; `v0.2.0-alpha.2` maakte de editor compact; `v0.2.0-alpha.3` ondersteunt een flexibel aantal camera's en maakt de route naar privacyacties expliciet. `v0.3.0-alpha.1` toonde voor het eerst de vijf echte, read-only productviews; `v0.3.0-alpha.2` corrigeert de optionele privacybediening.
+[`v0.1.0-alpha.1`](https://github.com/ju1ced/home-dashboard/releases/tag/v0.1.0-alpha.1) heeft de volledige HACS-lifecycle doorlopen: installatie, update, verwijdering en herinstallatie. Zie [het geanonimiseerde resultaat](docs/releases/results-v0.1.0-alpha.1.md). `v0.2.0-alpha.1` valideerde schema, preview, import/export en mobiel bewerken; `v0.2.0-alpha.2` maakte de editor compact; `v0.2.0-alpha.3` ondersteunt een flexibel aantal camera's. `v0.3.0-alpha.1` toonde de eerste echte read-only views; `v0.3.0-alpha.2` maakte status-only geldig en `v0.3.0-alpha.3` laat de gekozen actie haar eigen risicoklasse behouden.
 
 ## Checks
 
@@ -85,4 +85,4 @@ scripts/          lokale preview en repositorychecks
 
 ## Status
 
-De ontwerpbaseline, deliveryroadmap en HACS-fundering zijn gepubliceerd; installatie, configuratie en de compacte editor zijn praktisch gevalideerd. `v0.3.0-alpha.2` is de actuele runtimegate voor de echte native shell en lokaal gekozen statusinformatie. Home Assistant-writes en servicecalls starten niet automatisch en behouden hun afzonderlijke menselijke gates.
+De ontwerpbaseline, deliveryroadmap en HACS-fundering zijn gepubliceerd; installatie, configuratie en de compacte editor zijn praktisch gevalideerd. `v0.3.0-alpha.3` is de actuele runtimegate voor de echte native shell en lokaal gekozen statusinformatie. Home Assistant-writes en servicecalls starten niet automatisch en behouden hun afzonderlijke menselijke gates.

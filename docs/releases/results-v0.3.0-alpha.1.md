@@ -10,7 +10,7 @@
 
 Een camera met een gekozen privacystatusbron kon niet status-only worden opgeslagen. **Privacyactie = Geen** en een uitgeschakelde extra bevestigingskeuze veroorzaakten blokkerende validatie. Bij gekoppelde acties verschenen bovendien generieke configuratievariantmeldingen naast de bruikbare specifieke fout.
 
-Dit wijkt af van het gewenste model: de statusbron is zelfstandig bruikbaar; bediening is optioneel. Alleen een daadwerkelijk gekoppelde privacyactie moet aan het centrale veiligheidscontract voldoen.
+Dit wijkt af van het gewenste model: de statusbron is zelfstandig bruikbaar en bediening is optioneel. Een gekoppelde actie moet bestaan, expliciet gescopet en verifieerbaar zijn; de gekozen risicoklasse blijft eigendom van de actie.
 
 ## Vervolg
 
