@@ -12,7 +12,7 @@
 De editor bewaart een ongeldige tussenstand lokaal en verstuurt dan geen `config-changed`. Los alle rode fouten bovenaan op. Veelvoorkomend:
 
 - security is ingeschakeld zonder camera;
-- een gekoppelde privacyactie gebruikt niet de risicoklasse `privacy` of mist bevestiging; voor status-only mag **Privacyactie** gewoon op **Geen** blijven staan;
+- een gekoppelde privacyactie bestaat niet meer of mist een expliciete target/resultaatcontrole; iedere geldige risicoklasse is toegestaan en voor status-only mag **Privacyactie** op **Geen** blijven staan;
 - een logical key ontbreekt, is ongeldig of komt dubbel voor;
 - een room verwijst naar een onbekende quick action;
 - een privacy-, kostelijke of destructieve actie mist bevestigingstekst;

@@ -146,8 +146,8 @@
 
 ## D-025 — Privacyacties hebben een expliciete configuratieroute
 
-- **Status:** besloten in `v0.2.0-alpha.3`; status-only validatie gecorrigeerd in `v0.3.0-alpha.2`
-- **Besluit:** een camera met privacyinstelling mag status-only blijven met **Privacyactie = Geen**. Optionele bediening verwijst naar een vooraf onder **Acties** aangemaakte actie. Security legt dat model uit en biedt een directe, toetsenbordvriendelijke route naar die sectie. De extra camerabevestigingsvlag is optioneel; de gekoppelde privacyactie zelf bewaart altijd haar verplichte confirmationcontract.
+- **Status:** besloten in `v0.2.0-alpha.3`; validatie verfijnd in `v0.3.0-alpha.2` en `v0.3.0-alpha.3`
+- **Besluit:** een camera met privacyinstelling mag status-only blijven met **Privacyactie = Geen**. Optionele bediening verwijst naar een vooraf onder **Acties** aangemaakte actie. De actie behoudt haar gekozen risicoklasse en het bijbehorende confirmationcontract. De extra camerabevestigingsvlag is onafhankelijk en optioneel. Security legt dat model uit en biedt een directe, toetsenbordvriendelijke route naar Acties.
 - **Reden:** de centrale actionallowlist bewaart bevestiging, targetscope en verificatie op één plaats, terwijl de editor de relatie voortaan zichtbaar maakt.
 
 ## D-026 — Eerste echte shell is read-only

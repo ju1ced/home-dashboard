@@ -99,7 +99,7 @@ test("Security accepteert ieder positief aantal camera's", () => {
   assert.ok(validateConfigSchema(enabled).some((issue) => issue.path === "security" && issue.code === "schema_any_of"));
 });
 
-test("privacystatus mag zonder actie; gekoppelde bediening vereist privacyrisico en confirmation", () => {
+test("privacystatus en gekoppelde bediening laten risicoklasse en extra bevestiging vrij", () => {
   const config = createDefaultConfig();
   config.security.enabled = true;
   config.security.cameras.push({
@@ -115,12 +115,10 @@ test("privacystatus mag zonder actie; gekoppelde bediening vereist privacyrisico
   });
 
   config.security.cameras[0].privacy_action_key = "privacy_toggle";
-  const codes = validateConfig(config).map((issue) => issue.code);
-  assert.ok(codes.includes("privacy_action_risk"));
   assert.deepEqual(validateConfigSchema(config), []);
+  assert.equal(validateConfig(config).filter((issue) => issue.severity === "error").length, 0);
 
-  config.actions[0].risk = "privacy";
-  config.actions[0].confirmation_text = "Privacy aanpassen?";
+  config.security.cameras[0].confirm_privacy_disable = true;
   assert.deepEqual(validateConfigSchema(config), []);
   assert.equal(validateConfig(config).filter((issue) => issue.severity === "error").length, 0);
 });

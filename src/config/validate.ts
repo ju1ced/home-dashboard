@@ -135,8 +135,6 @@ export function validateConfig(config: HomeDashboardConfigV1): ValidationIssue[]
       const privacyAction = config.actions.find((action) => action.key === cameraConfig.privacy_action_key);
       if (!privacyAction) {
         issues.push(issue(`security.cameras[${cameraIndex}].privacy_action_key`, "unknown_action", `Privacy-actie '${cameraConfig.privacy_action_key}' bestaat niet.`));
-      } else if (privacyAction.risk !== "privacy") {
-        issues.push(issue(`security.cameras[${cameraIndex}].privacy_action_key`, "privacy_action_risk", `Actie '${cameraConfig.privacy_action_key}' moet risicoklasse privacy gebruiken.`));
       }
     }
   });
