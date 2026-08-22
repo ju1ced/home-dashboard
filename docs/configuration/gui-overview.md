@@ -1,6 +1,6 @@
 # Grafische configuratie
 
-## Reikwijdte van v0.2.0-alpha.1
+## Reikwijdte van v0.2.0-alpha.2
 
 De editor registreert zich als `home-dashboard-strategy-editor` en beheert schema v1 zonder handgeschreven YAML of JSON. De Community dashboard-kiezer kan de strategy al aanmaken en toont daarna één read-only configuratiepreview. De vijf productviews volgen in `v0.3.0-alpha.1`.
 
@@ -16,6 +16,12 @@ De editor heeft tien onderdelen:
 8. **Specialisten:** Kia, robot, tuin en zwembad met vaste cardtypes, minimumversie en logische mappingkeys.
 9. **Layout:** mobiele disclosure en zichtbaarheid van weer, personen, security en quick actions.
 10. **Diagnostiek:** beheerroute, freshness en operationele allowlist voor unavailable.
+
+## Navigatie
+
+De editor toont bewust maar één configuratieonderdeel tegelijk. Desktop gebruikt een vaste linkernavigatie; op smalle schermen verandert die in een horizontaal scrollbare tabbalk. Fout- en waarschuwingsbadges blijven bij elk onderdeel zichtbaar. Vorige/volgende-knoppen bieden een lineaire route, terwijl pijltjestoetsen, Home en End rechtstreeks tussen de sectietabs navigeren.
+
+Herhaalbare items zoals personen, camera's, kamers en acties zijn inklapbaar. Een geopend item blijft na een geldige of ongeldige veldwijziging open; een nieuw item opent onmiddellijk voor invoer.
 
 ## Opslaan en validatie
 

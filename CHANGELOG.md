@@ -6,6 +6,20 @@ Alle betekenisvolle wijzigingen worden hier bijgehouden. Het project gebruikt Se
 
 Nog geen wijzigingen.
 
+## 0.2.0-alpha.2 — 2026-08-22
+
+### Changed
+
+- Vervangt de lange editorlijst door vaste sectienavigatie met één zichtbaar onderdeel, voortgang en vorige/volgende-bediening.
+- Gebruikt op desktop een compacte linkernavigatie en op mobiel een horizontaal scrollbare sectiebalk.
+- Toont validatiebadges per onderdeel en alleen de relevante foutdetails in het actieve onderdeel.
+- Maakt personen, camera's, kamers en acties afzonderlijk inklapbaar; open items blijven open na een wijziging.
+- Voegt volledige toetsenbordnavigatie voor de sectietabs toe.
+
+### Validation
+
+- Legt de geslaagde preview-, import/export- en mobiele editortest van `v0.2.0-alpha.1` geanonimiseerd vast.
+
 ## 0.2.0-alpha.1 — 2026-08-22
 
 ### Added

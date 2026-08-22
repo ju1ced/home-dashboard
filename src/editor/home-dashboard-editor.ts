@@ -24,6 +24,20 @@ const SECTION_TITLES: Record<string, string> = {
   layout: "Layout",
   diagnostics: "Diagnostiek"
 };
+export const EDITOR_SECTION_KEYS = Object.keys(SECTION_TITLES);
+
+export function getEditorItemToken(collection: string, item: object, index: number): string {
+  const key = (item as { key?: unknown }).key;
+  return `${collection}:${typeof key === "string" && key.trim() ? key.trim() : `#${index}`}`;
+}
+
+export function getEditorSectionForKey(current: string, key: string): string {
+  const currentIndex = Math.max(0, EDITOR_SECTION_KEYS.indexOf(current));
+  if (key === "Home") return EDITOR_SECTION_KEYS[0] ?? "general";
+  if (key === "End") return EDITOR_SECTION_KEYS.at(-1) ?? "general";
+  const direction = ["ArrowLeft", "ArrowUp"].includes(key) ? -1 : ["ArrowRight", "ArrowDown"].includes(key) ? 1 : 0;
+  return EDITOR_SECTION_KEYS[(currentIndex + direction + EDITOR_SECTION_KEYS.length) % EDITOR_SECTION_KEYS.length] ?? "general";
+}
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
@@ -77,9 +91,10 @@ function renderSelector(collection: string, index: number, field: string, value:
   return `<ha-selector class="collection-selector" data-collection="${collection}" data-index="${index}" data-field="${field}" data-selector="${escapeHtml(JSON.stringify(selector))}" data-value="${escapeHtml(JSON.stringify(value))}"></ha-selector>`;
 }
 
-function renderPersons(config: HomeDashboardConfigV1): string {
-  return config.persons.map((personConfig, index) => `<article class="item">
-    <div class="item-title"><strong>${escapeHtml(personConfig.label || personConfig.key || `Persoon ${index + 1}`)}</strong><button type="button" aria-label="Verwijder persoon ${escapeHtml(personConfig.label || personConfig.key || index + 1)}" data-remove="persons" data-index="${index}">Verwijder</button></div>
+function renderPersons(config: HomeDashboardConfigV1, expandedItems: Set<string>): string {
+  return config.persons.map((personConfig, index) => `<details class="item" data-item-token="${escapeHtml(getEditorItemToken("persons", personConfig, index))}" ${expandedItems.has(getEditorItemToken("persons", personConfig, index)) ? "open" : ""}>
+    <summary>${escapeHtml(personConfig.label || personConfig.key || `Persoon ${index + 1}`)}</summary><div class="item-body">
+    <div class="item-toolbar"><button type="button" aria-label="Verwijder persoon ${escapeHtml(personConfig.label || personConfig.key || index + 1)}" data-remove="persons" data-index="${index}">Verwijder</button></div>
     <label>Logische sleutel<input data-collection="persons" data-index="${index}" data-field="key" value="${escapeHtml(personConfig.key)}"></label>
     <label>Label<input data-collection="persons" data-index="${index}" data-field="label" value="${escapeHtml(personConfig.label)}"></label>
     <label>Person-entiteit${renderSelector("persons", index, "entity", personConfig.entity, { entity: { domain: "person" } })}</label>
@@ -87,13 +102,14 @@ function renderPersons(config: HomeDashboardConfigV1): string {
     <label class="check"><input type="checkbox" data-collection="persons" data-index="${index}" data-field="show_location" ${personConfig.show_location ? "checked" : ""}> Toon thuis/zone/andere locatie</label>
     <label>Toegestane zones${renderSelector("persons", index, "zone_entities", personConfig.zone_entities, { entity: { domain: "zone", multiple: true } })}</label>
     <label>Batterijbronnen${renderSelector("persons", index, "battery_entities", personConfig.battery_entities, { entity: { multiple: true } })}</label>
-  </article>`).join("");
+  </div></details>`).join("");
 }
 
-function renderCameras(config: HomeDashboardConfigV1): string {
+function renderCameras(config: HomeDashboardConfigV1, expandedItems: Set<string>): string {
   const actionOptions = [`<option value="">Geen</option>`, ...config.actions.map((action) => `<option value="${escapeHtml(action.key)}">${escapeHtml(action.label || action.key)}</option>`)].join("");
-  return config.security.cameras.map((cameraConfig, index) => `<article class="item">
-    <div class="item-title"><strong>${escapeHtml(cameraConfig.name || cameraConfig.key || `Camera ${index + 1}`)}</strong><button type="button" aria-label="Verwijder camera ${escapeHtml(cameraConfig.name || cameraConfig.key || index + 1)}" data-remove="security.cameras" data-index="${index}">Verwijder</button></div>
+  return config.security.cameras.map((cameraConfig, index) => `<details class="item" data-item-token="${escapeHtml(getEditorItemToken("security.cameras", cameraConfig, index))}" ${expandedItems.has(getEditorItemToken("security.cameras", cameraConfig, index)) ? "open" : ""}>
+    <summary>${escapeHtml(cameraConfig.name || cameraConfig.key || `Camera ${index + 1}`)}</summary><div class="item-body">
+    <div class="item-toolbar"><button type="button" aria-label="Verwijder camera ${escapeHtml(cameraConfig.name || cameraConfig.key || index + 1)}" data-remove="security.cameras" data-index="${index}">Verwijder</button></div>
     <label>Logische sleutel<input data-collection="security.cameras" data-index="${index}" data-field="key" value="${escapeHtml(cameraConfig.key)}"></label>
     <label>Naam<input data-collection="security.cameras" data-index="${index}" data-field="name" value="${escapeHtml(cameraConfig.name)}"></label>
     <label>Camera${renderSelector("security.cameras", index, "camera_entity", cameraConfig.camera_entity, { entity: { domain: "camera" } })}</label>
@@ -101,12 +117,13 @@ function renderCameras(config: HomeDashboardConfigV1): string {
     <label>Privacyactie<select data-collection="security.cameras" data-index="${index}" data-field="privacy_action_key">${actionOptions.replace(`value="${escapeHtml(cameraConfig.privacy_action_key)}"`, `value="${escapeHtml(cameraConfig.privacy_action_key)}" selected`)}</select></label>
     <label>Fallback<select data-collection="security.cameras" data-index="${index}" data-field="fallback">${["placeholder", "last_image", "hidden"].map((value) => `<option ${cameraConfig.fallback === value ? "selected" : ""}>${value}</option>`).join("")}</select></label>
     <label class="check"><input type="checkbox" data-collection="security.cameras" data-index="${index}" data-field="confirm_privacy_disable" ${cameraConfig.confirm_privacy_disable ? "checked" : ""}> Bevestig privacy uitschakelen</label>
-  </article>`).join("");
+  </div></details>`).join("");
 }
 
-function renderRooms(config: HomeDashboardConfigV1): string {
-  return config.rooms.map((roomConfig, index) => `<article class="item">
-    <div class="item-title"><strong>${escapeHtml(roomConfig.name || roomConfig.key || `Kamer ${index + 1}`)}</strong><span class="item-actions"><button type="button" aria-label="Verplaats ${escapeHtml(roomConfig.name || roomConfig.key || `kamer ${index + 1}`)} omhoog" data-room-move="up" data-index="${index}" ${index === 0 ? "disabled" : ""}>↑</button><button type="button" aria-label="Verplaats ${escapeHtml(roomConfig.name || roomConfig.key || `kamer ${index + 1}`)} omlaag" data-room-move="down" data-index="${index}" ${index === config.rooms.length - 1 ? "disabled" : ""}>↓</button><button type="button" aria-label="Verwijder kamer ${escapeHtml(roomConfig.name || roomConfig.key || index + 1)}" data-remove="rooms" data-index="${index}">Verwijder</button></span></div>
+function renderRooms(config: HomeDashboardConfigV1, expandedItems: Set<string>): string {
+  return config.rooms.map((roomConfig, index) => `<details class="item" data-item-token="${escapeHtml(getEditorItemToken("rooms", roomConfig, index))}" ${expandedItems.has(getEditorItemToken("rooms", roomConfig, index)) ? "open" : ""}>
+    <summary>${escapeHtml(roomConfig.name || roomConfig.key || `Kamer ${index + 1}`)}</summary><div class="item-body">
+    <div class="item-toolbar"><span class="item-actions"><button type="button" aria-label="Verplaats ${escapeHtml(roomConfig.name || roomConfig.key || `kamer ${index + 1}`)} omhoog" data-room-move="up" data-index="${index}" ${index === 0 ? "disabled" : ""}>↑</button><button type="button" aria-label="Verplaats ${escapeHtml(roomConfig.name || roomConfig.key || `kamer ${index + 1}`)} omlaag" data-room-move="down" data-index="${index}" ${index === config.rooms.length - 1 ? "disabled" : ""}>↓</button><button type="button" aria-label="Verwijder kamer ${escapeHtml(roomConfig.name || roomConfig.key || index + 1)}" data-remove="rooms" data-index="${index}">Verwijder</button></span></div>
     <label>Logische sleutel<input data-collection="rooms" data-index="${index}" data-field="key" value="${escapeHtml(roomConfig.key)}"></label>
     <label>Naam<input data-collection="rooms" data-index="${index}" data-field="name" value="${escapeHtml(roomConfig.name)}"></label>
     <label>Icoon${renderSelector("rooms", index, "icon", roomConfig.icon, { icon: {} })}</label>
@@ -131,12 +148,13 @@ function renderRooms(config: HomeDashboardConfigV1): string {
     <label>Presets<input data-collection="rooms" data-index="${index}" data-field="hvac.presets" value="${escapeHtml(roomConfig.hvac.presets.join(", "))}"></label>
     <label>Fan modes<input data-collection="rooms" data-index="${index}" data-field="hvac.fan_modes" value="${escapeHtml(roomConfig.hvac.fan_modes.join(", "))}"></label>
     <label>Swing modes<input data-collection="rooms" data-index="${index}" data-field="hvac.swing_modes" value="${escapeHtml(roomConfig.hvac.swing_modes.join(", "))}"></label>
-  </article>`).join("");
+  </div></details>`).join("");
 }
 
-function renderActions(config: HomeDashboardConfigV1): string {
-  return config.actions.map((action, index) => `<article class="item">
-    <div class="item-title"><strong>${escapeHtml(action.label || action.key || `Actie ${index + 1}`)}</strong><button type="button" aria-label="Verwijder actie ${escapeHtml(action.label || action.key || index + 1)}" data-remove="actions" data-index="${index}">Verwijder</button></div>
+function renderActions(config: HomeDashboardConfigV1, expandedItems: Set<string>): string {
+  return config.actions.map((action, index) => `<details class="item" data-item-token="${escapeHtml(getEditorItemToken("actions", action, index))}" ${expandedItems.has(getEditorItemToken("actions", action, index)) ? "open" : ""}>
+    <summary>${escapeHtml(action.label || action.key || `Actie ${index + 1}`)}</summary><div class="item-body">
+    <div class="item-toolbar"><button type="button" aria-label="Verwijder actie ${escapeHtml(action.label || action.key || index + 1)}" data-remove="actions" data-index="${index}">Verwijder</button></div>
     <label>Logische sleutel<input data-collection="actions" data-index="${index}" data-field="key" value="${escapeHtml(action.key)}"></label>
     <label>Label<input data-collection="actions" data-index="${index}" data-field="label" value="${escapeHtml(action.label)}"></label>
     <label>Home Assistant-acties${renderSelector("actions", index, "sequence", action.sequence, { action: {} })}</label>
@@ -144,7 +162,7 @@ function renderActions(config: HomeDashboardConfigV1): string {
     <label>Bevestigingstekst<input data-collection="actions" data-index="${index}" data-field="confirmation_text" value="${escapeHtml(action.confirmation_text)}"></label>
     <label class="check"><input type="checkbox" data-collection="actions" data-index="${index}" data-field="hold_required" ${action.hold_required ? "checked" : ""}> Hold-to-confirm</label>
     <label>Resultaatcontrole${renderSelector("actions", index, "verification_entity", action.verification_entity, { entity: {} })}</label>
-  </article>`).join("");
+  </div></details>`).join("");
 }
 
 function renderSpecialists(config: HomeDashboardConfigV1): string {
@@ -177,6 +195,9 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
   private _config: HomeDashboardConfigV1 = createDefaultConfig();
   private message = "";
   private blocked = false;
+  private activeSection = "general";
+  private expandedItems = new Set<string>();
+  private focusActiveSection = false;
 
   public get configBlocked(): boolean {
     return this.blocked;
@@ -211,11 +232,13 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
     for (const segment of path) target = (target as MutableRecord)[segment];
     const item = (target as MutableRecord[])[index];
     if (item) {
+      const previousToken = getEditorItemToken(collection, item, index);
       const segments = field.split(".");
       const last = segments.pop();
       let fieldTarget = item;
       for (const segment of segments) fieldTarget = fieldTarget[segment] as MutableRecord;
       if (last) fieldTarget[last] = value;
+      if (field === "key" && this.expandedItems.delete(previousToken)) this.expandedItems.add(getEditorItemToken(collection, item, index));
     }
     this.commit();
   }
@@ -240,8 +263,11 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
     if (collection === "persons") {
       const person: PersonConfig = { key: `person_${this._config.persons.length + 1}`, entity: "", label: "", show_location: true, zone_entities: [], freshness_minutes: 30, battery_entities: [] };
       this._config.persons.push(person);
+      this.expandedItems.add(getEditorItemToken(collection, person, this._config.persons.length - 1));
     } else if (collection === "security.cameras" && this._config.security.cameras.length < 3) {
-      this._config.security.cameras.push(createCameraConfig(this._config.security.cameras.length));
+      const camera = createCameraConfig(this._config.security.cameras.length);
+      this._config.security.cameras.push(camera);
+      this.expandedItems.add(getEditorItemToken(collection, camera, this._config.security.cameras.length - 1));
     } else if (collection === "rooms") {
       const room: RoomConfig = {
         key: `room_${this._config.rooms.length + 1}`, name: "", icon: "mdi:sofa", floor_id: "", area_id: "", device_ids: [], capabilities: [], quick_actions: [],
@@ -249,9 +275,11 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
         hvac: { entity: "", comfort_entities: [], history_entities: [], modes: [], presets: [], fan_modes: [], swing_modes: [] }
       };
       this._config.rooms.push(room);
+      this.expandedItems.add(getEditorItemToken(collection, room, this._config.rooms.length - 1));
     } else if (collection === "actions") {
       const action: ActionConfig = { key: `action_${this._config.actions.length + 1}`, label: "", sequence: [], risk: "safe", confirmation_text: "", hold_required: false, verification_entity: "" };
       this._config.actions.push(action);
+      this.expandedItems.add(getEditorItemToken(collection, action, this._config.actions.length - 1));
     }
     this.commit();
   }
@@ -322,6 +350,32 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
     this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-remove]").forEach((controlButton) => controlButton.addEventListener("click", () => this.removeItem(controlButton.dataset.remove ?? "", Number(controlButton.dataset.index))));
     this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-room-move]").forEach((controlButton) => controlButton.addEventListener("click", () => this.moveItem(this._config.rooms, Number(controlButton.dataset.index), controlButton.dataset.roomMove as "up" | "down")));
     this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-view-move]").forEach((controlButton) => controlButton.addEventListener("click", () => this.moveItem(this._config.layout.view_order, Number(controlButton.dataset.index), controlButton.dataset.viewMove as "up" | "down")));
+    this.shadowRoot.querySelectorAll<HTMLDetailsElement>("details[data-item-token]").forEach((details) => {
+      const token = details.dataset.itemToken;
+      if (!token) return;
+      details.addEventListener("toggle", () => details.open ? this.expandedItems.add(token) : this.expandedItems.delete(token));
+    });
+    this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-section-nav]").forEach((controlButton) => {
+      controlButton.addEventListener("click", () => {
+        const section = controlButton.dataset.sectionNav;
+        if (!section || !EDITOR_SECTION_KEYS.includes(section)) return;
+        this.activeSection = section;
+        this.render();
+      });
+      controlButton.addEventListener("keydown", (event) => {
+        if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
+        event.preventDefault();
+        this.activeSection = getEditorSectionForKey(this.activeSection, event.key);
+        this.focusActiveSection = true;
+        this.render();
+      });
+    });
+    this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-section-step]").forEach((controlButton) => controlButton.addEventListener("click", () => {
+      const current = EDITOR_SECTION_KEYS.indexOf(this.activeSection);
+      const direction = controlButton.dataset.sectionStep === "previous" ? -1 : 1;
+      this.activeSection = EDITOR_SECTION_KEYS[Math.max(0, Math.min(EDITOR_SECTION_KEYS.length - 1, current + direction))] ?? "general";
+      this.render();
+    }));
     this.shadowRoot.querySelectorAll<HTMLInputElement>("[data-specialist]").forEach((element) => element.addEventListener("change", () => {
       const specialist = this._config.specialists[element.dataset.specialist as keyof typeof this._config.specialists];
       const field = element.dataset.field as "enabled" | "minimum_version" | "mapping_keys";
@@ -373,33 +427,63 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
     const focusData = active ? { ...active.dataset, id: active.id } : undefined;
     const issues = [...validateConfigSchema(this._config), ...validateConfig(this._config)];
     const summary = `${this._config.rooms.length} kamers · ${this._config.persons.length} personen · ${this._config.security.cameras.length}/3 camera's · ${this._config.actions.length} acties`;
-    const section = (key: string, body: string, extra = "") => `<details open><summary>${SECTION_TITLES[key]}</summary><div class="section">${FIELD_DEFINITIONS.filter((field) => field.section === key).map((field) => renderField(field, this._config)).join("")}${body}${extra}</div></details>`;
+    if (!EDITOR_SECTION_KEYS.includes(this.activeSection)) this.activeSection = "general";
+    const sectionIndex = EDITOR_SECTION_KEYS.indexOf(this.activeSection);
+    const sectionForIssue = (path: string) => EDITOR_SECTION_KEYS.find((key) => path === key || path.startsWith(`${key}.`) || path.startsWith(`${key}[`)) ?? "general";
+    const sectionIssues = issues.filter((candidate) => sectionForIssue(candidate.path) === this.activeSection);
+    const sectionBodies: Record<string, { body: string; extra?: string }> = {
+      general: { body: "" },
+      today: { body: "" },
+      persons: { body: `<div class="items">${renderPersons(this._config, this.expandedItems)}</div>`, extra: `<button class="add" type="button" data-add="persons">Persoon toevoegen</button>` },
+      security: { body: `<div class="items">${renderCameras(this._config, this.expandedItems)}</div>`, extra: `<button class="add" type="button" data-add="security.cameras" ${this._config.security.cameras.length >= 3 ? "disabled" : ""}>Camera toevoegen</button>` },
+      rooms: { body: `<div class="items">${renderRooms(this._config, this.expandedItems)}</div>`, extra: `<button class="add" type="button" data-add="rooms">Kamer toevoegen</button>` },
+      energy: { body: "" },
+      actions: { body: `<div class="items">${renderActions(this._config, this.expandedItems)}</div>`, extra: `<button class="add" type="button" data-add="actions">Actie toevoegen</button>` },
+      specialists: { body: `<div class="items">${renderSpecialists(this._config)}</div>` },
+      layout: { body: `<div><strong>Viewvolgorde</strong><small>De vijf stabiele paden blijven aanwezig en kunnen worden herschikt.</small>${renderViewOrder(this._config)}</div>` },
+      diagnostics: { body: "" }
+    };
+    const sectionContent = sectionBodies[this.activeSection] ?? sectionBodies.general!;
+    const navigation = EDITOR_SECTION_KEYS.map((key) => {
+      const scoped = issues.filter((candidate) => sectionForIssue(candidate.path) === key);
+      const errors = scoped.filter((candidate) => candidate.severity === "error").length;
+      const warnings = scoped.length - errors;
+      const status = errors ? `<span class="nav-state error" aria-label="${errors} fouten">${errors}</span>` : warnings ? `<span class="nav-state warning" aria-label="${warnings} waarschuwingen">${warnings}</span>` : `<span class="nav-state valid" aria-label="Geldig">✓</span>`;
+      return `<button type="button" role="tab" id="section-tab-${key}" aria-controls="section-panel" aria-selected="${key === this.activeSection}" tabindex="${key === this.activeSection ? "0" : "-1"}" class="section-tab" data-section-nav="${key}"><span>${SECTION_TITLES[key]}</span>${status}</button>`;
+    }).join("");
+    const issueSummary = issues.length
+      ? `${issues.filter((candidate) => candidate.severity === "error").length} fouten · ${issues.filter((candidate) => candidate.severity === "warning").length} waarschuwingen. De badges tonen waar aandacht nodig is.`
+      : "Schema v1 is geldig.";
     this.shadowRoot.innerHTML = `<style>
       :host{display:block;color:var(--primary-text-color);font-family:var(--paper-font-body1_-_font-family,system-ui);--accent:var(--primary-color,#276b5b)}
       *{box-sizing:border-box}header{display:grid;gap:12px;padding:16px;border:1px solid var(--divider-color);border-radius:16px;background:var(--card-background-color)}
       h2,p{margin:0}.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:end}.toolbar label,.toolbar button{border:1px solid var(--divider-color);border-radius:10px;padding:9px 12px;background:var(--secondary-background-color);color:inherit;cursor:pointer}.toolbar label{display:grid;gap:5px}.toolbar input[type=file]{max-width:240px;padding:4px}
-      details{margin-top:12px;border:1px solid var(--divider-color);border-radius:14px;background:var(--card-background-color);overflow:hidden}summary{font-size:1.05rem;font-weight:700;padding:14px;cursor:pointer}.section{display:grid;gap:12px;padding:0 14px 14px}
+      .editor-layout{display:grid;grid-template-columns:minmax(170px,220px) minmax(0,1fr);gap:12px;margin-top:12px}.section-nav{display:grid;gap:6px;align-self:start;position:sticky;top:8px}.section-tab{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--divider-color);border-radius:10px;background:var(--card-background-color);color:inherit;text-align:left;cursor:pointer}.section-tab[aria-selected=true]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--card-background-color));font-weight:700}.nav-state{display:grid;place-items:center;min-width:24px;height:24px;padding:0 6px;border-radius:999px;background:var(--secondary-background-color);font-size:.78rem}.nav-state.valid{color:var(--success-color,#27824a)}
+      .section-panel{min-width:0;border:1px solid var(--divider-color);border-radius:14px;background:var(--card-background-color);overflow:hidden}.section-heading{padding:16px;border-bottom:1px solid var(--divider-color)}.section-heading h3{margin:0;font-size:1.25rem}.section{display:grid;gap:12px;padding:14px}
       .field,label{display:grid;gap:5px}.field{grid-template-columns:minmax(180px,1fr) minmax(220px,1fr);align-items:center;padding:9px 0;border-top:1px solid var(--divider-color)}small{display:block;color:var(--secondary-text-color);margin-top:3px}
       input,select{width:100%;padding:10px;border:1px solid var(--divider-color);border-radius:8px;background:var(--secondary-background-color);color:inherit}input[type=checkbox]{width:22px;height:22px}.check{display:flex;align-items:center;gap:8px}
-      .items{display:grid;gap:10px}.item{display:grid;gap:10px;padding:12px;border:1px solid var(--divider-color);border-radius:12px;background:var(--secondary-background-color)}.item-title{display:flex;justify-content:space-between;align-items:center;gap:8px}.item-actions{display:flex;gap:4px}.item button{color:var(--error-color);background:transparent;border:0;cursor:pointer}.item button[disabled]{opacity:.35;cursor:not-allowed}code{display:block;overflow-wrap:anywhere;color:var(--secondary-text-color)}
+      .items{display:grid;gap:10px}.item{margin:0;border:1px solid var(--divider-color);border-radius:12px;background:var(--secondary-background-color);overflow:hidden}.item summary{padding:12px;font-weight:700;cursor:pointer}.item-body{display:grid;gap:10px;padding:0 12px 12px}.item-toolbar{display:flex;justify-content:flex-end}.item-actions{display:flex;gap:4px}.item button{color:var(--error-color);background:transparent;border:0;min-width:40px;min-height:40px;cursor:pointer}.item button[disabled]{opacity:.35;cursor:not-allowed}code{display:block;overflow-wrap:anywhere;color:var(--secondary-text-color)}
       fieldset.config{border:0;margin:0;padding:0;min-width:0}.config[disabled]{pointer-events:none;opacity:.72}.order{display:grid;gap:6px}.order>div{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border:1px solid var(--divider-color);border-radius:8px}.order button{min-width:40px;min-height:40px;border:0;border-radius:8px;margin-left:4px}.fatal{color:var(--error-color);font-weight:700}
-      .add{justify-self:start;padding:9px 12px;border:0;border-radius:9px;background:var(--accent);color:var(--text-primary-color,#fff);cursor:pointer}.issues{margin:0;padding-left:20px}.error{color:var(--error-color)}.warning{color:var(--warning-color,#b26a00)}
-      @media(max-width:600px){.field{grid-template-columns:1fr}.section{padding-inline:10px}header{padding:12px}}
+      .add{justify-self:start;padding:9px 12px;border:0;border-radius:9px;background:var(--accent);color:var(--text-primary-color,#fff);cursor:pointer}.issues{margin:0;padding-left:20px}.error{color:var(--error-color)}.warning{color:var(--warning-color,#b26a00)}.section-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;border-top:1px solid var(--divider-color)}.section-footer button{min-height:42px;padding:8px 14px;border:1px solid var(--divider-color);border-radius:9px;background:var(--secondary-background-color);color:inherit}.section-footer button[disabled]{opacity:.45}
+      @media(max-width:800px){.editor-layout{grid-template-columns:1fr}.section-nav{display:flex;overflow-x:auto;position:sticky;top:0;z-index:2;padding:6px;background:var(--primary-background-color);scrollbar-width:thin}.section-tab{flex:0 0 auto;width:auto}.field{grid-template-columns:1fr}.section{padding-inline:10px}header{padding:12px}.toolbar{align-items:stretch}.toolbar>*{flex:1 1 180px}}
     </style>
-    <header><div><h2>Home Dashboard configuratie</h2><p>${escapeHtml(summary)}</p></div><div class="toolbar"><button id="export" type="button" ${this.blocked ? "disabled" : ""}>Exporteer privé-back-up</button><label>Importeer JSON<input id="import" type="file" accept="application/json"></label><button id="reset" type="button" ${this.blocked ? "disabled" : ""}>Herstel standaard</button></div><p role="status" aria-live="polite" class="${this.blocked ? "fatal" : ""}">${escapeHtml(this.message)}</p>${this.blocked ? "" : issues.length ? `<div role="alert"><ul class="issues">${issues.map((candidate) => `<li class="${candidate.severity}"><strong>${escapeHtml(candidate.path)}</strong>: ${escapeHtml(candidate.message)}</li>`).join("")}</ul></div>` : "<p>Schema v1 is geldig.</p>"}</header>
+    <header><div><h2>Home Dashboard configuratie</h2><p>${escapeHtml(summary)}</p></div><div class="toolbar"><button id="export" type="button" ${this.blocked ? "disabled" : ""}>Exporteer privé-back-up</button><label>Importeer JSON<input id="import" type="file" accept="application/json"></label><button id="reset" type="button" ${this.blocked ? "disabled" : ""}>Herstel standaard</button></div><p role="status" aria-live="polite" class="${this.blocked ? "fatal" : ""}">${escapeHtml(this.message)}</p>${this.blocked ? "" : `<p>${escapeHtml(issueSummary)}</p>`}</header>
     <fieldset class="config" ${this.blocked ? "disabled" : ""}>
-    ${section("general", "")}${section("today", "")}
-    ${section("persons", `<div class="items">${renderPersons(this._config)}</div>`, `<button class="add" type="button" data-add="persons">Persoon toevoegen</button>`)}
-    ${section("security", `<div class="items">${renderCameras(this._config)}</div>`, `<button class="add" type="button" data-add="security.cameras" ${this._config.security.cameras.length >= 3 ? "disabled" : ""}>Camera toevoegen</button>`)}
-    ${section("rooms", `<div class="items">${renderRooms(this._config)}</div>`, `<button class="add" type="button" data-add="rooms">Kamer toevoegen</button>`)}
-    ${section("energy", "")}
-    ${section("actions", `<div class="items">${renderActions(this._config)}</div>`, `<button class="add" type="button" data-add="actions">Actie toevoegen</button>`)}
-    ${section("specialists", `<div class="items">${renderSpecialists(this._config)}</div>`)}
-    ${section("layout", `<div><strong>Viewvolgorde</strong><small>De vijf stabiele paden blijven aanwezig en kunnen worden herschikt.</small>${renderViewOrder(this._config)}</div>`)}
-    ${section("diagnostics", "")}</fieldset>`;
+      <div class="editor-layout"><nav class="section-nav" role="tablist" aria-label="Configuratieonderdelen">${navigation}</nav>
+      <section class="section-panel" id="section-panel" role="tabpanel" aria-labelledby="section-tab-${this.activeSection}">
+        <div class="section-heading"><h3>${SECTION_TITLES[this.activeSection]}</h3><small>Onderdeel ${sectionIndex + 1} van ${EDITOR_SECTION_KEYS.length}</small></div>
+        ${sectionIssues.length ? `<div role="alert" class="section"><ul class="issues">${sectionIssues.map((candidate) => `<li class="${candidate.severity}"><strong>${escapeHtml(candidate.path)}</strong>: ${escapeHtml(candidate.message)}</li>`).join("")}</ul></div>` : ""}
+        <div class="section">${FIELD_DEFINITIONS.filter((field) => field.section === this.activeSection).map((field) => renderField(field, this._config)).join("")}${sectionContent.body}${sectionContent.extra ?? ""}</div>
+        <div class="section-footer"><button type="button" data-section-step="previous" ${sectionIndex === 0 ? "disabled" : ""}>← Vorige</button><span>${sectionIndex + 1} / ${EDITOR_SECTION_KEYS.length}</span><button type="button" data-section-step="next" ${sectionIndex === EDITOR_SECTION_KEYS.length - 1 ? "disabled" : ""}>Volgende →</button></div>
+      </section></div>
+    </fieldset>`;
     this.configureSelectors();
     this.bindEvents();
-    if (focusData) {
+    if (this.focusActiveSection) {
+      const selected = this.shadowRoot.querySelector<HTMLButtonElement>("[data-section-nav][aria-selected=true]");
+      queueMicrotask(() => selected?.focus());
+      this.focusActiveSection = false;
+    } else if (focusData) {
       const candidates = Array.from(this.shadowRoot.querySelectorAll<HTMLElement>("input,select,button,ha-selector"));
       const target = candidates.find((candidate) => Object.entries(focusData).every(([key, value]) => key === "id" ? !value || candidate.id === value : candidate.dataset[key] === value));
       target?.focus();
