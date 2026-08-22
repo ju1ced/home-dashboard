@@ -3,10 +3,13 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   EDITOR_COVERAGE,
+  EDITOR_SECTION_KEYS,
   HomeDashboardStrategy,
   HomeDashboardStrategyEditor,
   compileConfig,
   createDefaultConfig,
+  getEditorItemToken,
+  getEditorSectionForKey,
   migrateConfig,
   parseImportedConfig,
   serializeConfig,
@@ -148,7 +151,19 @@ test("minimale strategy maakt een read-only configuratiepreview", async () => {
 
 test("editorbundle bevat ordering, focus- en live-feedbackcontracten", async () => {
   const bundle = await readFile(new URL("../dist/home-dashboard.js", import.meta.url), "utf8");
-  for (const marker of ["data-room-move", "data-view-move", "aria-live", "config-changed", "home-dashboard-strategy-editor"]) assert.match(bundle, new RegExp(marker));
+  for (const marker of ["data-room-move", "data-view-move", "data-section-nav", "data-section-step", "role=\"tabpanel\"", "queueMicrotask", "aria-live", "config-changed", "home-dashboard-strategy-editor"]) assert.match(bundle, new RegExp(marker));
+});
+
+test("editornavigatie en open itemtokens overleven HA-configroundtrips", () => {
+  const room = { key: "living_room" };
+  const roundTrip = JSON.parse(JSON.stringify(room));
+  assert.equal(getEditorItemToken("rooms", room, 0), getEditorItemToken("rooms", roundTrip, 0));
+  assert.equal(getEditorItemToken("rooms", {}, 3), "rooms:#3");
+  assert.equal(EDITOR_SECTION_KEYS.length, 10);
+  assert.equal(getEditorSectionForKey("persons", "ArrowRight"), "security");
+  assert.equal(getEditorSectionForKey("security", "ArrowLeft"), "persons");
+  assert.equal(getEditorSectionForKey("diagnostics", "Home"), "general");
+  assert.equal(getEditorSectionForKey("general", "End"), "diagnostics");
 });
 
 test("JSON Schema en editorcontract dekken dezelfde configuratieoppervlakte", async () => {

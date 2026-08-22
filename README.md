@@ -42,7 +42,7 @@ Open daarna `http://127.0.0.1:4173/`. De fixtureselector wisselt tussen normaal,
 
 ## HACS-installatie
 
-[`v0.1.0-alpha.1`](https://github.com/ju1ced/home-dashboard/releases/tag/v0.1.0-alpha.1) heeft de volledige HACS-lifecycle doorlopen: installatie, update, verwijdering en herinstallatie. Zie [het geanonimiseerde resultaat](docs/releases/results-v0.1.0-alpha.1.md). `v0.2.0-alpha.1` voegt het versioned schema, de volledige grafische editor en een minimale Community dashboard-preview toe; de vijf productviews volgen in `v0.3.0-alpha.1`.
+[`v0.1.0-alpha.1`](https://github.com/ju1ced/home-dashboard/releases/tag/v0.1.0-alpha.1) heeft de volledige HACS-lifecycle doorlopen: installatie, update, verwijdering en herinstallatie. Zie [het geanonimiseerde resultaat](docs/releases/results-v0.1.0-alpha.1.md). `v0.2.0-alpha.1` valideerde schema, preview, import/export en mobiel bewerken; `v0.2.0-alpha.2` maakt de editor compact met sectienavigatie. De vijf productviews volgen in `v0.3.0-alpha.1`.
 
 ## Checks
 
@@ -84,4 +84,4 @@ scripts/          lokale preview en repositorychecks
 
 ## Status
 
-De ontwerpbaseline, deliveryroadmap en HACS-fundering zijn gepubliceerd; de lifecycle-smoke van `v0.1.0-alpha.1` is geslaagd. Delivery-PR 2 levert schema v1, de grafische configuratie-editor en een veilige preview voor `v0.2.0-alpha.1`. Home Assistant-writes en deployment starten niet automatisch en behouden hun afzonderlijke menselijke gates.
+De ontwerpbaseline, deliveryroadmap en HACS-fundering zijn gepubliceerd; de lifecycle-smoke van `v0.1.0-alpha.1` en de configuratie-smoke van `v0.2.0-alpha.1` zijn geslaagd. De compacte editorpatch wordt als `v0.2.0-alpha.2` getest. Home Assistant-writes en deployment starten niet automatisch en behouden hun afzonderlijke menselijke gates.
