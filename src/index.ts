@@ -6,14 +6,14 @@ import { migrateConfig } from "./config/migrate";
 import { validateConfig } from "./config/validate";
 import { validateConfigSchema } from "./config/schema-validator";
 import { getCameraPresentation, HomeDashboardCameraStrip, registerHomeDashboardCameraStrip } from "./cards/home-dashboard-camera-strip";
-import { getHomeStructureSignature, HomeDashboardHomeOverview, registerHomeDashboardHomeOverview } from "./cards/home-dashboard-home-overview";
+import { getHomeStructureSignature, getWastePresentation, HomeDashboardHomeOverview, registerHomeDashboardHomeOverview } from "./cards/home-dashboard-home-overview";
 import { getRoomMetric, HomeDashboardRoomDetail, HomeDashboardRoomOverview, registerHomeDashboardRoomCards, roomPath } from "./cards/home-dashboard-room-cards";
 import { EDITOR_COVERAGE } from "./editor/fields";
 import { EDITOR_SECTION_KEYS, getEditorItemToken, getEditorSectionForKey, HomeDashboardStrategyEditor, mergeEditorIssues, registerHomeDashboardEditor } from "./editor/home-dashboard-editor";
 import { HomeDashboardStrategy, registerHomeDashboardStrategy } from "./strategy/home-dashboard-strategy";
 import { buildView, HomeDashboardViewStrategy, registerHomeDashboardViewStrategy } from "./strategy/home-dashboard-view-strategy";
 
-export { buildView, compileConfig, createDefaultConfig, EDITOR_COVERAGE, EDITOR_SECTION_KEYS, getCameraPresentation, getEditorItemToken, getEditorSectionForKey, getHomeStructureSignature, getRoomMetric, HomeDashboardCameraStrip, HomeDashboardHomeOverview, HomeDashboardRoomDetail, HomeDashboardRoomOverview, HomeDashboardStrategy, HomeDashboardStrategyEditor, HomeDashboardViewStrategy, mergeEditorIssues, migrateConfig, parseImportedConfig, roomPath, serializeConfig, validateConfig, validateConfigSchema };
+export { buildView, compileConfig, createDefaultConfig, EDITOR_COVERAGE, EDITOR_SECTION_KEYS, getCameraPresentation, getEditorItemToken, getEditorSectionForKey, getHomeStructureSignature, getRoomMetric, getWastePresentation, HomeDashboardCameraStrip, HomeDashboardHomeOverview, HomeDashboardRoomDetail, HomeDashboardRoomOverview, HomeDashboardStrategy, HomeDashboardStrategyEditor, HomeDashboardViewStrategy, mergeEditorIssues, migrateConfig, parseImportedConfig, roomPath, serializeConfig, validateConfig, validateConfigSchema };
 export type { HomeDashboardConfigV1, ValidationIssue } from "./config/types";
 
 export interface HomeDashboardBuildInfo {

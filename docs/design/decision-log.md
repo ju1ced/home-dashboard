@@ -191,3 +191,9 @@
 - **Status:** besloten voor `v0.5.0-alpha.5`; D-030 verfijnd naar zes KPI-mappings
 - **Besluit:** batterij laden en ontladen krijgen elk een eigen optionele entitymapping. Realtime KPI-, afval-, weer- en persoonswaarden worden in-place bijgewerkt; alleen een gewijzigde operationele aandachtstructuur veroorzaakt een volledige Home-rerender. Op brede schermen vormen weer, KPI/afval en security drie kolommen; kleinere schermen stapelen responsief.
 - **Reden:** afzonderlijke laad- en ontlaadsensoren hebben een andere betekenis en mogen niet onder één mapping worden samengevoegd. Vermogenssensoren wijzigen bovendien vaak; een volledige DOM-reconstructie per waarde-update herstart weer- en camerachildcards en oogt als een permanente refresh.
+
+## D-033 — Vandaag gebruikt renderhiërarchie en HA-themetokens
+
+- **Status:** besloten voor `v0.5.0-alpha.6`
+- **Besluit:** de brede Vandaag-zone gebruikt een compactere weerkolom, zes iconische energiestatussen en security zonder een dubbele buitenkop. Afval wordt uit bronnaam, entitysleutel en bekende datumattributen semantisch als GFT, papier, PMD, groenafval, glas of restafval gepresenteerd, met datum en relatieve termijn. `system` erft de actieve HA-tokens; expliciet licht/donker gebruikt de gedocumenteerde Juiced Horizon Calm-tokens binnen de compositie.
+- **Reden:** lange vaste KPI-labels, generieke afvaliconen en een dubbele beveiligingsheading brachten de informatie wel over maar niet de visuele hiërarchie van de goedgekeurde render. De semantische presentatie verbetert herkenning zonder integratiespecifieke of private identifiers in tracked code op te nemen.

@@ -13,6 +13,7 @@ export interface HomeDashboardViewConfig {
   type: "custom:home-dashboard-view";
   view: ViewPath | "room";
   density: HomeDashboardConfigV1["general"]["density"];
+  theme_mode?: HomeDashboardConfigV1["general"]["theme_mode"];
   show_weather?: boolean;
   today?: HomeDashboardConfigV1["today"];
   persons?: HomeDashboardConfigV1["persons"];
@@ -80,6 +81,7 @@ function homeSections(config: HomeDashboardViewConfig, maxColumns: number): Love
     column_span: maxColumns,
     cards: [{
       type: "custom:home-dashboard-home-overview",
+      theme_mode: config.theme_mode,
       today: config.today,
       persons: config.persons ?? [],
       security: config.security,

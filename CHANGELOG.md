@@ -6,6 +6,19 @@ Alle betekenisvolle wijzigingen worden hier bijgehouden. Het project gebruikt Se
 
 Nog geen wijzigingen.
 
+## 0.5.0-alpha.6 — 2026-08-24
+
+### Changed
+
+- Brengt de driedelige Vandaag-layout in lijn met de goedgekeurde render: compacter weer, iconische energiestatussen en security zonder dubbele sectietitel.
+- Laat `system`, `light` en `dark` uit de grafische configuratie doorwerken op de Home-compositie en haar childcards via ondersteunde Home Assistant-themetokens.
+- Herkent GFT, papier/karton, PMD, groenafval, glas en restafval semantisch en toont per ophaling een fractie-icoon, korte naam, datum en relatieve termijn.
+
+### Validation
+
+- Test afvalherkenning met ISO- en lokale datumnotatie en bewaakt de afwezigheid van de verwijderde securitykop.
+- Controleert de runtimecompositie lokaal op 1440 px, 390 px en met donkere HA-themetokens; er zijn geen Home Assistant-writes of servicecalls uitgevoerd.
+
 ## 0.5.0-alpha.5 — 2026-08-24
 
 ### Changed

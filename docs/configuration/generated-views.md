@@ -1,10 +1,10 @@
 # Gegenereerde views
 
-De dashboard strategy maakt vijf stabiele hoofdviews en per geconfigureerde kamer een stabiele subview; een afzonderlijke view strategy bouwt iedere view als Sections-configuratie. `v0.5.0-alpha.5` gebruikt binnen Home en Kamers begrensde compositiecards om de informatiehiërarchie van de goedgekeurde renders te behouden, geeft zes configureerbare Vandaag-energie-KPI's vaste labels en werkt realtime waarden zonder volledige Home-rerender bij. Energie, Domeinen en Meer behouden bewust hun shell-alpha-inhoud tot hun eigen roadmaprelease.
+De dashboard strategy maakt vijf stabiele hoofdviews en per geconfigureerde kamer een stabiele subview; een afzonderlijke view strategy bouwt iedere view als Sections-configuratie. `v0.5.0-alpha.6` gebruikt binnen Home en Kamers begrensde compositiecards om de informatiehiërarchie van de goedgekeurde renders te behouden, toont zes configureerbare Vandaag-energie-KPI's iconisch en werkt realtime waarden zonder volledige Home-rerender bij. Energie, Domeinen en Meer behouden bewust hun shell-alpha-inhoud tot hun eigen roadmaprelease.
 
 | View | Inhoud in deze alpha |
 |---|---|
-| Home | begroeting/statusrail, aandacht, Vandaag met weer, zes energie-KPI's en duidelijke afvalophaling, security als derde desktopkolom, gezin en directe routes |
+| Home | begroeting/statusrail, aandacht, Vandaag met compact weer, zes iconische energie-KPI's en fractiegebonden afvalophaling, security als derde desktopkolom, gezin en directe routes |
 | Kamers | hero, compacte kamerkaarten per verdieping, gemapte apparaatchips en voor iedere kamer een samenhangend `room-<key>`-detaildashboard |
 | Energie | geselecteerde elektriciteit-, zon-, batterij-, gas-, water-, apparaat-, EV-, UPS-, piek- en fasebronnen plus route naar het standaard Energy-panel |
 | Domeinen | via kamers geselecteerde states opnieuw gegroepeerd per functie |
