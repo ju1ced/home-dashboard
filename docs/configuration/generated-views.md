@@ -1,6 +1,6 @@
 # Gegenereerde views
 
-De dashboard strategy maakt vijf stabiele hoofdviews; een afzonderlijke view strategy bouwt iedere view als Sections-configuratie. `v0.4.0-alpha.1` verfijnt uitsluitend Home/security. De overige views behouden bewust hun shell-alpha-inhoud tot hun eigen roadmaprelease.
+De dashboard strategy maakt vijf stabiele hoofdviews; een afzonderlijke view strategy bouwt iedere view als Sections-configuratie. `v0.4.0-alpha.2` verfijnt uitsluitend Home/security. De overige views behouden bewust hun shell-alpha-inhoud tot hun eigen roadmaprelease.
 
 | View | Inhoud in deze alpha |
 |---|---|
@@ -25,7 +25,7 @@ Deze alpha is bedoeld om echte informatie, routes en responsive gedrag veilig te
 ## Bewuste vervolgstappen
 
 - De Home/security-release toont aandacht alleen voor de expliciete operationele allowlist. Actieve kamers, `Nu` en de twee algemene quick actions volgen pas na hun afzonderlijke actiegate; deze alpha blijft read-only.
-- De camerastrook ondersteunt ieder geconfigureerd aantal camera's, bronvolgorde, muis/touchscroll en toetsenbord. Privacy actief krijgt een eigen placeholder. `hidden` verbergt `unavailable`/`unknown`; `placeholder` en `last_image` gebruiken voorlopig de native camerafout-/snapshotweergave.
+- De cameracarrousel ondersteunt ieder geconfigureerd aantal camera's, bronvolgorde, muis/touchscroll en toetsenbord, maar toont één beeld per viewport. Privacy-actieve camera's worden niet als beeld getoond en blijven alleen in de compacte statusrail zichtbaar. `hidden` verbergt `unavailable`/`unknown`; `placeholder` en `last_image` gebruiken voorlopig de native camerafout-/snapshotweergave.
 - Kamerdetails, volledige Energy-pariteit en specialistische Kia-, robot-, tuin- en zwembadcards volgen in hun eigen PR en prerelease.
 - De native weather-card bepaalt in deze alpha zelf de zichtbare forecastlengte; de geconfigureerde forecastlimiet blijft alvast in schema v1 bewaard.
 - `theme_mode` en `mobile_disclosure` blijven in schema v1 bewaard; deze shell-alpha erft het actieve HA-thema en gebruikt de native responsive Sections-layout.

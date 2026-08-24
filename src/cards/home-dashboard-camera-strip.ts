@@ -97,7 +97,7 @@ export class HomeDashboardCameraStrip extends HTMLElementBase {
 
   private scrollStrip(direction: -1 | 1): void {
     const strip = this.shadowRoot?.querySelector<HTMLElement>(".strip");
-    strip?.scrollBy({ left: direction * Math.max(280, strip.clientWidth * 0.8), behavior: "smooth" });
+    strip?.scrollBy({ left: direction * strip.clientWidth, behavior: "smooth" });
   }
 
   private async renderStrip(): Promise<void> {
@@ -111,26 +111,36 @@ export class HomeDashboardCameraStrip extends HTMLElementBase {
     this.childCards = [];
     const style = document.createElement("style");
     style.textContent = `
-      :host{display:block;min-width:0}ha-card{display:block;padding:10px;background:var(--ha-card-background,var(--card-background-color));overflow:hidden}
+      :host{display:block;min-width:0}ha-card{display:block;padding:12px;background:var(--ha-card-background,var(--card-background-color));overflow:hidden}
       .toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 2px 8px}.label{color:var(--secondary-text-color);font-size:.9rem}
       .controls{display:flex;gap:6px}.controls button{display:grid;place-items:center;width:44px;height:44px;border:0;border-radius:999px;background:var(--secondary-background-color);color:var(--primary-text-color);cursor:pointer}
-      .strip{display:flex;gap:12px;overflow-x:auto;overscroll-behavior-inline:contain;scroll-snap-type:inline mandatory;scrollbar-width:thin;padding:2px 2px 8px;outline:none}
-      .strip:focus-visible{outline:2px solid var(--primary-color);outline-offset:2px;border-radius:10px}.item{flex:0 0 min(340px,86vw);min-width:0;display:grid;align-content:start;gap:8px;scroll-snap-align:start}
-      .privacy{min-height:210px;display:grid;place-items:center;align-content:center;gap:10px;border-radius:12px;background:var(--secondary-background-color);color:var(--primary-text-color);text-align:center}.privacy ha-icon{width:44px;height:44px;color:var(--primary-color)}
-      .privacy strong{font-size:1.05rem}.privacy span{color:var(--secondary-text-color)}.empty{padding:18px;color:var(--secondary-text-color)}
-      @media(max-width:600px){ha-card{padding-inline:8px}.item{flex-basis:min(320px,88vw)}}
+      .controls button:disabled{opacity:.35;cursor:default}.content{display:grid;grid-template-columns:minmax(0,900px) 180px;justify-content:center;align-items:start;gap:12px}.content.no-privacy{grid-template-columns:minmax(0,900px)}
+      .strip{display:flex;overflow-x:auto;overscroll-behavior-inline:contain;scroll-snap-type:inline mandatory;scrollbar-width:none;outline:none;border-radius:12px}.strip::-webkit-scrollbar{display:none}
+      .strip:focus-visible{outline:2px solid var(--primary-color);outline-offset:2px}.item{flex:0 0 100%;min-width:0;scroll-snap-align:start;scroll-snap-stop:always}.item>*{display:block;width:100%}
+      .privacy-rail{display:grid;gap:8px;align-content:start}.privacy-title{font-size:.82rem;font-weight:600;color:var(--secondary-text-color);padding:2px 4px}.privacy-chip{display:grid;grid-template-columns:28px minmax(0,1fr);align-items:center;gap:8px;min-height:44px;padding:6px 10px;border-radius:12px;background:var(--secondary-background-color)}
+      .privacy-chip ha-icon{width:24px;height:24px;color:var(--state-icon-color,var(--secondary-text-color))}.privacy-chip.active ha-icon{color:var(--warning-color,#f0a000)}.privacy-copy{display:grid;min-width:0}.privacy-copy strong,.privacy-copy span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.privacy-copy strong{font-size:.82rem}.privacy-copy span{font-size:.76rem;color:var(--secondary-text-color)}
+      .empty{min-height:180px;display:grid;place-items:center;padding:18px;border-radius:12px;background:var(--secondary-background-color);color:var(--secondary-text-color);text-align:center}
+      @media(max-width:700px){ha-card{padding-inline:8px}.content{grid-template-columns:minmax(0,1fr)}.privacy-rail{display:flex;overflow-x:auto}.privacy-title{display:none}.privacy-chip{flex:0 0 150px}}
     `;
     const card = document.createElement("ha-card");
     const toolbar = document.createElement("div");
     toolbar.className = "toolbar";
     const label = document.createElement("span");
     label.className = "label";
-    label.textContent = `${this._config.cameras.length} camera${this._config.cameras.length === 1 ? "" : "'s"}`;
+    const cameraStates = this._config.cameras.map((camera) => {
+      const cameraState = this._hass?.states?.[camera.camera_entity]?.state;
+      const privacyState = camera.privacy_entity ? this._hass?.states?.[camera.privacy_entity]?.state : undefined;
+      return { camera, cameraState, privacyState, presentation: getCameraPresentation(cameraState, privacyState, camera.fallback) };
+    });
+    const visibleCameras = cameraStates.filter(({ presentation }) => presentation === "camera");
+    const privacyCameras = cameraStates.filter(({ camera }) => Boolean(camera.privacy_entity));
+    label.textContent = `${visibleCameras.length} van ${this._config.cameras.length} camera${this._config.cameras.length === 1 ? "" : "'s"} zichtbaar`;
     const controls = document.createElement("div");
     controls.className = "controls";
     for (const [direction, icon, text] of [[-1, "mdi:chevron-left", "Vorige camera"], [1, "mdi:chevron-right", "Volgende camera"]] as const) {
       const button = document.createElement("button");
       button.type = "button";
+      button.disabled = visibleCameras.length <= 1;
       button.setAttribute("aria-label", text);
       const haIcon = document.createElement("ha-icon") as HTMLElement & { icon?: string };
       haIcon.icon = icon;
@@ -153,27 +163,11 @@ export class HomeDashboardCameraStrip extends HTMLElementBase {
       else if (event.key === "End") strip.scrollTo({ left: strip.scrollWidth, behavior: "smooth" });
     });
 
-    for (const camera of this._config.cameras) {
-      const cameraState = this._hass?.states?.[camera.camera_entity]?.state;
-      const privacyState = camera.privacy_entity ? this._hass?.states?.[camera.privacy_entity]?.state : undefined;
-      const presentation = getCameraPresentation(cameraState, privacyState, camera.fallback);
-      if (presentation === "hidden") continue;
-
+    for (const { camera } of visibleCameras) {
       const item = document.createElement("article");
       item.className = "item";
       item.setAttribute("role", "listitem");
-      if (presentation === "privacy") {
-        const placeholder = document.createElement("div");
-        placeholder.className = "privacy";
-        const icon = document.createElement("ha-icon") as HTMLElement & { icon?: string };
-        icon.icon = "mdi:eye-off-outline";
-        const title = document.createElement("strong");
-        title.textContent = camera.name;
-        const status = document.createElement("span");
-        status.textContent = "Privacy actief";
-        placeholder.append(icon, title, status);
-        item.append(placeholder);
-      } else if (helpers) {
+      if (helpers) {
         const picture = helpers.createCardElement({
           type: "picture-entity", entity: camera.camera_entity, name: camera.name, camera_view: "auto",
           show_name: true, show_state: false, tap_action: noAction(), hold_action: noAction(), double_tap_action: noAction()
@@ -181,16 +175,6 @@ export class HomeDashboardCameraStrip extends HTMLElementBase {
         picture.hass = this._hass;
         this.childCards.push(picture);
         item.append(picture);
-      }
-      if (camera.privacy_entity && helpers) {
-        const privacy = helpers.createCardElement({
-          type: "tile", entity: camera.privacy_entity, name: `${camera.name} · privacy`,
-          tap_action: noAction(), hold_action: noAction(), double_tap_action: noAction(),
-          icon_tap_action: noAction(), icon_hold_action: noAction(), icon_double_tap_action: noAction()
-        });
-        privacy.hass = this._hass;
-        this.childCards.push(privacy);
-        item.append(privacy);
       }
       strip.append(item);
     }
@@ -201,7 +185,36 @@ export class HomeDashboardCameraStrip extends HTMLElementBase {
       empty.textContent = "Geen camerabeeld beschikbaar.";
       strip.append(empty);
     }
-    card.append(toolbar, strip);
+    const content = document.createElement("div");
+    content.className = `content${privacyCameras.length === 0 ? " no-privacy" : ""}`;
+    content.append(strip);
+    if (privacyCameras.length > 0) {
+      const privacyRail = document.createElement("aside");
+      privacyRail.className = "privacy-rail";
+      privacyRail.setAttribute("aria-label", "Privacystatus per camera");
+      const privacyTitle = document.createElement("div");
+      privacyTitle.className = "privacy-title";
+      privacyTitle.textContent = "Privacy";
+      privacyRail.append(privacyTitle);
+      for (const { camera, privacyState, presentation } of privacyCameras) {
+        const chip = document.createElement("div");
+        chip.className = `privacy-chip${presentation === "privacy" ? " active" : ""}`;
+        chip.setAttribute("role", "status");
+        const icon = document.createElement("ha-icon") as HTMLElement & { icon?: string };
+        icon.icon = presentation === "privacy" ? "mdi:eye-off-outline" : "mdi:eye-outline";
+        const copy = document.createElement("span");
+        copy.className = "privacy-copy";
+        const name = document.createElement("strong");
+        name.textContent = camera.name;
+        const state = document.createElement("span");
+        state.textContent = presentation === "privacy" ? "Privacy aan" : privacyState === "off" ? "Privacy uit" : "Status onbekend";
+        copy.append(name, state);
+        chip.append(icon, copy);
+        privacyRail.append(chip);
+      }
+      content.append(privacyRail);
+    }
+    card.append(toolbar, content);
     this.shadowRoot.replaceChildren(style, card);
   }
 }

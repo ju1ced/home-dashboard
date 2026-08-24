@@ -6,6 +6,19 @@ Alle betekenisvolle wijzigingen worden hier bijgehouden. Het project gebruikt Se
 
 Nog geen wijzigingen.
 
+## 0.4.0-alpha.2 — 2026-08-24
+
+### Fixed
+
+- Toont in de cameracarrousel exact één camerakaart per viewport in plaats van een rij miniaturen.
+- Laat camera's met actieve privacymodus volledig uit de beeldcarrousel weg.
+- Verplaatst alle privacystatussen naar een compacte zijrail die op mobiel horizontaal onder het beeld staat.
+- Beperkt de camerabreedte op grote schermen en houdt pijltjes-, touch- en toetsenbordnavigatie beschikbaar.
+
+### Safety
+
+- De compacte privacystatus is informatief en voert geen actie uit; camera-, alarm- en privacybediening blijven read-only.
+
 ## 0.4.0-alpha.1 — 2026-08-24
 
 ### Added
