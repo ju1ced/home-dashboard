@@ -6,6 +6,18 @@ Alle betekenisvolle wijzigingen worden hier bijgehouden. Het project gebruikt Se
 
 Nog geen wijzigingen.
 
+## 0.5.0-alpha.4 — 2026-08-24
+
+### Fixed
+
+- Voorkomt dat enkelvoudige Home Assistant-entityselectors hun net gekozen waarde onmiddellijk opnieuw leegmaken doordat zowel `value-changed` als het daaropvolgende native `change`-event werden verwerkt.
+- Herstelt daarmee de vijf entityselectors onder **Vandaag** en dezelfde selectorroute voor onder meer het securityalarm en Energie.
+- Markeert deze optionele entityvelden expliciet als niet-verplicht voor de Home Assistant-selectorcomponent.
+
+### Validation
+
+- Simuleert in de regressietests de echte Home Assistant-eventvolgorde voor zowel een Vandaag-KPI als het alarm en controleert dat selectie, opslag en rerender dezelfde waarde behouden.
+
 ## 0.5.0-alpha.3 — 2026-08-24
 
 ### Added

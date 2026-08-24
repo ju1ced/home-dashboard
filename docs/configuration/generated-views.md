@@ -1,6 +1,6 @@
 # Gegenereerde views
 
-De dashboard strategy maakt vijf stabiele hoofdviews en per geconfigureerde kamer een stabiele subview; een afzonderlijke view strategy bouwt iedere view als Sections-configuratie. `v0.5.0-alpha.3` gebruikt binnen Home en Kamers begrensde compositiecards om de informatiehiërarchie van de goedgekeurde renders te behouden en geeft de vijf configureerbare Vandaag-energie-KPI's vaste labels. Energie, Domeinen en Meer behouden bewust hun shell-alpha-inhoud tot hun eigen roadmaprelease.
+De dashboard strategy maakt vijf stabiele hoofdviews en per geconfigureerde kamer een stabiele subview; een afzonderlijke view strategy bouwt iedere view als Sections-configuratie. `v0.5.0-alpha.4` gebruikt binnen Home en Kamers begrensde compositiecards om de informatiehiërarchie van de goedgekeurde renders te behouden, geeft de vijf configureerbare Vandaag-energie-KPI's vaste labels en bewaart gekozen enkelvoudige entities correct. Energie, Domeinen en Meer behouden bewust hun shell-alpha-inhoud tot hun eigen roadmaprelease.
 
 | View | Inhoud in deze alpha |
 |---|---|

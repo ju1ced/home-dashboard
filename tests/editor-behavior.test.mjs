@@ -70,6 +70,7 @@ class FakeShadowRoot {
 
   querySelectorAll(selector) {
     if (selector === "[data-section-nav]" || selector === "input,select,button,ha-selector") return this.navigation;
+    if (selector === "[data-path]") return this.selectors;
     if (selector === "ha-selector") return this.selectors;
     if (selector === "[data-go-section]") return this.sectionLinks;
     if (selector === "details[data-item-token]") return this.items;
@@ -214,8 +215,29 @@ test("alarmselector bewaart de gekozen entiteit en verstuurt geldige configurati
   const alarmSelector = editor.shadowRoot.selectors.find((element) => element.dataset.path === "security.alarm_entity");
   assert.ok(alarmSelector);
   alarmSelector.emit("value-changed", { detail: { value: "alarm_primary" } });
+  alarmSelector.emit("change");
 
   assert.equal(editor._config.security.alarm_entity, "alarm_primary");
   assert.equal(saved.security.alarm_entity, "alarm_primary");
   assert.equal(editor.shadowRoot.selectors.find((element) => element.dataset.path === "security.alarm_entity").value, "alarm_primary");
+});
+
+test("Vandaag-selectors behouden hun keuze na de echte value-changed plus change-volgorde", () => {
+  const editor = new HomeDashboardStrategyEditor();
+  editor.connectedCallback();
+  editor.setConfig(createDefaultConfig());
+  findTab(editor, "today").emit("click");
+
+  let saved;
+  editor.addEventListener("config-changed", (event) => { saved = event.detail.config; });
+  const selector = editor.shadowRoot.selectors.find((element) => element.dataset.path === "today.battery_soc_entity");
+  assert.ok(selector);
+  assert.equal(selector.required, false);
+
+  selector.emit("value-changed", { detail: { value: "battery_soc_primary" } });
+  selector.emit("change");
+
+  assert.equal(editor._config.today.battery_soc_entity, "battery_soc_primary");
+  assert.equal(saved.today.battery_soc_entity, "battery_soc_primary");
+  assert.equal(editor.shadowRoot.selectors.find((element) => element.dataset.path === "today.battery_soc_entity").value, "battery_soc_primary");
 });
