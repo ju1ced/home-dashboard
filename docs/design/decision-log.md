@@ -179,3 +179,9 @@
 - **Status:** besloten voor `v0.5.0-alpha.3`
 - **Besluit:** batterij-SoC, batterij laad-/ontlaadvermogen, zonnepanelenopbrengst, huisverbruik zonder batterijladen en maandelijkse vermogenspiek krijgen elk een eigen optionele entitymapping en een vast UI-label. De bestaande generieke energiecontext blijft alleen als aanvulling en compatibiliteitsveld bestaan.
 - **Reden:** een onbenoemde entiteitenlijst maakt de betekenis en volgorde afhankelijk van integratienamen. Expliciete mappings maken de GUI begrijpelijk, houden Home consistent en voorkomen dat technisch gelijksoortige W- en kW-sensoren verkeerd geïnterpreteerd worden.
+
+## D-031 — Enkelvoudige selectors hebben één eigenaar per eventtype
+
+- **Status:** besloten en gecorrigeerd voor `v0.5.0-alpha.4`
+- **Besluit:** Home Assistant-entityselectors worden alleen via hun publieke `value-changed`-event bijgewerkt. De generieke native `change`-binding geldt uitsluitend voor echte `input`- en `select`-elementen. Optionele entityselectors krijgen bovendien expliciet `required = false`.
+- **Reden:** de Home Assistant-picker vuurt na `value-changed` ook een native `change` af. Wanneer beide bindings dezelfde custom selector verwerken, kan een synchrone rerender de tweede handler met een verouderde lege waarde achterlaten en zo de geldige keuze overschrijven.

@@ -307,19 +307,20 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
 
   private configureSelectors(): void {
     if (!this.shadowRoot) return;
-    this.shadowRoot.querySelectorAll<HTMLElement & { hass: HomeAssistantLike | undefined; selector?: Record<string, unknown>; value?: unknown }>("ha-selector").forEach((element) => {
+    this.shadowRoot.querySelectorAll<HTMLElement & { hass: HomeAssistantLike | undefined; selector?: Record<string, unknown>; value?: unknown; required?: boolean }>("ha-selector").forEach((element) => {
       element.hass = this._hass;
       const path = element.dataset.path;
       const field = path ? FIELD_DEFINITIONS.find((candidate) => candidate.path === path) : undefined;
       const encodedSelector = element.dataset.selector;
       element.selector = field?.selector ?? (encodedSelector ? JSON.parse(encodedSelector) as Record<string, unknown> : { entity: {} });
       element.value = JSON.parse(element.dataset.value ?? "null") as unknown;
+      if (path) element.required = false;
     });
   }
 
   private bindEvents(): void {
     if (!this.shadowRoot) return;
-    this.shadowRoot.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-path]").forEach((element) => {
+    this.shadowRoot.querySelectorAll<HTMLInputElement | HTMLSelectElement>("input[data-path],select[data-path]").forEach((element) => {
       element.addEventListener("change", () => {
         const path = element.dataset.path;
         if (!path) return;

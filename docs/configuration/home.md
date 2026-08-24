@@ -1,6 +1,6 @@
 # Home
 
-Home is een operationeel startscherm, geen volledige inventaris. `v0.5.0-alpha.3` rendert de inhoud als één begrensde, responsive compositie in plaats van losse Sections-kolommen:
+Home is een operationeel startscherm, geen volledige inventaris. `v0.5.0-alpha.4` rendert de inhoud als één begrensde, responsive compositie in plaats van losse Sections-kolommen:
 
 1. **Aandacht nodig** verschijnt alleen wanneer een entity uit **Diagnostiek → operationele entities** `unknown` of `unavailable` is. Generieke buttons, events of overige diagnostiek worden niet als alarm behandeld.
 2. **Vandaag** toont de ingeschakelde weerbron, afvalbronnen en vijf benoemde energie-KPI's: thuisbatterij-SoC, batterij laad-/ontlaadvermogen, zonnepanelenopbrengst, huisverbruik zonder batterijladen en maandelijkse vermogenspiek. Extra energiecontext blijft optioneel.

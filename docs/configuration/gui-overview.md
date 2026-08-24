@@ -1,8 +1,8 @@
 # Grafische configuratie
 
-## Reikwijdte van v0.5.0-alpha.3
+## Reikwijdte van v0.5.0-alpha.4
 
-De editor registreert zich als `home-dashboard-strategy-editor` en beheert schema v1 zonder handgeschreven YAML of JSON. De Community dashboard-kiezer maakt vijf hoofdviews en per kamer een semantische subview. `v0.5.0-alpha.3` levert de visuele Home/security- en Kamers-baseline met vijf expliciete Vandaag-energie-KPI's; statechips openen het standaard HA-detailvenster, terwijl directe actionsequences, volledige Energie en specialistische detailcards via afzonderlijke releases volgen.
+De editor registreert zich als `home-dashboard-strategy-editor` en beheert schema v1 zonder handgeschreven YAML of JSON. De Community dashboard-kiezer maakt vijf hoofdviews en per kamer een semantische subview. `v0.5.0-alpha.4` levert de visuele Home/security- en Kamers-baseline met vijf expliciete Vandaag-energie-KPI's en een herstelde enkelvoudige entityselectie; statechips openen het standaard HA-detailvenster, terwijl directe actionsequences, volledige Energie en specialistische detailcards via afzonderlijke releases volgen.
 
 De editor heeft tien onderdelen:
 
@@ -39,7 +39,7 @@ Geldige wijzigingen versturen het publieke Home Assistant-event `config-changed`
 
 ## Selectors
 
-Entity-, area-, floor-, icon- en actionvelden gebruiken Home Assistant-selectors. De installatie bewaart echte IDs in de dashboardconfiguratie; de repository, fixtures en documentatie bevatten alleen logische of fictieve waarden.
+Entity-, area-, floor-, icon- en actionvelden gebruiken Home Assistant-selectors. Enkelvoudige optionele entityselectors verwerken uitsluitend het publieke `value-changed`-event; het aansluitende native `change`-event mag een selectie niet opnieuw leegmaken. De installatie bewaart echte IDs in de dashboardconfiguratie; de repository, fixtures en documentatie bevatten alleen logische of fictieve waarden.
 
 ## Import en export
 
