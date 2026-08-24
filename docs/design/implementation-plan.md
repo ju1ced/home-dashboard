@@ -100,6 +100,7 @@ Critical path: foundation → capability/mappingcontract → native HA-shell/vie
 - **Tests:** paritymanifest per geconfigureerde bron/card, gedeelde collection/date-semantie, cost/compensation, upstream apparaten zonder dubbeltelling, current versus historische flow, conditional gas/water, ingebouwde Energy-fallback, lokale piek/EV/UPS/fases, data freshness, domain coverage, riskante controls en volledige securityroute.
 - **Acceptatie:** Energie is op mobiel/tablet/desktop aantoonbaar niet informatiearmer dan het standaard HA Energy-dashboard voor dezelfde configuratie en voegt de lokale besliscontext toe; iedere relevante live functionele categorie heeft één eigenaarroute en fixture.
 - **Rollback:** afzonderlijke domeinview uitschakelen zonder Home/rooms te breken.
+- **Deliverystatus:** `v0.6.0-alpha.1` levert de eerste volledige read-only runtimegate: actuele Energie-KPI's, officiële Energy-inzichten, veilige fallbacks en gecureerde woningbrede domeinen. Interactieve domeinacties, volledige live informatiepariteit en specialistische integraties blijven achter hun afzonderlijke gates.
 
 ### PR 7 — Kia-integratie
 

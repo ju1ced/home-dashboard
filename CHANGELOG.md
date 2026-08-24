@@ -6,6 +6,25 @@ Alle betekenisvolle wijzigingen worden hier bijgehouden. Het project gebruikt Se
 
 Nog geen wijzigingen.
 
+## 0.6.0-alpha.1 — 2026-08-24
+
+### Added
+
+- Voegt op Home geprioriteerde aandacht, actuele activiteit en afwijkende kamers toe binnen vaste contentbudgetten.
+- Toont op het kameroverzicht concrete apparaatchips met semantische status en groepeert kamerdetails per verlichting, covers, klimaat, media, safety, camera, power en historie.
+- Bouwt een afzonderlijke read-only Energie-view met actuele KPI's, historie, bronsecties en de officiële Home Assistant Energy-kaarten.
+- Vervangt de platte domeininventaris door gecureerde woningfuncties voor klimaat, verlichting, veiligheid, water, media, energie, mobiliteit/buiten en systeem.
+
+### Changed
+
+- Verhoogt het bewaakte minified bundlebudget naar 160 kB voor de nieuwe semantische views; de releasebundel blijft onder die harde grens.
+- Verrijkt personen uitsluitend met privacyveilige zone-, versheids- en lage-batterijcontext.
+
+### Safety and validation
+
+- Alle nieuwe interacties openen uitsluitend Home Assistants standaard detaildialoog of navigeren naar een view; er zijn geen servicecalls of configuratiewrites toegevoegd.
+- Dekt normal, warning, missing en unavailable states af met 48 geautomatiseerde tests, plus repository-, privacy-, TypeScript- en distributiechecks.
+
 ## 0.5.0-alpha.9 — 2026-08-24
 
 ### Changed

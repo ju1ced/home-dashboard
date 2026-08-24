@@ -19,7 +19,7 @@ export type { HomeDashboardConfigV1, ValidationIssue } from "./config/types";
 export interface HomeDashboardBuildInfo {
   readonly name: "Home Dashboard";
   readonly version: string;
-  readonly phase: "visual-redesign";
+  readonly phase: "energy-domains";
   readonly minimumHomeAssistant: "2026.8.2";
 }
 
@@ -32,7 +32,7 @@ declare global {
 export const buildInfo: HomeDashboardBuildInfo = Object.freeze({
   name: "Home Dashboard",
   version: __HOME_DASHBOARD_VERSION__,
-  phase: "visual-redesign",
+  phase: "energy-domains",
   minimumHomeAssistant: "2026.8.2"
 });
 
