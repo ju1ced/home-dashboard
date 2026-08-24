@@ -3,6 +3,7 @@ import { validateConfig } from "../config/validate";
 import { validateConfigSchema } from "../config/schema-validator";
 import type { HomeDashboardConfigV1, ViewPath } from "../config/types";
 import type { HomeDashboardViewConfig } from "./home-dashboard-view-strategy";
+import { roomPath } from "../cards/home-dashboard-room-cards";
 
 interface StrategyMetadata {
   type: string;
@@ -65,7 +66,10 @@ export class HomeDashboardStrategy extends HTMLElementBase {
     const orderedPaths = [config.general.start_view, ...config.layout.view_order.filter((path) => path !== config.general.start_view)];
     return {
       title: config.general.title,
-      views: orderedPaths.map((path) => createView(path, config))
+      views: [
+        ...orderedPaths.map((path) => createView(path, config)),
+        ...config.rooms.map((room) => createRoomView(room, config))
+      ]
     };
   }
 }
@@ -94,6 +98,22 @@ function createView(path: ViewPath, config: HomeDashboardConfigV1): Record<strin
     show_icon_and_title: true,
     subview: false,
     strategy: createViewStrategy(path, config)
+  };
+}
+
+function createRoomView(room: HomeDashboardConfigV1["rooms"][number], config: HomeDashboardConfigV1): Record<string, unknown> {
+  return {
+    title: room.name,
+    path: roomPath(room),
+    icon: room.icon || "mdi:sofa-outline",
+    subview: true,
+    back_path: "rooms",
+    strategy: {
+      type: "custom:home-dashboard-view",
+      view: "room",
+      density: config.general.density,
+      room
+    } satisfies HomeDashboardViewConfig
   };
 }
 

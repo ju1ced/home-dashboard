@@ -89,6 +89,7 @@ Critical path: foundation → capability/mappingcontract → native HA-shell/vie
 - **Tests:** iedere capability- en quick-actionvariant, HVAC mode/preset/fan/swing, actueel/dagverbruik en optionele spanning, actionscope/confirmation, lege secties verborgen, area-loze mapping, operationele unavailable zichtbaar, warning buiten gesloten sectie, source/focusorder en golden output.
 - **Acceptatie:** alle bevestigde kamers zijn vanuit één overzicht bereikbaar; een lichte en zware kamer behouden volledige informatiedekking op 390×844, tablet en desktop; floors/detailsecties zijn mobiel progressief zonder permanent verborgen functies; geen hardcoded aantal kamers.
 - **Rollback:** kamerincludes uit testcomposition verwijderen; generatoroutput reproduceerbaar herstellen.
+- **Deliverystatus:** `v0.5.0-alpha.1` levert het floor-gegroepeerde overzicht, stabiele room-subviews en volledige read-only informatiegroepen. Quick actions en interactieve HVAC/media/covers blijven open tot hun actiegates bewezen zijn.
 
 ### PR 6 — Volledige Energie-hoofdview en woningbrede domeinpagina's
 

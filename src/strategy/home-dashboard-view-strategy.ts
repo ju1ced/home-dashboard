@@ -11,7 +11,7 @@ type LovelaceConfig = Record<string, unknown>;
 
 export interface HomeDashboardViewConfig {
   type: "custom:home-dashboard-view";
-  view: ViewPath;
+  view: ViewPath | "room";
   density: HomeDashboardConfigV1["general"]["density"];
   show_weather?: boolean;
   today?: HomeDashboardConfigV1["today"];
@@ -22,6 +22,7 @@ export interface HomeDashboardViewConfig {
   specialists?: SpecialistsConfig;
   counts?: { rooms: number; persons: number; cameras: number };
   diagnostics?: DiagnosticsConfig;
+  room?: RoomConfig;
 }
 
 const HTMLElementBase = (typeof HTMLElement === "undefined" ? class {} : HTMLElement) as typeof HTMLElement;
@@ -158,28 +159,71 @@ function homeSections(config: HomeDashboardViewConfig, maxColumns: number): Love
   return present.length > 0 ? present : [{ type: "grid", cards: [markdown("Configureer Vandaag, Personen, Security of Kamers via **Dashboard bewerken**.", "Home Dashboard")] }];
 }
 
-function roomEntities(room: RoomConfig): string[] {
-  return uniqueEntities([
-    ...room.light_entities,
-    ...room.cover_entities,
-    room.hvac.entity,
-    ...room.hvac.comfort_entities,
-    ...room.media_entities,
-    ...room.safety_entities,
-    ...room.camera_entities,
-    ...room.power_entities
-  ]);
+function roomsSections(rooms: readonly RoomConfig[], maxColumns: number): LovelaceConfig[] {
+  if (rooms.length === 0) return [{ type: "grid", cards: [markdown("Voeg kamers toe via **Dashboard bewerken → Kamers**.", "Kamers")] }];
+  return [{
+    type: "grid",
+    column_span: maxColumns,
+    cards: [{ type: "custom:home-dashboard-room-overview", rooms, grid_options: { columns: "full", rows: "auto" } }]
+  }];
 }
 
-function roomsSections(rooms: readonly RoomConfig[]): LovelaceConfig[] {
-  if (rooms.length === 0) return [{ type: "grid", cards: [markdown("Voeg kamers toe via **Dashboard bewerken → Kamers**.", "Kamers")] }];
-  return rooms.map((room) => ({
+function readonlyPictureEntity(entity: string): LovelaceConfig {
+  return {
+    type: "picture-entity",
+    entity,
+    camera_view: "auto",
+    show_name: true,
+    show_state: false,
+    tap_action: noAction(),
+    hold_action: noAction(),
+    double_tap_action: noAction()
+  };
+}
+
+function roomDetailSection(title: string, icon: string, cards: LovelaceConfig[], maxColumns: number): LovelaceConfig | undefined {
+  return homeSection(title, icon, cards, maxColumns);
+}
+
+function roomDetailSections(room: RoomConfig | undefined, maxColumns: number): LovelaceConfig[] {
+  if (!room) return [{ type: "grid", cards: [markdown("Deze kamerconfiguratie ontbreekt.", "Kamer")] }];
+  const sections: Array<LovelaceConfig | undefined> = [{
     type: "grid",
-    title: room.name,
-    cards: roomEntities(room).length > 0
-      ? roomEntities(room).map((entity) => readonlyTile(entity))
-      : [markdown("Nog geen statusbronnen geconfigureerd.")]
-  }));
+    column_span: maxColumns,
+    cards: [{ type: "custom:home-dashboard-room-hero", room, grid_options: { columns: "full", rows: "auto" } }]
+  }];
+  const statusEntities = uniqueEntities([...room.hvac.comfort_entities, ...room.safety_entities]).slice(0, 8);
+  sections.push(roomDetailSection("Ruimtestatus", "mdi:gauge", statusEntities.map((entity) => readonlyTile(entity)), maxColumns));
+
+  const primaryCards = [
+    ...room.light_entities.map((entity) => readonlyTile(entity)),
+    ...room.cover_entities.map((entity) => readonlyTile(entity))
+  ];
+  sections.push(roomDetailSection("Licht, covers & openingen", "mdi:lightbulb-group-outline", primaryCards, maxColumns));
+
+  const climateCards: LovelaceConfig[] = [];
+  if (room.hvac.entity) climateCards.push({ type: "custom:home-dashboard-room-climate", room, grid_options: { columns: "full", rows: "auto" } });
+  climateCards.push(...room.hvac.comfort_entities.map((entity) => readonlyTile(entity)));
+  sections.push(roomDetailSection("Comfort & klimaat", "mdi:thermostat", climateCards, maxColumns));
+
+  sections.push(roomDetailSection("Media", "mdi:speaker", room.media_entities.map((entity) => readonlyTile(entity)), maxColumns));
+  const safetyCards = [
+    ...room.safety_entities.map((entity) => readonlyTile(entity)),
+    ...room.camera_entities.map((entity) => readonlyPictureEntity(entity))
+  ];
+  sections.push(roomDetailSection("Veiligheid", "mdi:shield-home-outline", safetyCards, maxColumns));
+  sections.push(roomDetailSection("Apparaten & energie", "mdi:power-plug-outline", room.power_entities.map((entity) => readonlyTile(entity)), maxColumns));
+
+  const historyEntities = uniqueEntities([...room.history_entities, ...room.hvac.history_entities]);
+  if (historyEntities.length > 0) {
+    sections.push(roomDetailSection("Historie", "mdi:chart-line", [{
+      type: "history-graph",
+      entities: historyEntities,
+      hours_to_show: 72,
+      grid_options: { columns: "full", rows: 5 }
+    }], maxColumns));
+  }
+  return sections.filter((candidate): candidate is LovelaceConfig => Boolean(candidate));
 }
 
 function energySections(energy?: EnergyConfig): LovelaceConfig[] {
@@ -235,19 +279,20 @@ function moreSections(config: HomeDashboardViewConfig): LovelaceConfig[] {
 }
 
 export function buildView(config: HomeDashboardViewConfig): LovelaceConfig {
-  if (!["home", "rooms", "energy", "domains", "more"].includes(config.view)) {
+  if (!["home", "rooms", "energy", "domains", "more", "room"].includes(config.view)) {
     return { type: "sections", max_columns: 1, dense_section_placement: false, sections: [{ type: "grid", cards: [markdown("Deze viewconfiguratie wordt niet ondersteund.", "Home Dashboard")] }] };
   }
   const maxColumns = config.density === "compact" ? 4 : 3;
   const sections = config.view === "home" ? homeSections(config, maxColumns)
-    : config.view === "rooms" ? roomsSections(config.rooms ?? [])
+    : config.view === "rooms" ? roomsSections(config.rooms ?? [], maxColumns)
+      : config.view === "room" ? roomDetailSections(config.room, maxColumns)
       : config.view === "energy" ? energySections(config.energy)
         : config.view === "domains" ? domainSections(config.rooms ?? [])
           : moreSections(config);
   return {
     type: "sections",
     max_columns: maxColumns,
-    dense_section_placement: config.view === "home",
+    dense_section_placement: config.view === "home" || config.view === "room",
     sections
   };
 }

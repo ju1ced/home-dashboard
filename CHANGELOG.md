@@ -6,6 +6,20 @@ Alle betekenisvolle wijzigingen worden hier bijgehouden. Het project gebruikt Se
 
 Nog geen wijzigingen.
 
+## 0.5.0-alpha.1 — 2026-08-24
+
+### Added
+
+- Vervangt de vlakke Kamers-entiteitenlijst door een herkenbaar overzicht met hero, verdiepingsgroepen en compacte kamerkaarten.
+- Genereert voor iedere geconfigureerde kamer een stabiele semantische subview `room-<key>` met terugpad naar Kamers.
+- Groepeert kamerdetails in ruimtestatus, licht/covers/openingen, comfort/klimaat, media, veiligheid/camera's, apparaten/energie en 72-uurs historie.
+- Verbergt lege kamersecties en behoudt normale, gedeeltelijk onbeschikbare en lege kamers als geldige layouts.
+
+### Safety and validation
+
+- Kamerstatus en detailkaarten blijven read-only; servicecalls, actionsequences en quick actions worden nog niet gegenereerd.
+- Test stabiele paths, subviews, informatiedekking, kamerstatussemantiek, responsive componentregistratie en veilige entityacties.
+
 ## 0.4.0-alpha.2 — 2026-08-24
 
 ### Fixed
