@@ -6,6 +6,21 @@ Alle betekenisvolle wijzigingen worden hier bijgehouden. Het project gebruikt Se
 
 Nog geen wijzigingen.
 
+## 0.4.0-alpha.1 — 2026-08-24
+
+### Added
+
+- Bouwt Home opnieuw op met compacte Vandaag-, Gezin- en navigatiegroepen en een beveiligingssectie over de volledige beschikbare breedte.
+- Voegt een horizontaal en met toetsenbord bedienbare camerastrook toe voor ieder geconfigureerd aantal camera's.
+- Toont bij actieve privacy een expliciete privacyplaceholder in plaats van een betekenisloos zwart cameravlak.
+- Toont operationele `unknown`/`unavailable`-status uitsluitend voor de expliciete diagnostiek-allowlist.
+
+### Safety and validation
+
+- Camera-, privacy-, alarm- en personweergave blijven read-only; de release genereert geen servicecall of Home Assistant-write.
+- Cameravolgorde, privacyfallback, verborgen fallback, volledige sectiebreedte, compacte personenweergave en custom-cardregistratie zijn regressiegetest.
+- De in Home Assistant waargenomen layoutproblemen zijn alleen geanonimiseerd vastgelegd; screenshots en installatie-identifiers zijn niet aan de repository toegevoegd.
+
 ## 0.3.0-alpha.3 — 2026-08-22
 
 ### Fixed

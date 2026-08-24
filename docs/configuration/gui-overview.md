@@ -1,8 +1,8 @@
 # Grafische configuratie
 
-## Reikwijdte van v0.3.0-alpha.3
+## Reikwijdte van v0.4.0-alpha.1
 
-De editor registreert zich als `home-dashboard-strategy-editor` en beheert schema v1 zonder handgeschreven YAML of JSON. De Community dashboard-kiezer maakt vijf echte native Sections-views: Home, Kamers, Energie, Domeinen en Meer. `v0.3.0-alpha.3` toont geselecteerde states en camerabeelden read-only; bediening en specialistische detailcards volgen via afzonderlijke releases.
+De editor registreert zich als `home-dashboard-strategy-editor` en beheert schema v1 zonder handgeschreven YAML of JSON. De Community dashboard-kiezer maakt vijf echte Sections-views: Home, Kamers, Energie, Domeinen en Meer. `v0.4.0-alpha.1` verfijnt Home, personen en Security; bediening, kamerdetails, volledige Energie en specialistische detailcards volgen via afzonderlijke releases.
 
 De editor heeft tien onderdelen:
 

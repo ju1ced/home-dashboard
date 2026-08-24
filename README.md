@@ -1,6 +1,6 @@
 # Home Dashboard — ontwerpvoorstel
 
-Deze repository bouwt een HACS-installeerbare community dashboard strategy voor een centraal Home Assistant-dashboard. De HACS-foundation en grafische configuratie zijn in Home Assistant gevalideerd; `v0.3.0-alpha.3` levert de eerste echt renderende, read-only dashboardviews met optionele privacybediening. Home Assistant is niet door deze repository gewijzigd.
+Deze repository bouwt een HACS-installeerbare community dashboard strategy voor een centraal Home Assistant-dashboard. De HACS-foundation en grafische configuratie zijn in Home Assistant gevalideerd; `v0.4.0-alpha.1` levert een compacte, read-only Home-view met person cards en een brede camerastrook. Home Assistant is niet door deze repository gewijzigd.
 
 ## Aanbevolen richting
 
@@ -20,6 +20,8 @@ V1 bevat geen custom panel en geen extra summary-component. De minimale onderste
 - [Deliveryroadmap: agents, PR's, GUI, HACS en releases](docs/design/delivery-roadmap.md)
 - [Grafische configuratie](docs/configuration/gui-overview.md)
 - [Gegenereerde views en read-only contract](docs/configuration/generated-views.md)
+- [Home-configuratie](docs/configuration/home.md)
+- [Security en camerastrook](docs/configuration/security.md)
 - [Configuratieschema v1](docs/reference/config-schema.md)
 - [Compatibility](docs/reference/compatibility.md)
 - [Requirements en evidence](docs/discovery/requirements.md)
@@ -43,7 +45,7 @@ Open daarna `http://127.0.0.1:4173/`. De fixtureselector wisselt tussen normaal,
 
 ## HACS-installatie
 
-[`v0.1.0-alpha.1`](https://github.com/ju1ced/home-dashboard/releases/tag/v0.1.0-alpha.1) heeft de volledige HACS-lifecycle doorlopen: installatie, update, verwijdering en herinstallatie. Zie [het geanonimiseerde resultaat](docs/releases/results-v0.1.0-alpha.1.md). `v0.2.0-alpha.1` valideerde schema, preview, import/export en mobiel bewerken; `v0.2.0-alpha.2` maakte de editor compact; `v0.2.0-alpha.3` ondersteunt een flexibel aantal camera's. `v0.3.0-alpha.1` toonde de eerste echte read-only views; `v0.3.0-alpha.2` maakte status-only geldig en `v0.3.0-alpha.3` laat de gekozen actie haar eigen risicoklasse behouden.
+[`v0.1.0-alpha.1`](https://github.com/ju1ced/home-dashboard/releases/tag/v0.1.0-alpha.1) heeft de volledige HACS-lifecycle doorlopen: installatie, update, verwijdering en herinstallatie. Zie [het geanonimiseerde resultaat](docs/releases/results-v0.1.0-alpha.1.md). De `v0.2`-reeks valideerde de GUI en flexibele camera-instelling; de `v0.3`-reeks bracht de eerste echte views en corrigeerde de privacyconfiguratie. `v0.4.0-alpha.1` is de eerste gerichte Home/security-layoutrelease.
 
 ## Checks
 
@@ -85,4 +87,4 @@ scripts/          lokale preview en repositorychecks
 
 ## Status
 
-De ontwerpbaseline, deliveryroadmap en HACS-fundering zijn gepubliceerd; installatie, configuratie en de compacte editor zijn praktisch gevalideerd. `v0.3.0-alpha.3` is de actuele runtimegate voor de echte native shell en lokaal gekozen statusinformatie. Home Assistant-writes en servicecalls starten niet automatisch en behouden hun afzonderlijke menselijke gates.
+De ontwerpbaseline, deliveryroadmap en HACS-fundering zijn gepubliceerd; installatie, configuratie en de compacte editor zijn praktisch gevalideerd. `v0.4.0-alpha.1` is de actuele runtimegate voor Home, personen en de camerastrook. Kamers, Energie/Domeinen en specialisten blijven afzonderlijke roadmapstappen. Home Assistant-writes en servicecalls starten niet automatisch en behouden hun afzonderlijke menselijke gates.
