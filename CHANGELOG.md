@@ -6,6 +6,18 @@ Alle betekenisvolle wijzigingen worden hier bijgehouden. Het project gebruikt Se
 
 Nog geen wijzigingen.
 
+## 0.5.0-alpha.8 — 2026-08-24
+
+### Changed
+
+- Laat de compacte weerkaart op desktop over de twee linker Vandaag-kolommen lopen.
+- Verplaatst de energie-rail en afvalophaling naar de rij onder het weer, terwijl security rechts beide rijen blijft begeleiden.
+- Behoudt op tablet en mobiel de bestaande lineaire stapelvolgorde zonder horizontale overflow.
+
+### Validation
+
+- Vergrendelt de nieuwe gridposities en responsive reset in de distributietests.
+
 ## 0.5.0-alpha.7 — 2026-08-24
 
 ### Changed
