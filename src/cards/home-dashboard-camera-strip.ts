@@ -7,6 +7,7 @@ type HomeAssistantLike = { states?: Record<string, { state?: string }> };
 interface CameraStripConfig {
   type: "custom:home-dashboard-camera-strip";
   cameras: CameraConfig[];
+  compact?: boolean;
 }
 
 interface CustomCardMetadata {
@@ -120,9 +121,11 @@ export class HomeDashboardCameraStrip extends HTMLElementBase {
       .privacy-rail{display:grid;gap:6px;align-content:start}.privacy-title{font-size:.76rem;font-weight:600;color:var(--secondary-text-color);padding:2px 4px}.privacy-chip{display:grid;grid-template-columns:22px minmax(0,1fr);align-items:center;gap:6px;min-height:34px;padding:5px 8px;border-radius:10px;background:var(--secondary-background-color)}
       .privacy-chip ha-icon{width:19px;height:19px;color:var(--state-icon-color,var(--secondary-text-color))}.privacy-chip.active ha-icon{color:var(--warning-color,#f0a000)}.privacy-copy{display:grid;min-width:0}.privacy-copy strong,.privacy-copy span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.privacy-copy strong{font-size:.74rem}.privacy-copy span{font-size:.68rem;color:var(--secondary-text-color)}
       .empty{min-height:180px;display:grid;place-items:center;padding:18px;border-radius:12px;background:var(--secondary-background-color);color:var(--secondary-text-color);text-align:center}
+      ha-card.compact{max-width:none;padding:8px}.compact .toolbar{padding-bottom:6px}.compact .content{grid-template-columns:minmax(0,1fr)}.compact .privacy-rail{display:flex;overflow-x:auto;gap:5px}.compact .privacy-title{display:none}.compact .privacy-chip{flex:0 0 112px;min-height:30px;padding:4px 6px}
       @media(max-width:700px){ha-card{max-width:520px;padding-inline:8px}.content{grid-template-columns:minmax(0,1fr)}.privacy-rail{display:flex;overflow-x:auto}.privacy-title{display:none}.privacy-chip{flex:0 0 128px}}
     `;
     const card = document.createElement("ha-card");
+    if (this._config.compact) card.classList.add("compact");
     const toolbar = document.createElement("div");
     toolbar.className = "toolbar";
     const label = document.createElement("span");

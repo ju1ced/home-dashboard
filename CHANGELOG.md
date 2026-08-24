@@ -6,6 +6,24 @@ Alle betekenisvolle wijzigingen worden hier bijgehouden. Het project gebruikt Se
 
 Nog geen wijzigingen.
 
+## 0.5.0-alpha.5 — 2026-08-24
+
+### Changed
+
+- Splitst het gecombineerde batterijvermogen onder **Vandaag** in afzonderlijke sensoren en vaste labels voor **Batterij laden** en **Batterij ontladen**.
+- Plaatst security op brede schermen als compacte derde kolom naast het weer en de Vandaag-sensoren; tablet en mobiel blijven responsief stapelen.
+- Geeft afval een eigen herkenbare groep **Afvalophaling**, een afvalicoon en duidelijke friendly-name plus ophaalstatus per bron.
+
+### Fixed
+
+- Werkt realtime statewaarden in-place bij, zodat snel veranderende vermogenssensoren niet langer de volledige Home-compositie, weerkaart en camerastrook voortdurend opnieuw opbouwen.
+- Bewaart een oude gecombineerde batterijvermogensmapping verliesvrij als extra energiecontext en vraagt daarna om de twee nieuwe bronnen afzonderlijk te kiezen.
+
+### Validation
+
+- Voegt een regressietest toe die bewijst dat vermogensupdates geen structurele rerender veroorzaken, terwijl een echt veiligheidsincident de Home-structuur wel bijwerkt.
+- Controleert de driedelige desktopcompositie in een lokale runtime met fictieve waarden en zonder Home Assistant-verbinding.
+
 ## 0.5.0-alpha.4 — 2026-08-24
 
 ### Fixed

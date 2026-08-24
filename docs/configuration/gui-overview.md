@@ -1,13 +1,13 @@
 # Grafische configuratie
 
-## Reikwijdte van v0.5.0-alpha.4
+## Reikwijdte van v0.5.0-alpha.5
 
-De editor registreert zich als `home-dashboard-strategy-editor` en beheert schema v1 zonder handgeschreven YAML of JSON. De Community dashboard-kiezer maakt vijf hoofdviews en per kamer een semantische subview. `v0.5.0-alpha.4` levert de visuele Home/security- en Kamers-baseline met vijf expliciete Vandaag-energie-KPI's en een herstelde enkelvoudige entityselectie; statechips openen het standaard HA-detailvenster, terwijl directe actionsequences, volledige Energie en specialistische detailcards via afzonderlijke releases volgen.
+De editor registreert zich als `home-dashboard-strategy-editor` en beheert schema v1 zonder handgeschreven YAML of JSON. De Community dashboard-kiezer maakt vijf hoofdviews en per kamer een semantische subview. `v0.5.0-alpha.5` levert de visuele Home/security- en Kamers-baseline met zes expliciete Vandaag-energie-KPI's, duidelijke afvalinformatie en een driedelige desktopcompositie; statechips openen het standaard HA-detailvenster, terwijl directe actionsequences, volledige Energie en specialistische detailcards via afzonderlijke releases volgen.
 
 De editor heeft tien onderdelen:
 
 1. **Algemeen:** titel, taal, tijdnotatie, startview, thema en informatiedichtheid.
-2. **Vandaag:** weer, forecast, afval, thuisbatterij-SoC, batterijvermogen, zonnepanelenopbrengst, huisverbruik zonder batterijladen, maandelijkse vermogenspiek en optionele extra energiecontext.
+2. **Vandaag:** weer, forecast, afval, thuisbatterij-SoC, afzonderlijk batterij laden en ontladen, zonnepanelenopbrengst, huisverbruik zonder batterijladen, maandelijkse vermogenspiek en optionele extra energiecontext.
 3. **Personen:** personselectie, label, privacyveilige toegestane zones, thuis/zone/andere locatie, freshness en batterijen.
 4. **Security:** alarm en een vrij aantal camera's met privacyinstelling, actie, fallback en bevestiging.
 5. **Kamers:** logische sleutel, naam, icon, floor, area, extra devices, capabilities, maximaal twee quick actions en expliciete bronnen voor licht, covers/openingen, media, safety, camera, power, historie en volledige klimaatdetails.

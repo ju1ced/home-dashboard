@@ -32,7 +32,8 @@ export interface TodayConfig {
   forecast_days: number;
   waste_entities: EntityReference[];
   battery_soc_entity: EntityReference;
-  battery_power_entity: EntityReference;
+  battery_charge_power_entity: EntityReference;
+  battery_discharge_power_entity: EntityReference;
   solar_power_entity: EntityReference;
   home_consumption_entity: EntityReference;
   monthly_capacity_peak_entity: EntityReference;
