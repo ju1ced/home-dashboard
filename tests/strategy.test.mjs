@@ -117,6 +117,14 @@ test("camerastrook onderscheidt privacy, beeld en verborgen fallback", () => {
   assert.equal(getCameraPresentation("unavailable", "off", "last_image"), "camera");
 });
 
+test("cameracarrousel rendert één beeldbreedte en een compacte privacyrail", async () => {
+  const bundle = await readFile(new URL("../dist/home-dashboard.js", import.meta.url), "utf8");
+  assert.match(bundle, /flex:0 0 100%/);
+  assert.match(bundle, /privacy-rail/);
+  assert.match(bundle, /Privacy aan/);
+  assert.doesNotMatch(bundle, /Privacy actief/);
+});
+
 test("onbekende viewconfiguratie krijgt een native foutfallback", async () => {
   const fallback = await HomeDashboardViewStrategy.generate({ type: "custom:home-dashboard-view", view: "future", density: "comfortable" });
   assert.equal(fallback.type, "sections");

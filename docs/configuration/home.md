@@ -1,6 +1,6 @@
 # Home
 
-Home is een operationeel startscherm, geen volledige inventaris. `v0.4.0-alpha.1` gebruikt de beschikbare Sections-breedte als volgt:
+Home is een operationeel startscherm, geen volledige inventaris. `v0.4.0-alpha.2` gebruikt de beschikbare Sections-breedte als volgt:
 
 1. **Aandacht nodig** verschijnt alleen wanneer een entity uit **Diagnostiek → operationele entities** `unknown` of `unavailable` is. Generieke buttons, events of overige diagnostiek worden niet als alarm behandeld.
 2. **Vandaag** toont de ingeschakelde weerbron, afvalbronnen en korte energiecontext.

@@ -1,6 +1,6 @@
 # Home Dashboard — ontwerpvoorstel
 
-Deze repository bouwt een HACS-installeerbare community dashboard strategy voor een centraal Home Assistant-dashboard. De HACS-foundation en grafische configuratie zijn in Home Assistant gevalideerd; `v0.4.0-alpha.1` levert een compacte, read-only Home-view met person cards en een brede camerastrook. Home Assistant is niet door deze repository gewijzigd.
+Deze repository bouwt een HACS-installeerbare community dashboard strategy voor een centraal Home Assistant-dashboard. De HACS-foundation en grafische configuratie zijn in Home Assistant gevalideerd; `v0.4.0-alpha.2` levert een compacte, read-only Home-view met person cards en een cameracarrousel met één zichtbaar beeld. Home Assistant is niet door deze repository gewijzigd.
 
 ## Aanbevolen richting
 
@@ -45,7 +45,7 @@ Open daarna `http://127.0.0.1:4173/`. De fixtureselector wisselt tussen normaal,
 
 ## HACS-installatie
 
-[`v0.1.0-alpha.1`](https://github.com/ju1ced/home-dashboard/releases/tag/v0.1.0-alpha.1) heeft de volledige HACS-lifecycle doorlopen: installatie, update, verwijdering en herinstallatie. Zie [het geanonimiseerde resultaat](docs/releases/results-v0.1.0-alpha.1.md). De `v0.2`-reeks valideerde de GUI en flexibele camera-instelling; de `v0.3`-reeks bracht de eerste echte views en corrigeerde de privacyconfiguratie. `v0.4.0-alpha.1` is de eerste gerichte Home/security-layoutrelease.
+[`v0.1.0-alpha.1`](https://github.com/ju1ced/home-dashboard/releases/tag/v0.1.0-alpha.1) heeft de volledige HACS-lifecycle doorlopen: installatie, update, verwijdering en herinstallatie. Zie [het geanonimiseerde resultaat](docs/releases/results-v0.1.0-alpha.1.md). De `v0.2`-reeks valideerde de GUI en flexibele camera-instelling; de `v0.3`-reeks bracht de eerste echte views en corrigeerde de privacyconfiguratie. `v0.4.0-alpha.2` verfijnt Home/security tot één zichtbaar camerabeeld met compacte privacystatus.
 
 ## Checks
 
@@ -87,4 +87,4 @@ scripts/          lokale preview en repositorychecks
 
 ## Status
 
-De ontwerpbaseline, deliveryroadmap en HACS-fundering zijn gepubliceerd; installatie, configuratie en de compacte editor zijn praktisch gevalideerd. `v0.4.0-alpha.1` is de actuele runtimegate voor Home, personen en de camerastrook. Kamers, Energie/Domeinen en specialisten blijven afzonderlijke roadmapstappen. Home Assistant-writes en servicecalls starten niet automatisch en behouden hun afzonderlijke menselijke gates.
+De ontwerpbaseline, deliveryroadmap en HACS-fundering zijn gepubliceerd; installatie, configuratie en de compacte editor zijn praktisch gevalideerd. `v0.4.0-alpha.2` is de actuele runtimegate voor Home, personen en de cameracarrousel. Kamers, Energie/Domeinen en specialisten blijven afzonderlijke roadmapstappen. Home Assistant-writes en servicecalls starten niet automatisch en behouden hun afzonderlijke menselijke gates.
