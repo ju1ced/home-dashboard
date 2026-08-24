@@ -209,3 +209,9 @@
 - **Status:** besloten voor `v0.5.0-alpha.8`
 - **Besluit:** op brede schermen staat de weerkaart over kolom één en twee. Energie en afval volgen in een tweede rij over dezelfde kolommen; security bezet rechts beide rijen. Onder 1050 px worden de zones lineair gestapeld.
 - **Reden:** de weerpresentatie profiteert van horizontale ruimte, terwijl de compacte energierail visueel sterker onder het weer staat dan ertussen. De vaste rechter securitykolom blijft daardoor scanbaar zonder de hoofdcontext te versnipperen.
+
+## D-036 — Vandaag is één samengestelde kaart
+
+- **Status:** besloten voor `v0.5.0-alpha.9`
+- **Besluit:** weer, energiecontext en afvalophaling delen op Home één buitenrand, surface en schaduw. Interne lijnen scheiden de drie informatielagen. Maximaal vier afvalfracties staan op desktop in één rij en op smalle schermen in twee kolommen. Security blijft een zelfstandige rechterkolom.
+- **Reden:** drie afzonderlijke kaartgroepen binnen dezelfde Vandaag-zone voelden visueel versnipperd. Eén compound card maakt hun samenhang duidelijk, terwijl de enkele afvalrij verticale ruimte bespaart zonder informatie weg te nemen.

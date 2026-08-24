@@ -1,9 +1,9 @@
 # Home
 
-Home is een operationeel startscherm, geen volledige inventaris. `v0.5.0-alpha.8` rendert de inhoud als één begrensde, responsive compositie in plaats van losse Sections-kolommen:
+Home is een operationeel startscherm, geen volledige inventaris. `v0.5.0-alpha.9` rendert de inhoud als één begrensde, responsive compositie in plaats van losse Sections-kolommen:
 
 1. **Aandacht nodig** verschijnt alleen wanneer een entity uit **Diagnostiek → operationele entities** `unknown` of `unavailable` is. Generieke buttons, events of overige diagnostiek worden niet als alarm behandeld.
-2. **Vandaag** toont op desktop een compacte weerkaart over de twee linker kolommen. De energie-rail en **Afvalophaling** staan daaronder; security blijft als derde kolom rechts staan. Op smallere schermen stapelen de drie zones. Afvalfracties krijgen waar herkenbaar hun eigen icoon en korte naam, plus datum en `Vandaag`, `Morgen` of `Over n dagen`. Extra energiecontext blijft optioneel.
+2. **Vandaag** vormt op desktop één samengestelde kaart over de twee linker kolommen: weer, energie-rail en **Afvalophaling** delen één buitenrand en worden alleen door interne lijnen gescheiden. Maximaal vier afvalfracties staan in één rij; op mobiel blijven ze twee per rij. Security blijft als derde kolom rechts staan en stapelt op smallere schermen. Afvalfracties krijgen waar herkenbaar hun eigen icoon en korte naam, plus datum en `Vandaag`, `Morgen` of `Over n dagen`. Extra energiecontext blijft optioneel.
 3. **Gezin** toont de geconfigureerde person cards compact en respecteert `show_location`. Een geconfigureerde persoonsbatterij verschijnt alleen onder 20%.
 4. **Snel naar** groepeert maximaal vier rechtstreekse kamerdetailroutes en ingeschakelde specialistische ingangen.
 5. **Beveiliging & privacy** staat zonder dubbele buitenkop op brede schermen als compacte derde kolom naast weer en energiesensoren, en stapelt op tablet/mobiel. Het toont alarmstatus en één camerabeeld per positie; private camera's verdwijnen uit de carrousel en blijven alleen in de smalle privacyrail zichtbaar.
