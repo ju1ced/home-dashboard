@@ -215,3 +215,9 @@
 - **Status:** besloten voor `v0.5.0-alpha.9`
 - **Besluit:** weer, energiecontext en afvalophaling delen op Home één buitenrand, surface en schaduw. Interne lijnen scheiden de drie informatielagen. Maximaal vier afvalfracties staan op desktop in één rij en op smalle schermen in twee kolommen. Security blijft een zelfstandige rechterkolom.
 - **Reden:** drie afzonderlijke kaartgroepen binnen dezelfde Vandaag-zone voelden visueel versnipperd. Eén compound card maakt hun samenhang duidelijk, terwijl de enkele afvalrij verticale ruimte bespaart zonder informatie weg te nemen.
+
+## D-037 — Semantische hoofdviews krijgen een begrensd bundlebudget van 160 kB
+
+- **Status:** besloten voor de gecombineerde Home-, Kamers- en Energie-alpha
+- **Besluit:** het minified bundlebudget groeit gecontroleerd van 128 kB naar 160 kB. De limiet blijft een harde buildgate. De groei is uitsluitend bestemd voor state-aware Home-samenvattingen, semantische kamerbediening via `hass-more-info` en een eerste volledige Energie-/Domeinencompositie; directe servicecalls en specialistische bronlogica worden niet meegebundeld.
+- **Reden:** de drie eigen compositielagen vervangen een veel zwaardere verzameling globaal geladen Lovelace-resources en behouden informatiehiërarchie zonder die afhankelijkheden te kopiëren. Een vaste bovengrens houdt verdere groei zichtbaar; runtime-, DOM- en rerendermetingen blijven verplicht vóór productie.
