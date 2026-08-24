@@ -5,7 +5,9 @@ import {
   HomeDashboardStrategy,
   HomeDashboardViewStrategy,
   getCameraPresentation,
-  migrateConfig
+  getRoomMetric,
+  migrateConfig,
+  roomPath
 } from "../dist/home-dashboard.js";
 
 async function normalConfig() {
@@ -38,25 +40,27 @@ function walk(value, visit) {
   else if (value && typeof value === "object") Object.values(value).forEach((item) => walk(item, visit));
 }
 
-test("dashboardstrategy genereert vijf stabiele hoofdviews met startview eerst", async () => {
+test("dashboardstrategy genereert vijf hoofdviews en stabiele kamer-subviews", async () => {
   const config = await normalConfig();
   const forbiddenHass = new Proxy({}, { get(_target, property) { throw new Error(`Hass call verboden: ${String(property)}`); } });
   const generated = await HomeDashboardStrategy.generate(config, forbiddenHass);
   assert.equal(generated.title, "Home");
-  assert.deepEqual(generated.views.map((view) => view.path), ["energy", "home", "rooms", "domains", "more"]);
-  assert.equal(new Set(generated.views.map((view) => view.path)).size, 5);
-  assert.ok(generated.views.every((view) => view.subview === false && view.strategy.type === "custom:home-dashboard-view"));
+  assert.deepEqual(generated.views.map((view) => view.path), ["energy", "home", "rooms", "domains", "more", "room-living-room"]);
+  assert.equal(new Set(generated.views.map((view) => view.path)).size, 6);
+  assert.ok(generated.views.slice(0, 5).every((view) => view.subview === false && view.strategy.type === "custom:home-dashboard-view"));
+  assert.ok(generated.views.slice(5).every((view) => view.subview === true && view.back_path === "rooms" && view.strategy.view === "room"));
+  assert.equal(roomPath(config.rooms[0]), "room-living-room");
   assert.doesNotThrow(() => JSON.stringify(generated));
   assert.deepEqual(generated, await HomeDashboardStrategy.generate(config));
 });
 
 test("iedere viewstrategy levert native Sections zonder serviceactie", async () => {
   const dashboard = await HomeDashboardStrategy.generate(await normalConfig());
-  const allowedCards = new Set(["button", "conditional", "custom:home-dashboard-camera-strip", "entities", "entity-filter", "heading", "markdown", "picture-entity", "tile", "weather-forecast"]);
+  const allowedCards = new Set(["button", "conditional", "custom:home-dashboard-camera-strip", "custom:home-dashboard-room-climate", "custom:home-dashboard-room-hero", "custom:home-dashboard-room-overview", "entities", "entity-filter", "heading", "history-graph", "markdown", "picture-entity", "tile", "weather-forecast"]);
   for (const view of dashboard.views) {
     const expanded = await HomeDashboardViewStrategy.generate(view.strategy);
     assert.equal(expanded.type, "sections");
-    assert.equal(expanded.dense_section_placement, view.path === "home");
+    assert.equal(expanded.dense_section_placement, view.path === "home" || view.strategy.view === "room");
     assert.ok(expanded.sections.length > 0);
     walk(expanded, (value) => {
       if (!value || typeof value !== "object" || Array.isArray(value)) return;
@@ -91,11 +95,39 @@ test("Home toont een compacte gezinsectie en een volle camerastrook met zes came
   assert.ok(cards.some((card) => card.type === "grid" && card.cards?.some((candidate) => candidate.entity === config.persons[0].entity)));
 });
 
+test("Kamers gebruikt een overzichtskaart en een semantisch gegroepeerde detail-subview", async () => {
+  const config = await normalConfig();
+  const dashboard = await HomeDashboardStrategy.generate(config);
+  const overviewView = dashboard.views.find((view) => view.path === "rooms");
+  const overview = await HomeDashboardViewStrategy.generate(overviewView.strategy);
+  const overviewCard = overview.sections[0].cards[0];
+  assert.equal(overviewCard.type, "custom:home-dashboard-room-overview");
+  assert.deepEqual(overviewCard.rooms.map((room) => room.key), ["living_room"]);
+
+  const detailView = dashboard.views.find((view) => view.path === "room-living-room");
+  const detail = await HomeDashboardViewStrategy.generate(detailView.strategy);
+  const headings = [];
+  const entities = [];
+  walk(detail, (value) => {
+    if (value?.type === "heading") headings.push(value.heading);
+    if (typeof value?.entity === "string") entities.push(value.entity);
+    if (value?.type === "history-graph" && Array.isArray(value.entities)) entities.push(...value.entities);
+  });
+  assert.deepEqual(headings, ["Ruimtestatus", "Licht, covers & openingen", "Comfort & klimaat", "Media", "Apparaten & energie", "Historie"]);
+  for (const entity of ["living_lights", "living_hvac", "living_temperature", "living_humidity", "living_media", "living_power", "living_air_quality"]) assert.ok(entities.includes(entity), `${entity} ontbreekt`);
+  assert.equal(detail.sections[0].cards[0].type, "custom:home-dashboard-room-hero");
+  assert.ok(detail.sections.some((section) => section.cards.some((card) => card.type === "custom:home-dashboard-room-climate")));
+  assert.equal(getRoomMetric({ states: { living_lights: { state: "on" } } }, config.rooms[0]), "1 lamp aan");
+  assert.equal(getRoomMetric({ states: { living_hvac: { state: "heat", attributes: { current_temperature: 21.5 } } } }, config.rooms[0]), "21.5 °C");
+  assert.equal(getRoomMetric({ states: { living_media: { state: "unavailable" } } }, config.rooms[0]), "Deels offline");
+});
+
 test("lege en unavailable fixtures blijven renderbaar", async () => {
   for (const name of ["warning", "unavailable"]) {
     const fixture = JSON.parse(await readFile(new URL(`../config/examples/${name}.json`, import.meta.url), "utf8"));
-    const dashboard = await HomeDashboardStrategy.generate(migrateConfig(fixture).config);
-    assert.equal(dashboard.views.length, 5);
+    const fixtureConfig = migrateConfig(fixture).config;
+    const dashboard = await HomeDashboardStrategy.generate(fixtureConfig);
+    assert.equal(dashboard.views.length, 5 + fixtureConfig.rooms.length);
     for (const view of dashboard.views) {
       assert.doesNotThrow(() => JSON.stringify(view));
       await assert.doesNotReject(() => HomeDashboardViewStrategy.generate(view.strategy));

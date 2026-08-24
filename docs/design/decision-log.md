@@ -161,3 +161,9 @@
 - **Status:** besloten voor `v0.4.0-alpha.1`
 - **Besluit:** Security beslaat op Home de volledige Sections-breedte. Eén kleine, meegebundelde custom card verzorgt horizontale scroll en focusbediening voor 1..n camera's, met exact één niet-private camera per viewport en compacte privacystatussen ernaast. Privacy-actieve camera's worden niet als beeld gerenderd. De camerainhoud blijft een Home Assistant `picture-entity` met alle acties op `none`.
 - **Reden:** een native horizontal stack perst 1..n camera's naast elkaar en een native grid levert geen horizontale camerastrook. De begrensde component lost alleen de ontbrekende layoutinteractie op en kopieert geen camera- of servicelogica.
+
+## D-028 — Iedere kamer krijgt overview-summary en een echte subview
+
+- **Status:** besloten voor `v0.5.0-alpha.1`
+- **Besluit:** Kamers toont compacte herkenbare kamerkaarten per verdieping. Iedere kamer krijgt een stabiele `room-<key>`-subview met hero en afzonderlijke groepen voor status, primaire toestanden, klimaat, media, veiligheid, apparaten/energie en historie. Lege groepen verdwijnen. De eerste release is read-only.
+- **Reden:** een vlakke entiteitenlijst behoudt wel data maar niet de informatiehiërarchie of mobiele bruikbaarheid van de bestaande kamerdetailpagina's en de goedgekeurde renders.
