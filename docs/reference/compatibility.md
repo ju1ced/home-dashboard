@@ -1,6 +1,6 @@
 # Compatibility
 
-| Component | Ondersteund in v0.5.0-alpha.6 | Opmerking |
+| Component | Ondersteund in v0.5.0-alpha.7 | Opmerking |
 |---|---:|---|
 | Home Assistant Core/frontend | 2026.8.2 of nieuwer | 2026.8.2 is de minimale en huidige ontwikkelbaseline |
 | HACS | actuele ondersteunde release | custom repository, categorie Dashboard |
@@ -11,4 +11,4 @@
 | Tuincard | configuratiecontract | runtime-integratie volgt in v0.9 |
 | Zwembadcard | configuratiecontract | zelfstandige card en runtime-integratie volgen in v0.10 |
 
-De editor gebruikt de publieke custom strategy/editorcontracten en native selectors van Home Assistant. De dashboard strategy levert vijf views en een afzonderlijke view strategy bouwt Sections. De camerastrook is een kleine meegeleverde custom card die uitsluitend native camera- en tilekaarten samenstelt. Statuskaarten zijn in deze alpha read-only; kamer-, Energie- en specialistfunctionaliteit volgt per roadmaprelease.
+De editor gebruikt de publieke custom strategy/editorcontracten en native selectors van Home Assistant. De dashboard strategy levert vijf views en een afzonderlijke view strategy bouwt Sections. De camerastrook is een kleine meegeleverde custom card die uitsluitend native camerakaarten samenstelt. De compacte weerpresentatie gebruikt Home Assistants officiële read-only dagelijkse forecastsubscription. Statuskaarten zijn in deze alpha read-only; kamer-, Energie- en specialistfunctionaliteit volgt per roadmaprelease.

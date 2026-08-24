@@ -209,6 +209,12 @@ test("visuele cards openen alleen het standaard HA-detailvenster", async () => {
   assert.doesNotMatch(bundle, /callWS\(/);
   assert.match(bundle, /home-battery-outline/);
   assert.match(bundle, /waste-relative/);
+  assert.match(bundle, /compact-weather/);
+  assert.match(bundle, /forecast-row/);
+  assert.match(bundle, /weather\/subscribe_forecast/);
+  assert.match(bundle, /subscribeMessage/);
+  assert.match(bundle, /--hd-brand-soft/);
+  assert.doesNotMatch(bundle, /type:\s*["']weather-forecast["']/);
   assert.doesNotMatch(bundle, /Camera, privacy en alarm in één compacte kolom/);
 });
 

@@ -197,3 +197,9 @@
 - **Status:** besloten voor `v0.5.0-alpha.6`
 - **Besluit:** de brede Vandaag-zone gebruikt een compactere weerkolom, zes iconische energiestatussen en security zonder een dubbele buitenkop. Afval wordt uit bronnaam, entitysleutel en bekende datumattributen semantisch als GFT, papier, PMD, groenafval, glas of restafval gepresenteerd, met datum en relatieve termijn. `system` erft de actieve HA-tokens; expliciet licht/donker gebruikt de gedocumenteerde Juiced Horizon Calm-tokens binnen de compositie.
 - **Reden:** lange vaste KPI-labels, generieke afvaliconen en een dubbele beveiligingsheading brachten de informatie wel over maar niet de visuele hiërarchie van de goedgekeurde render. De semantische presentatie verbetert herkenning zonder integratiespecifieke of private identifiers in tracked code op te nemen.
+
+## D-034 — Compact weer gebruikt de officiële read-only forecastsubscription
+
+- **Status:** besloten voor `v0.5.0-alpha.7`
+- **Besluit:** Home vervangt de hoge native weather-card door een begrensde presentatielaag voor actuele toestand en maximaal drie dagelijkse forecasts. Forecastdata komt via `weather/subscribe_forecast`; de kaart opent alleen `hass-more-info` en voert geen service- of configuratiecall uit. De Juiced Horizon Calm-tokenlaag stuurt voortaan surfaces, schaduw, brandkleur en compacte kaartgroepen consistent aan. Het minified bundlebudget groeit gecontroleerd van 120 kB naar 128 kB.
+- **Reden:** de native weather-card houdt in deze driedelige compositie te veel onbruikbare hoogte vast en haar interne Shadow DOM kan niet robuust vanuit de dashboardcard worden gecomprimeerd. De officiële read-only subscription behoudt forecastinformatie zonder Home Assistant-bedieningslogica te kopiëren.
