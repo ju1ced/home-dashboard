@@ -111,16 +111,16 @@ export class HomeDashboardCameraStrip extends HTMLElementBase {
     this.childCards = [];
     const style = document.createElement("style");
     style.textContent = `
-      :host{display:block;min-width:0}ha-card{display:block;padding:12px;background:var(--ha-card-background,var(--card-background-color));overflow:hidden}
+      :host{display:block;min-width:0}ha-card{display:block;max-width:720px;margin:0 auto;padding:10px;background:var(--ha-card-background,var(--card-background-color));overflow:hidden}
       .toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 2px 8px}.label{color:var(--secondary-text-color);font-size:.9rem}
-      .controls{display:flex;gap:6px}.controls button{display:grid;place-items:center;width:44px;height:44px;border:0;border-radius:999px;background:var(--secondary-background-color);color:var(--primary-text-color);cursor:pointer}
-      .controls button:disabled{opacity:.35;cursor:default}.content{display:grid;grid-template-columns:minmax(0,900px) 180px;justify-content:center;align-items:start;gap:12px}.content.no-privacy{grid-template-columns:minmax(0,900px)}
+      .controls{display:flex;gap:6px}.controls button{display:grid;place-items:center;width:36px;height:36px;border:0;border-radius:999px;background:var(--secondary-background-color);color:var(--primary-text-color);cursor:pointer}
+      .controls button:disabled{opacity:.35;cursor:default}.content{display:grid;grid-template-columns:minmax(0,520px) 150px;justify-content:center;align-items:start;gap:10px}.content.no-privacy{grid-template-columns:minmax(0,520px)}
       .strip{display:flex;overflow-x:auto;overscroll-behavior-inline:contain;scroll-snap-type:inline mandatory;scrollbar-width:none;outline:none;border-radius:12px}.strip::-webkit-scrollbar{display:none}
       .strip:focus-visible{outline:2px solid var(--primary-color);outline-offset:2px}.item{flex:0 0 100%;min-width:0;scroll-snap-align:start;scroll-snap-stop:always}.item>*{display:block;width:100%}
-      .privacy-rail{display:grid;gap:8px;align-content:start}.privacy-title{font-size:.82rem;font-weight:600;color:var(--secondary-text-color);padding:2px 4px}.privacy-chip{display:grid;grid-template-columns:28px minmax(0,1fr);align-items:center;gap:8px;min-height:44px;padding:6px 10px;border-radius:12px;background:var(--secondary-background-color)}
-      .privacy-chip ha-icon{width:24px;height:24px;color:var(--state-icon-color,var(--secondary-text-color))}.privacy-chip.active ha-icon{color:var(--warning-color,#f0a000)}.privacy-copy{display:grid;min-width:0}.privacy-copy strong,.privacy-copy span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.privacy-copy strong{font-size:.82rem}.privacy-copy span{font-size:.76rem;color:var(--secondary-text-color)}
+      .privacy-rail{display:grid;gap:6px;align-content:start}.privacy-title{font-size:.76rem;font-weight:600;color:var(--secondary-text-color);padding:2px 4px}.privacy-chip{display:grid;grid-template-columns:22px minmax(0,1fr);align-items:center;gap:6px;min-height:34px;padding:5px 8px;border-radius:10px;background:var(--secondary-background-color)}
+      .privacy-chip ha-icon{width:19px;height:19px;color:var(--state-icon-color,var(--secondary-text-color))}.privacy-chip.active ha-icon{color:var(--warning-color,#f0a000)}.privacy-copy{display:grid;min-width:0}.privacy-copy strong,.privacy-copy span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.privacy-copy strong{font-size:.74rem}.privacy-copy span{font-size:.68rem;color:var(--secondary-text-color)}
       .empty{min-height:180px;display:grid;place-items:center;padding:18px;border-radius:12px;background:var(--secondary-background-color);color:var(--secondary-text-color);text-align:center}
-      @media(max-width:700px){ha-card{padding-inline:8px}.content{grid-template-columns:minmax(0,1fr)}.privacy-rail{display:flex;overflow-x:auto}.privacy-title{display:none}.privacy-chip{flex:0 0 150px}}
+      @media(max-width:700px){ha-card{max-width:520px;padding-inline:8px}.content{grid-template-columns:minmax(0,1fr)}.privacy-rail{display:flex;overflow-x:auto}.privacy-title{display:none}.privacy-chip{flex:0 0 128px}}
     `;
     const card = document.createElement("ha-card");
     const toolbar = document.createElement("div");

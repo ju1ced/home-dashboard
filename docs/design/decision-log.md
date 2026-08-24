@@ -167,3 +167,9 @@
 - **Status:** besloten voor `v0.5.0-alpha.1`
 - **Besluit:** Kamers toont compacte herkenbare kamerkaarten per verdieping. Iedere kamer krijgt een stabiele `room-<key>`-subview met hero en afzonderlijke groepen voor status, primaire toestanden, klimaat, media, veiligheid, apparaten/energie en historie. Lege groepen verdwijnen. De eerste release is read-only.
 - **Reden:** een vlakke entiteitenlijst behoudt wel data maar niet de informatiehiërarchie of mobiele bruikbaarheid van de bestaande kamerdetailpagina's en de goedgekeurde renders.
+
+## D-029 — Home en kamerdetail worden begrensde compositiecards
+
+- **Status:** besloten voor `v0.5.0-alpha.2`
+- **Besluit:** Home en iedere kamerdetail-subview gebruiken één responsive compositiecard binnen de native Sections-shell. Kamerchips en detailcards openen uitsluitend het standaard `hass-more-info`-venster; zij roepen geen service aan. De cameraviewport wordt begrensd tot circa 520 px. Het minified bundlebudget groeit gecontroleerd van 100 kB naar 120 kB.
+- **Reden:** losse Sections-elementen spreidden kleine informatiedelen over brede desktops, maakten de camera dominant en verloren de hiërarchie van de goedgekeurde desktop- en mobiele renders. Een begrensde component houdt ritme, kolomverhoudingen en responsive disclosure stabiel zonder Home Assistant-bedieningslogica te kopiëren.

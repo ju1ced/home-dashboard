@@ -69,94 +69,28 @@ function heading(headingText: string, icon: string, navigationPath?: string): Lo
   };
 }
 
-function compactGrid(cards: LovelaceConfig[], columns = 2): LovelaceConfig {
-  return { type: "grid", columns: Math.max(1, Math.min(columns, cards.length)), square: false, cards, grid_options: { columns: "full", rows: "auto" } };
-}
-
 function homeSection(title: string, icon: string, cards: LovelaceConfig[], columnSpan = 1, navigationPath?: string): LovelaceConfig | undefined {
   if (cards.length === 0) return undefined;
   return { type: "grid", column_span: columnSpan, cards: [heading(title, icon, navigationPath), ...cards] };
 }
 
 function homeSections(config: HomeDashboardViewConfig, maxColumns: number): LovelaceConfig[] {
-  const sections: Array<LovelaceConfig | undefined> = [];
-  const operationalEntities = config.diagnostics?.unavailable_policy === "hidden"
-    ? []
-    : uniqueEntities(config.diagnostics?.operational_entities ?? []);
-  if (operationalEntities.length > 0) {
-    sections.push({
-      type: "grid",
-      cards: [{
-        type: "entity-filter",
-        entities: operationalEntities,
-        state_filter: ["unavailable", "unknown"],
-        show_empty: false,
-        card: { type: "entities", title: "Aandacht nodig", show_header_toggle: false }
-      }]
-    });
-  }
-  const todayCards: LovelaceConfig[] = [];
-  if (config.today?.enabled) {
-    if (config.show_weather !== false && config.today.weather_entity) {
-      todayCards.push({ type: "weather-forecast", entity: config.today.weather_entity, forecast_type: "daily", show_forecast: true });
-    }
-    for (const entity of uniqueEntities([...(config.today.waste_entities ?? []), ...(config.today.energy_context_entities ?? [])])) {
-      todayCards.push(readonlyTile(entity));
-    }
-  }
-  sections.push(homeSection("Vandaag", "mdi:calendar-today", todayCards));
-
-  const personCards = (config.persons ?? []).filter((person) => person.entity).map((person) => readonlyTile(
-    person.entity,
-    person.label || undefined,
-    { show_entity_picture: true, ...(person.show_location ? {} : { hide_state: true }) }
-  ));
-  const batteryWarnings = (config.persons ?? []).flatMap((person) => person.battery_entities).filter(Boolean).map((entity) => ({
-    type: "conditional",
-    conditions: [{ condition: "numeric_state", entity, below: 20 }],
-    card: readonlyTile(entity, "Batterij bijna leeg")
-  }));
-  sections.push(homeSection("Gezin", "mdi:account-group", personCards.length > 0 ? [compactGrid(personCards), ...batteryWarnings] : batteryWarnings));
-
-  const securityCards: LovelaceConfig[] = [];
-  if (config.security?.enabled && config.security.alarm_entity) securityCards.push(readonlyTile(config.security.alarm_entity, "Alarm"));
-  if (config.security?.enabled && config.security.cameras.some((camera) => camera.camera_entity)) {
-    securityCards.push({
-      type: "custom:home-dashboard-camera-strip",
-      cameras: config.security.cameras.filter((camera) => camera.camera_entity),
+  return [{
+    type: "grid",
+    column_span: maxColumns,
+    cards: [{
+      type: "custom:home-dashboard-home-overview",
+      today: config.today,
+      persons: config.persons ?? [],
+      security: config.security,
+      rooms: config.rooms ?? [],
+      specialists: config.specialists,
+      diagnostics: config.diagnostics,
+      energy: config.energy,
+      show_weather: config.show_weather,
       grid_options: { columns: "full", rows: "auto" }
-    });
-  }
-  sections.push(homeSection("Beveiliging & privacy", "mdi:shield-home-outline", securityCards, maxColumns));
-
-  const roomCards = (config.rooms ?? []).map((room) => ({
-    type: "button",
-    name: room.name,
-    icon: room.icon || "mdi:sofa",
-    tap_action: { action: "navigate", navigation_path: "rooms" },
-    hold_action: noAction(),
-    double_tap_action: noAction()
-  }));
-
-  const specialistNames: Record<keyof SpecialistsConfig, [string, string]> = {
-    kia: ["Auto", "mdi:car-electric"],
-    robot: ["Robot", "mdi:robot-vacuum"],
-    garden: ["Tuin", "mdi:flower"],
-    pool: ["Zwembad", "mdi:pool"]
-  };
-  const specialistCards = Object.entries(config.specialists ?? {}).filter(([, specialist]) => specialist.enabled).map(([key]) => ({
-    type: "button",
-    name: specialistNames[key as keyof SpecialistsConfig][0],
-    icon: specialistNames[key as keyof SpecialistsConfig][1],
-    tap_action: { action: "navigate", navigation_path: "more" },
-    hold_action: noAction(),
-    double_tap_action: noAction()
-  }));
-  const navigationCards = [...roomCards, ...specialistCards];
-  sections.push(homeSection("Snel naar", "mdi:view-dashboard-outline", navigationCards.length > 0 ? [compactGrid(navigationCards, 2)] : [], 1, "rooms"));
-
-  const present = sections.filter((candidate): candidate is LovelaceConfig => Boolean(candidate));
-  return present.length > 0 ? present : [{ type: "grid", cards: [markdown("Configureer Vandaag, Personen, Security of Kamers via **Dashboard bewerken**.", "Home Dashboard")] }];
+    }]
+  }];
 }
 
 function roomsSections(rooms: readonly RoomConfig[], maxColumns: number): LovelaceConfig[] {
@@ -168,19 +102,6 @@ function roomsSections(rooms: readonly RoomConfig[], maxColumns: number): Lovela
   }];
 }
 
-function readonlyPictureEntity(entity: string): LovelaceConfig {
-  return {
-    type: "picture-entity",
-    entity,
-    camera_view: "auto",
-    show_name: true,
-    show_state: false,
-    tap_action: noAction(),
-    hold_action: noAction(),
-    double_tap_action: noAction()
-  };
-}
-
 function roomDetailSection(title: string, icon: string, cards: LovelaceConfig[], maxColumns: number): LovelaceConfig | undefined {
   return homeSection(title, icon, cards, maxColumns);
 }
@@ -190,29 +111,8 @@ function roomDetailSections(room: RoomConfig | undefined, maxColumns: number): L
   const sections: Array<LovelaceConfig | undefined> = [{
     type: "grid",
     column_span: maxColumns,
-    cards: [{ type: "custom:home-dashboard-room-hero", room, grid_options: { columns: "full", rows: "auto" } }]
+    cards: [{ type: "custom:home-dashboard-room-detail", room, grid_options: { columns: "full", rows: "auto" } }]
   }];
-  const statusEntities = uniqueEntities([...room.hvac.comfort_entities, ...room.safety_entities]).slice(0, 8);
-  sections.push(roomDetailSection("Ruimtestatus", "mdi:gauge", statusEntities.map((entity) => readonlyTile(entity)), maxColumns));
-
-  const primaryCards = [
-    ...room.light_entities.map((entity) => readonlyTile(entity)),
-    ...room.cover_entities.map((entity) => readonlyTile(entity))
-  ];
-  sections.push(roomDetailSection("Licht, covers & openingen", "mdi:lightbulb-group-outline", primaryCards, maxColumns));
-
-  const climateCards: LovelaceConfig[] = [];
-  if (room.hvac.entity) climateCards.push({ type: "custom:home-dashboard-room-climate", room, grid_options: { columns: "full", rows: "auto" } });
-  climateCards.push(...room.hvac.comfort_entities.map((entity) => readonlyTile(entity)));
-  sections.push(roomDetailSection("Comfort & klimaat", "mdi:thermostat", climateCards, maxColumns));
-
-  sections.push(roomDetailSection("Media", "mdi:speaker", room.media_entities.map((entity) => readonlyTile(entity)), maxColumns));
-  const safetyCards = [
-    ...room.safety_entities.map((entity) => readonlyTile(entity)),
-    ...room.camera_entities.map((entity) => readonlyPictureEntity(entity))
-  ];
-  sections.push(roomDetailSection("Veiligheid", "mdi:shield-home-outline", safetyCards, maxColumns));
-  sections.push(roomDetailSection("Apparaten & energie", "mdi:power-plug-outline", room.power_entities.map((entity) => readonlyTile(entity)), maxColumns));
 
   const historyEntities = uniqueEntities([...room.history_entities, ...room.hvac.history_entities]);
   if (historyEntities.length > 0) {

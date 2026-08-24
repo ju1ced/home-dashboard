@@ -9,6 +9,7 @@ const bundle = await readFile(bundleUrl, "utf8");
 const bundleStats = await stat(bundleUrl);
 const distFiles = await readdir(distDirectory);
 const errors = [];
+const maxBundleBytes = 120_000;
 
 if (hacs.filename !== "home-dashboard.js") errors.push("hacs.json verwijst niet naar home-dashboard.js");
 if (hacs.homeassistant !== "2026.8.2") errors.push("Onverwachte minimale Home Assistant-versie");
@@ -17,7 +18,7 @@ if (!bundle.startsWith("/*! Home Dashboard")) errors.push("Bundleheader ontbreek
 if (!bundle.includes(packageJson.version)) errors.push("Packageversie ontbreekt in bundle");
 if (bundle.includes("sourceMappingURL")) errors.push("Productiebundle bevat een sourcemapverwijzing");
 if (distFiles.some((file) => file.endsWith(".map"))) errors.push("dist bevat een sourcemap");
-if (bundleStats.size > 100_000) errors.push(`Foundationbundle overschrijdt 100 kB: ${bundleStats.size}`);
+if (bundleStats.size > maxBundleBytes) errors.push(`Dashboardbundle overschrijdt 120 kB: ${bundleStats.size}`);
 
 if (errors.length) {
   console.error(errors.map((error) => `- ${error}`).join("\n"));

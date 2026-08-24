@@ -56,7 +56,7 @@ test("dashboardstrategy genereert vijf hoofdviews en stabiele kamer-subviews", a
 
 test("iedere viewstrategy levert native Sections zonder serviceactie", async () => {
   const dashboard = await HomeDashboardStrategy.generate(await normalConfig());
-  const allowedCards = new Set(["button", "conditional", "custom:home-dashboard-camera-strip", "custom:home-dashboard-room-climate", "custom:home-dashboard-room-hero", "custom:home-dashboard-room-overview", "entities", "entity-filter", "heading", "history-graph", "markdown", "picture-entity", "tile", "weather-forecast"]);
+  const allowedCards = new Set(["button", "custom:home-dashboard-home-overview", "custom:home-dashboard-room-detail", "custom:home-dashboard-room-overview", "heading", "history-graph", "markdown", "tile"]);
   for (const view of dashboard.views) {
     const expanded = await HomeDashboardViewStrategy.generate(view.strategy);
     assert.equal(expanded.type, "sections");
@@ -76,23 +76,20 @@ test("iedere viewstrategy levert native Sections zonder serviceactie", async () 
   }
 });
 
-test("Home toont een compacte gezinsectie en een volle camerastrook met zes camera's", async () => {
+test("Home levert één samenhangende compositie met volledige context en zes camera's", async () => {
   const config = await normalConfig();
   config.persons[0].show_location = false;
   const dashboard = await HomeDashboardStrategy.generate(config);
   const home = dashboard.views.find((view) => view.path === "home");
   const expanded = await HomeDashboardViewStrategy.generate(home.strategy);
-  const cards = [];
-  walk(expanded, (value) => { if (value?.type) cards.push(value); });
-  const strip = cards.find((card) => card.type === "custom:home-dashboard-camera-strip");
-  assert.equal(strip.cameras.length, 6);
-  assert.deepEqual(strip.cameras.map((camera) => camera.key), config.security.cameras.map((camera) => camera.key));
-  const security = expanded.sections.find((candidate) => candidate.cards?.some((card) => card.type === "heading" && card.heading === "Beveiliging & privacy"));
-  assert.equal(security.column_span, expanded.max_columns);
-  const person = cards.find((card) => card.entity === config.persons[0].entity);
-  assert.equal(person.hide_state, true);
-  assert.equal(person.tap_action.action, "none");
-  assert.ok(cards.some((card) => card.type === "grid" && card.cards?.some((candidate) => candidate.entity === config.persons[0].entity)));
+  const overview = expanded.sections[0].cards[0];
+  assert.equal(overview.type, "custom:home-dashboard-home-overview");
+  assert.equal(overview.security.cameras.length, 6);
+  assert.deepEqual(overview.security.cameras.map((camera) => camera.key), config.security.cameras.map((camera) => camera.key));
+  assert.deepEqual(overview.today.energy_context_entities, ["power_primary"]);
+  assert.deepEqual(overview.energy.solar_entities, ["solar_primary"]);
+  assert.equal(overview.persons[0].show_location, false);
+  assert.equal(expanded.sections[0].column_span, expanded.max_columns);
 });
 
 test("Kamers gebruikt een overzichtskaart en een semantisch gegroepeerde detail-subview", async () => {
@@ -106,17 +103,17 @@ test("Kamers gebruikt een overzichtskaart en een semantisch gegroepeerde detail-
 
   const detailView = dashboard.views.find((view) => view.path === "room-living-room");
   const detail = await HomeDashboardViewStrategy.generate(detailView.strategy);
-  const headings = [];
   const entities = [];
   walk(detail, (value) => {
-    if (value?.type === "heading") headings.push(value.heading);
     if (typeof value?.entity === "string") entities.push(value.entity);
     if (value?.type === "history-graph" && Array.isArray(value.entities)) entities.push(...value.entities);
   });
-  assert.deepEqual(headings, ["Ruimtestatus", "Licht, covers & openingen", "Comfort & klimaat", "Media", "Apparaten & energie", "Historie"]);
-  for (const entity of ["living_lights", "living_hvac", "living_temperature", "living_humidity", "living_media", "living_power", "living_air_quality"]) assert.ok(entities.includes(entity), `${entity} ontbreekt`);
-  assert.equal(detail.sections[0].cards[0].type, "custom:home-dashboard-room-hero");
-  assert.ok(detail.sections.some((section) => section.cards.some((card) => card.type === "custom:home-dashboard-room-climate")));
+  const detailCard = detail.sections[0].cards[0];
+  assert.equal(detailCard.type, "custom:home-dashboard-room-detail");
+  for (const entity of ["living_lights", "living_hvac", "living_temperature", "living_humidity", "living_media", "living_power", "living_air_quality"]) {
+    assert.ok(JSON.stringify(detailCard.room).includes(entity) || entities.includes(entity), `${entity} ontbreekt`);
+  }
+  assert.ok(detail.sections.some((section) => section.cards.some((card) => card.type === "history-graph")));
   assert.equal(getRoomMetric({ states: { living_lights: { state: "on" } } }, config.rooms[0]), "1 lamp aan");
   assert.equal(getRoomMetric({ states: { living_hvac: { state: "heat", attributes: { current_temperature: 21.5 } } } }, config.rooms[0]), "21.5 °C");
   assert.equal(getRoomMetric({ states: { living_media: { state: "unavailable" } } }, config.rooms[0]), "Deels offline");
@@ -154,7 +151,17 @@ test("cameracarrousel rendert één beeldbreedte en een compacte privacyrail", a
   assert.match(bundle, /flex:0 0 100%/);
   assert.match(bundle, /privacy-rail/);
   assert.match(bundle, /Privacy aan/);
+  assert.match(bundle, /minmax\(0,520px\) 150px/);
   assert.doesNotMatch(bundle, /Privacy actief/);
+});
+
+test("visuele cards openen alleen het standaard HA-detailvenster", async () => {
+  const bundle = await readFile(new URL("../dist/home-dashboard.js", import.meta.url), "utf8");
+  assert.match(bundle, /hass-more-info/);
+  assert.match(bundle, /Open klimaatbediening/);
+  assert.match(bundle, /Samenhangend Home-overzicht/);
+  assert.doesNotMatch(bundle, /callService\(/);
+  assert.doesNotMatch(bundle, /callWS\(/);
 });
 
 test("onbekende viewconfiguratie krijgt een native foutfallback", async () => {

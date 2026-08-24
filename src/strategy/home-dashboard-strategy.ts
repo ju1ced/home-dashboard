@@ -84,7 +84,7 @@ const viewMetadata: Record<ViewPath, { title: string; icon: string }> = {
 
 function createViewStrategy(path: ViewPath, config: HomeDashboardConfigV1): HomeDashboardViewConfig {
   const base: HomeDashboardViewConfig = { type: "custom:home-dashboard-view", view: path, density: config.general.density };
-  if (path === "home") return { ...base, today: config.today, show_weather: config.layout.show_weather, persons: config.layout.show_persons ? config.persons : [], security: config.layout.show_security ? config.security : { ...config.security, enabled: false }, rooms: config.rooms.slice(0, 4), specialists: config.specialists, diagnostics: config.diagnostics };
+  if (path === "home") return { ...base, today: config.today, show_weather: config.layout.show_weather, persons: config.layout.show_persons ? config.persons : [], security: config.layout.show_security ? config.security : { ...config.security, enabled: false }, rooms: config.rooms, specialists: config.specialists, diagnostics: config.diagnostics, energy: config.energy };
   if (path === "rooms" || path === "domains") return { ...base, rooms: config.rooms };
   if (path === "energy") return { ...base, energy: config.energy };
   return { ...base, specialists: config.specialists, counts: { rooms: config.rooms.length, persons: config.persons.length, cameras: config.security.cameras.length } };
