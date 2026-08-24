@@ -155,3 +155,9 @@
 - **Status:** besloten voor `v0.3.0-alpha.1`
 - **Besluit:** de eerste vijf renderende Sections-views tonen alleen geselecteerde states, camerabeelden en navigatie. Entitytap, hold en double-tap zijn uitgeschakeld; actionsequences en servicecalls worden nog niet gegenereerd.
 - **Reden:** hiermee kan de eigenaar routes, informatiekeuze, responsive gedrag en echte entityweergave testen voordat bediening en specialistische kaarten hun afzonderlijke veiligheidsgates doorlopen.
+
+## D-027 — Camerastrook is een begrensde custom layoutcomponent
+
+- **Status:** besloten voor `v0.4.0-alpha.1`
+- **Besluit:** Security beslaat op Home de volledige Sections-breedte. Eén kleine, meegebundelde custom card verzorgt horizontale scroll, focusbediening en privacyplaceholder voor 1..n camera's; de inhoud blijft opgebouwd uit Home Assistant `picture-entity`- en `tile`-kaarten met alle acties op `none`.
+- **Reden:** een native horizontal stack perst 1..n camera's naast elkaar en een native grid levert geen horizontale camerastrook. De begrensde component lost alleen de ontbrekende layoutinteractie op en kopieert geen camera- of servicelogica.

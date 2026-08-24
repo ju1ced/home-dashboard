@@ -113,6 +113,7 @@ const {
 test("dashboard- en view-strategy zijn beide geregistreerd", () => {
   assert.ok(registry.has("ll-strategy-dashboard-home-dashboard"));
   assert.ok(registry.has("ll-strategy-view-home-dashboard-view"));
+  assert.ok(registry.has("home-dashboard-camera-strip"));
 });
 
 function room(key) {

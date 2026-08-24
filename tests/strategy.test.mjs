@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   HomeDashboardStrategy,
   HomeDashboardViewStrategy,
+  getCameraPresentation,
   migrateConfig
 } from "../dist/home-dashboard.js";
 
@@ -51,11 +52,11 @@ test("dashboardstrategy genereert vijf stabiele hoofdviews met startview eerst",
 
 test("iedere viewstrategy levert native Sections zonder serviceactie", async () => {
   const dashboard = await HomeDashboardStrategy.generate(await normalConfig());
-  const allowedCards = new Set(["button", "conditional", "markdown", "picture-entity", "tile", "weather-forecast"]);
+  const allowedCards = new Set(["button", "conditional", "custom:home-dashboard-camera-strip", "entities", "entity-filter", "heading", "markdown", "picture-entity", "tile", "weather-forecast"]);
   for (const view of dashboard.views) {
     const expanded = await HomeDashboardViewStrategy.generate(view.strategy);
     assert.equal(expanded.type, "sections");
-    assert.equal(expanded.dense_section_placement, false);
+    assert.equal(expanded.dense_section_placement, view.path === "home");
     assert.ok(expanded.sections.length > 0);
     walk(expanded, (value) => {
       if (!value || typeof value !== "object" || Array.isArray(value)) return;
@@ -71,17 +72,23 @@ test("iedere viewstrategy levert native Sections zonder serviceactie", async () 
   }
 });
 
-test("Home toont zes camera's en privacyverborgen personen lekken geen state", async () => {
+test("Home toont een compacte gezinsectie en een volle camerastrook met zes camera's", async () => {
   const config = await normalConfig();
   config.persons[0].show_location = false;
   const dashboard = await HomeDashboardStrategy.generate(config);
   const home = dashboard.views.find((view) => view.path === "home");
   const expanded = await HomeDashboardViewStrategy.generate(home.strategy);
-  const cards = expanded.sections.flatMap((section) => section.cards);
-  assert.equal(cards.filter((card) => card.type === "picture-entity").length, 6);
+  const cards = [];
+  walk(expanded, (value) => { if (value?.type) cards.push(value); });
+  const strip = cards.find((card) => card.type === "custom:home-dashboard-camera-strip");
+  assert.equal(strip.cameras.length, 6);
+  assert.deepEqual(strip.cameras.map((camera) => camera.key), config.security.cameras.map((camera) => camera.key));
+  const security = expanded.sections.find((candidate) => candidate.cards?.some((card) => card.type === "heading" && card.heading === "Beveiliging & privacy"));
+  assert.equal(security.column_span, expanded.max_columns);
   const person = cards.find((card) => card.entity === config.persons[0].entity);
   assert.equal(person.hide_state, true);
   assert.equal(person.tap_action.action, "none");
+  assert.ok(cards.some((card) => card.type === "grid" && card.cards?.some((candidate) => candidate.entity === config.persons[0].entity)));
 });
 
 test("lege en unavailable fixtures blijven renderbaar", async () => {
@@ -102,20 +109,12 @@ test("lege en unavailable fixtures blijven renderbaar", async () => {
   assert.deepEqual(HomeDashboardViewStrategy.registryDependencies, []);
 });
 
-test("camerafallbacks behouden beeld of verbergen alleen bij onbeschikbaarheid", async () => {
-  const config = await normalConfig();
-  config.security.cameras = ["placeholder", "last_image", "hidden"].map((fallback, index) => ({
-    key: `camera_${index + 1}`, name: `Camera ${index + 1}`, camera_entity: `camera_${index + 1}`,
-    privacy_entity: "", privacy_action_key: "", fallback, confirm_privacy_disable: true
-  }));
-  const dashboard = await HomeDashboardStrategy.generate(config);
-  const home = dashboard.views.find((view) => view.path === "home");
-  const expanded = await HomeDashboardViewStrategy.generate(home.strategy);
-  const security = expanded.sections.find((candidate) => candidate.title === "Beveiliging & privacy");
-  assert.equal(security.cards.filter((card) => card.type === "picture-entity").length, 2);
-  const hidden = security.cards.find((card) => card.type === "conditional");
-  assert.equal(hidden.card.type, "picture-entity");
-  assert.deepEqual(hidden.conditions.map((condition) => condition.state_not), ["unavailable", "unknown"]);
+test("camerastrook onderscheidt privacy, beeld en verborgen fallback", () => {
+  assert.equal(getCameraPresentation("idle", "on", "placeholder"), "privacy");
+  assert.equal(getCameraPresentation("idle", "off", "placeholder"), "camera");
+  assert.equal(getCameraPresentation("unavailable", "off", "hidden"), "hidden");
+  assert.equal(getCameraPresentation("unknown", undefined, "hidden"), "hidden");
+  assert.equal(getCameraPresentation("unavailable", "off", "last_image"), "camera");
 });
 
 test("onbekende viewconfiguratie krijgt een native foutfallback", async () => {

@@ -78,6 +78,7 @@ Critical path: foundation → capability/mappingcontract → native HA-shell/vie
 - **Tests:** prioriteit, tijdige Vandaag-content, person states thuis/zone/onderweg/onbekend, relevante device-batterijwarning, geen precieze locatielekken, camerastreamfallback per kaart, privacystatus, alarmstatus, confirmation/autorisatie bij privacy uit, action missing-mapping, niet-kritieke maxima, unknown-filtering, unavailable allowlist en empty states.
 - **Acceptatie:** eerste mobiele viewport toont aandacht/context; Vandaag, gezin en de geconfigureerde camera's zijn vlot bereikbaar; geen uitgebreide grafieken/diagnoselijsten; exact de twee goedgekeurde algemene actions verschijnen alleen met geldige mapping.
 - **Rollback:** Home vervangen door minimale navigatieview in het testdashboard.
+- **Deliverystatus:** `v0.4.0-alpha.1` levert de read-only layoutgate voor compacte personen, operationele aandacht en de brede camerastrook. `Nu`, actieve ruimtes, summaries en acties blijven open totdat hun data- en actiegates afzonderlijk zijn bewezen.
 
 ### PR 5 — Volledig Kamers-overzicht, kamermodel en kamerpagina's
 
