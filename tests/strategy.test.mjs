@@ -38,7 +38,14 @@ async function normalConfig() {
   }));
   config.energy.electricity_entities = ["electricity_primary"];
   config.energy.solar_entities = ["solar_primary"];
+  config.energy.battery_entities = ["battery_primary"];
+  config.energy.gas_entities = ["gas_primary"];
   config.energy.water_entities = ["water_primary"];
+  config.energy.device_entities = ["device_energy_primary"];
+  config.energy.capacity_peak_entity = "capacity_peak_primary";
+  config.energy.ev_power_entity = "ev_power_primary";
+  config.energy.ups_entity = "ups_primary";
+  config.energy.phase_entities = ["phase_l1_primary", "phase_l2_primary", "phase_l3_primary"];
   return config;
 }
 
@@ -64,7 +71,29 @@ test("dashboardstrategy genereert vijf hoofdviews en stabiele kamer-subviews", a
 
 test("iedere viewstrategy levert native Sections zonder serviceactie", async () => {
   const dashboard = await HomeDashboardStrategy.generate(await normalConfig());
-  const allowedCards = new Set(["button", "custom:home-dashboard-home-overview", "custom:home-dashboard-room-detail", "custom:home-dashboard-room-overview", "heading", "history-graph", "markdown", "tile"]);
+  const allowedCards = new Set([
+    "button",
+    "custom:home-dashboard-energy-overview",
+    "custom:home-dashboard-home-overview",
+    "custom:home-dashboard-room-detail",
+    "custom:home-dashboard-room-overview",
+    "energy-carbon-consumed-gauge",
+    "energy-date-selection",
+    "energy-devices-graph",
+    "energy-distribution",
+    "energy-gas-graph",
+    "energy-grid-neutrality-gauge",
+    "energy-self-sufficiency-gauge",
+    "energy-solar-consumed-gauge",
+    "energy-solar-graph",
+    "energy-sources-table",
+    "energy-usage-graph",
+    "energy-water-graph",
+    "heading",
+    "history-graph",
+    "markdown",
+    "tile"
+  ]);
   for (const view of dashboard.views) {
     const expanded = await HomeDashboardViewStrategy.generate(view.strategy);
     assert.equal(expanded.type, "sections");
@@ -162,6 +191,88 @@ test("Kamers gebruikt een overzichtskaart en een semantisch gegroepeerde detail-
   assert.equal(getRoomMetric({ states: { living_lights: { state: "on" } } }, config.rooms[0]), "1 lamp aan");
   assert.equal(getRoomMetric({ states: { living_hvac: { state: "heat", attributes: { current_temperature: 21.5 } } } }, config.rooms[0]), "21.5 °C");
   assert.equal(getRoomMetric({ states: { living_media: { state: "unavailable" } } }, config.rooms[0]), "Deels offline");
+});
+
+test("Energie combineert actuele mappings met officiële Energy-inzichten en veilige fallback", async () => {
+  const config = await normalConfig();
+  const energy = await HomeDashboardViewStrategy.generate({
+    type: "custom:home-dashboard-view",
+    view: "energy",
+    density: "comfortable",
+    theme_mode: "dark",
+    energy: config.energy
+  });
+  const types = [];
+  const entities = [];
+  const navigationPaths = [];
+  walk(energy, (value) => {
+    if (!value || typeof value !== "object") return;
+    if (typeof value.type === "string") types.push(value.type);
+    if (typeof value.entity === "string") entities.push(value.entity);
+    if (typeof value.navigation_path === "string") navigationPaths.push(value.navigation_path);
+  });
+  for (const expected of [
+    "custom:home-dashboard-energy-overview",
+    "energy-date-selection",
+    "energy-distribution",
+    "energy-usage-graph",
+    "energy-solar-graph",
+    "energy-sources-table",
+    "energy-devices-graph",
+    "energy-gas-graph",
+    "energy-water-graph"
+  ]) assert.ok(types.includes(expected), `${expected} ontbreekt`);
+  for (const entity of [
+    "electricity_primary",
+    "solar_primary",
+    "battery_primary",
+    "capacity_peak_primary",
+    "ev_power_primary",
+    "ups_primary",
+    "phase_l1_primary",
+    "gas_primary",
+    "water_primary",
+    "device_energy_primary"
+  ]) assert.ok(entities.includes(entity), `${entity} ontbreekt in de read-only bronpresentatie`);
+  assert.ok(navigationPaths.includes("/energy"));
+  assert.equal(energy.sections.every((section) => section.column_span === energy.max_columns), true);
+
+  const disabled = structuredClone(config.energy);
+  disabled.enabled = false;
+  const fallback = await HomeDashboardViewStrategy.generate({ type: "custom:home-dashboard-view", view: "energy", density: "comfortable", energy: disabled });
+  assert.match(fallback.sections[0].cards[0].content, /Activeer Energie/);
+});
+
+test("Domeinen routeert gecureerd per woningfunctie zonder platte entityinventaris", async () => {
+  const config = await normalConfig();
+  config.rooms[0].cover_entities = ["living_cover"];
+  config.rooms[0].safety_entities = ["living_window"];
+  config.security.alarm_entity = "alarm_primary";
+  config.specialists.kia.enabled = true;
+  config.diagnostics.admin_dashboard_path = "/admin-dashboard";
+  const domains = await HomeDashboardViewStrategy.generate({
+    type: "custom:home-dashboard-view",
+    view: "domains",
+    density: "comfortable",
+    rooms: config.rooms,
+    energy: config.energy,
+    security: config.security,
+    specialists: config.specialists,
+    diagnostics: config.diagnostics
+  });
+  const titles = domains.sections.map((section) => section.cards[0]?.heading);
+  for (const title of ["Klimaat & lucht", "Verlichting", "Veiligheid & openingen", "Water", "Media", "Energie & apparaten", "Mobiliteit & buiten", "Systeem"]) {
+    assert.ok(titles.includes(title), `${title} ontbreekt`);
+  }
+  const serialized = JSON.stringify(domains);
+  assert.match(serialized, /room-living-room/);
+  assert.match(serialized, /\/admin-dashboard/);
+  assert.match(serialized, /water_primary/);
+  assert.match(serialized, /alarm_primary/);
+  assert.doesNotMatch(serialized, /living_lights/);
+  assert.doesNotMatch(serialized, /living_hvac/);
+  assert.doesNotMatch(serialized, /living_media/);
+  assert.equal(domains.sections.every((section) => section.column_span === domains.max_columns), true);
 });
 
 test("lege en unavailable fixtures blijven renderbaar", async () => {
