@@ -203,3 +203,9 @@
 - **Status:** besloten voor `v0.5.0-alpha.7`
 - **Besluit:** Home vervangt de hoge native weather-card door een begrensde presentatielaag voor actuele toestand en maximaal drie dagelijkse forecasts. Forecastdata komt via `weather/subscribe_forecast`; de kaart opent alleen `hass-more-info` en voert geen service- of configuratiecall uit. De Juiced Horizon Calm-tokenlaag stuurt voortaan surfaces, schaduw, brandkleur en compacte kaartgroepen consistent aan. Het minified bundlebudget groeit gecontroleerd van 120 kB naar 128 kB.
 - **Reden:** de native weather-card houdt in deze driedelige compositie te veel onbruikbare hoogte vast en haar interne Shadow DOM kan niet robuust vanuit de dashboardcard worden gecomprimeerd. De officiële read-only subscription behoudt forecastinformatie zonder Home Assistant-bedieningslogica te kopiëren.
+
+## D-035 — Weer overspant de twee linker Vandaag-kolommen
+
+- **Status:** besloten voor `v0.5.0-alpha.8`
+- **Besluit:** op brede schermen staat de weerkaart over kolom één en twee. Energie en afval volgen in een tweede rij over dezelfde kolommen; security bezet rechts beide rijen. Onder 1050 px worden de zones lineair gestapeld.
+- **Reden:** de weerpresentatie profiteert van horizontale ruimte, terwijl de compacte energierail visueel sterker onder het weer staat dan ertussen. De vaste rechter securitykolom blijft daardoor scanbaar zonder de hoofdcontext te versnipperen.
