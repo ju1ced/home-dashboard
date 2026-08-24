@@ -173,3 +173,9 @@
 - **Status:** besloten voor `v0.5.0-alpha.2`
 - **Besluit:** Home en iedere kamerdetail-subview gebruiken één responsive compositiecard binnen de native Sections-shell. Kamerchips en detailcards openen uitsluitend het standaard `hass-more-info`-venster; zij roepen geen service aan. De cameraviewport wordt begrensd tot circa 520 px. Het minified bundlebudget groeit gecontroleerd van 100 kB naar 120 kB.
 - **Reden:** losse Sections-elementen spreidden kleine informatiedelen over brede desktops, maakten de camera dominant en verloren de hiërarchie van de goedgekeurde desktop- en mobiele renders. Een begrensde component houdt ritme, kolomverhoudingen en responsive disclosure stabiel zonder Home Assistant-bedieningslogica te kopiëren.
+
+## D-030 — Vandaag gebruikt vijf benoemde energie-KPI-mappings
+
+- **Status:** besloten voor `v0.5.0-alpha.3`
+- **Besluit:** batterij-SoC, batterij laad-/ontlaadvermogen, zonnepanelenopbrengst, huisverbruik zonder batterijladen en maandelijkse vermogenspiek krijgen elk een eigen optionele entitymapping en een vast UI-label. De bestaande generieke energiecontext blijft alleen als aanvulling en compatibiliteitsveld bestaan.
+- **Reden:** een onbenoemde entiteitenlijst maakt de betekenis en volgorde afhankelijk van integratienamen. Expliciete mappings maken de GUI begrijpelijk, houden Home consistent en voorkomen dat technisch gelijksoortige W- en kW-sensoren verkeerd geïnterpreteerd worden.

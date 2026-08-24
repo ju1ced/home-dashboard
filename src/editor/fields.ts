@@ -22,7 +22,12 @@ export const FIELD_DEFINITIONS: readonly FieldDefinition[] = [
   { path: "today.weather_entity", section: "today", label: "Weerbron", description: "Home Assistant weather-entiteit.", kind: "entity", selector: { entity: { domain: "weather" } } },
   { path: "today.forecast_days", section: "today", label: "Voorspellingsdagen", description: "Tussen 1 en 10 dagen.", kind: "number" },
   { path: "today.waste_entities", section: "today", label: "Afvalbronnen", description: "Selecteer alle relevante afvalsensoren.", kind: "entities", selector: { entity: { multiple: true } } },
-  { path: "today.energy_context_entities", section: "today", label: "Energiecontext", description: "Kern-KPI's op Home.", kind: "entities", selector: { entity: { multiple: true } } },
+  { path: "today.battery_soc_entity", section: "today", label: "Thuisbatterij SoC", description: "Actuele laadstatus van de thuisbatterij in procent.", kind: "entity", selector: { entity: { domain: "sensor" } } },
+  { path: "today.battery_power_entity", section: "today", label: "Batterij laden/ontladen", description: "Actueel laad- of ontlaadvermogen van de thuisbatterij.", kind: "entity", selector: { entity: { domain: "sensor" } } },
+  { path: "today.solar_power_entity", section: "today", label: "Zonnepanelen opbrengst", description: "Actuele productie van de zonnepanelen.", kind: "entity", selector: { entity: { domain: "sensor" } } },
+  { path: "today.home_consumption_entity", section: "today", label: "Huisverbruik zonder batterijladen", description: "Actueel huisverbruik waarbij batterijladen niet wordt meegerekend.", kind: "entity", selector: { entity: { domain: "sensor" } } },
+  { path: "today.monthly_capacity_peak_entity", section: "today", label: "Maandelijkse vermogenspiek", description: "Actuele maandpiek voor het capaciteitstarief in kW.", kind: "entity", selector: { entity: { domain: "sensor" } } },
+  { path: "today.energy_context_entities", section: "today", label: "Extra energiecontext", description: "Optionele aanvullende energie-KPI's op Home.", kind: "entities", selector: { entity: { domain: "sensor", multiple: true } } },
 
   { path: "security.enabled", section: "security", label: "Security tonen", description: "Toont alarm, cameracarrousel en privacyknoppen.", kind: "checkbox" },
   { path: "security.alarm_entity", section: "security", label: "Alarm", description: "Alarmbediening en status.", kind: "entity", selector: { entity: { domain: "alarm_control_panel" } } },

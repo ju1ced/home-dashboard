@@ -6,6 +6,19 @@ Alle betekenisvolle wijzigingen worden hier bijgehouden. Het project gebruikt Se
 
 Nog geen wijzigingen.
 
+## 0.5.0-alpha.3 — 2026-08-24
+
+### Added
+
+- Voegt onder **Vandaag** vijf afzonderlijke entityselectors toe voor thuisbatterij-SoC, batterij laad-/ontlaadvermogen, zonnepanelenopbrengst, huisverbruik zonder batterijladen en de maandelijkse vermogenspiek.
+- Toont deze bronnen op Home met vaste betekenisvolle labels, onafhankelijk van de technische entitynaam of friendly name.
+- Behoudt de bestaande algemene energiecontext als optionele aanvullende KPI-bronnen.
+
+### Compatibility and validation
+
+- Migreert bestaande schema-v1-configuraties verliesvrij door de nieuwe velden leeg aan te vullen.
+- Voegt schema-, editor-, migratie- en strategyregressies toe voor alle vijf benoemde KPI's.
+
 ## 0.5.0-alpha.2 — 2026-08-24
 
 ### Changed
