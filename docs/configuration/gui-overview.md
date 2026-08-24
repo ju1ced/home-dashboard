@@ -1,8 +1,8 @@
 # Grafische configuratie
 
-## Reikwijdte van v0.5.0-alpha.8
+## Reikwijdte van v0.5.0-alpha.9
 
-De editor registreert zich als `home-dashboard-strategy-editor` en beheert schema v1 zonder handgeschreven YAML of JSON. De Community dashboard-kiezer maakt vijf hoofdviews en per kamer een semantische subview. `v0.5.0-alpha.8` levert de visuele Home/security- en Kamers-baseline met een weerkaart over twee kolommen, energie en afval in de rij eronder, zes expliciete Vandaag-energie-KPI's, fractiegebonden afvalinformatie en light/dark-themetokens; statechips openen het standaard HA-detailvenster, terwijl directe actionsequences, volledige Energie en specialistische detailcards via afzonderlijke releases volgen.
+De editor registreert zich als `home-dashboard-strategy-editor` en beheert schema v1 zonder handgeschreven YAML of JSON. De Community dashboard-kiezer maakt vijf hoofdviews en per kamer een semantische subview. `v0.5.0-alpha.9` levert de visuele Home/security- en Kamers-baseline met één samengestelde Vandaag-kaart voor weer, energie en afval, zes expliciete energie-KPI's, fractiegebonden afvalinformatie en light/dark-themetokens; statechips openen het standaard HA-detailvenster, terwijl directe actionsequences, volledige Energie en specialistische detailcards via afzonderlijke releases volgen.
 
 De editor heeft tien onderdelen:
 

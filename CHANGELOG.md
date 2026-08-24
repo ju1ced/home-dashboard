@@ -6,6 +6,18 @@ Alle betekenisvolle wijzigingen worden hier bijgehouden. Het project gebruikt Se
 
 Nog geen wijzigingen.
 
+## 0.5.0-alpha.9 — 2026-08-24
+
+### Changed
+
+- Vormt weer, energiecontext en afvalophaling om tot één samengestelde Vandaag-kaart met één buitenrand en subtiele interne scheidingslijnen.
+- Plaatst maximaal vier afvalfracties op desktop in één rij en houdt ze op smalle schermen in een compacte tweekolomsindeling.
+- Behoudt security als afzonderlijke rechterkolom en de bestaande lineaire responsive volgorde.
+
+### Validation
+
+- Vergrendelt de samengestelde Vandaag-container, enkelvoudige desktop-afvalrij en tweekoloms mobiele afvalweergave in de distributietests.
+
 ## 0.5.0-alpha.8 — 2026-08-24
 
 ### Changed
