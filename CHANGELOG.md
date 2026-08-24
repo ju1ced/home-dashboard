@@ -6,6 +6,20 @@ Alle betekenisvolle wijzigingen worden hier bijgehouden. Het project gebruikt Se
 
 Nog geen wijzigingen.
 
+## 0.5.0-alpha.7 — 2026-08-24
+
+### Changed
+
+- Vervangt de te hoge native weather-card op Home door een begrensde eigen weerpresentatie met actuele conditie, temperatuur en maximaal drie dagelijkse voorspellingen.
+- Laat die voorspelling via Home Assistants read-only `weather/subscribe_forecast`-contract binnenkomen en bewaart een veilige huidige-statusfallback wanneer forecastdata nog laadt.
+- Brengt Home visueel dichter bij **Juiced Horizon Calm** met warmere surfaces, subtiele schaduwen, groene accenten, een aaneengesloten energie-rail en verfijnde afval-, person-, navigatie- en securitykaarten.
+- Verhoogt het gecontroleerde minified bundlebudget van 120 kB naar 128 kB voor de compacte forecastpresentatie; de bundel blijft zonder service- of configuratiewrites.
+
+### Validation
+
+- Vergelijkt de Home-compositie lokaal met de goedgekeurde render op desktop, 390 px en donkere tokens.
+- Bewaakt in de bundel de forecastsubscription, compacte weerstructuur, themetokens en afwezigheid van `callService` en `callWS`.
+
 ## 0.5.0-alpha.6 — 2026-08-24
 
 ### Changed
