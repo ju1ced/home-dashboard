@@ -1,6 +1,6 @@
 # Home Dashboard — ontwerpvoorstel
 
-Deze repository bouwt een HACS-installeerbare community dashboard strategy voor een centraal Home Assistant-dashboard. De HACS-foundation en grafische configuratie zijn in Home Assistant gevalideerd; `v0.5.0-alpha.5` splitst batterij laden en ontladen, voorkomt permanente Home-rerenders en maakt Vandaag/security tot een duidelijke driedelige desktopcompositie. Home Assistant is niet door deze repository gewijzigd.
+Deze repository bouwt een HACS-installeerbare community dashboard strategy voor een centraal Home Assistant-dashboard. De HACS-foundation en grafische configuratie zijn in Home Assistant gevalideerd; `v0.5.0-alpha.6` verfijnt de driedelige Home-render met compacte weer-, energie-, afval- en securityblokken en correcte light/dark-themetokens. Home Assistant is niet door deze repository gewijzigd.
 
 ## Aanbevolen richting
 
@@ -46,7 +46,7 @@ Open daarna `http://127.0.0.1:4173/`. De fixtureselector wisselt tussen normaal,
 
 ## HACS-installatie
 
-[`v0.1.0-alpha.1`](https://github.com/ju1ced/home-dashboard/releases/tag/v0.1.0-alpha.1) heeft de volledige HACS-lifecycle doorlopen: installatie, update, verwijdering en herinstallatie. Zie [het geanonimiseerde resultaat](docs/releases/results-v0.1.0-alpha.1.md). De `v0.2`-reeks valideerde de GUI; de `v0.3`-reeks bracht de eerste views; `v0.4.0-alpha.2` verfijnt de cameracarrousel. `v0.5.0-alpha.5` is de actuele visueel samenhangende Home- en Kamers-testrelease.
+[`v0.1.0-alpha.1`](https://github.com/ju1ced/home-dashboard/releases/tag/v0.1.0-alpha.1) heeft de volledige HACS-lifecycle doorlopen: installatie, update, verwijdering en herinstallatie. Zie [het geanonimiseerde resultaat](docs/releases/results-v0.1.0-alpha.1.md). De `v0.2`-reeks valideerde de GUI; de `v0.3`-reeks bracht de eerste views; `v0.4.0-alpha.2` verfijnt de cameracarrousel. `v0.5.0-alpha.6` is de actuele visueel samenhangende Home- en Kamers-testrelease.
 
 ## Checks
 
@@ -88,4 +88,4 @@ scripts/          lokale preview en repositorychecks
 
 ## Status
 
-De ontwerpbaseline, deliveryroadmap en HACS-fundering zijn gepubliceerd; installatie, configuratie en de compacte editor zijn praktisch gevalideerd. `v0.5.0-alpha.5` is de actuele visuele runtimegate voor Home/security, Kamers en kamerdetails. Energie/Domeinen en specialisten blijven afzonderlijke roadmapstappen. Home Assistant-writes en directe servicecalls starten niet automatisch en behouden hun afzonderlijke menselijke gates.
+De ontwerpbaseline, deliveryroadmap en HACS-fundering zijn gepubliceerd; installatie, configuratie en de compacte editor zijn praktisch gevalideerd. `v0.5.0-alpha.6` is de actuele visuele runtimegate voor Home/security, Kamers en kamerdetails. Energie/Domeinen en specialisten blijven afzonderlijke roadmapstappen. Home Assistant-writes en directe servicecalls starten niet automatisch en behouden hun afzonderlijke menselijke gates.

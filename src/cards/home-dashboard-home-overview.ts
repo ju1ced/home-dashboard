@@ -16,6 +16,7 @@ type CardHelpers = { createCardElement: (config: Record<string, unknown>) => Lov
 
 interface HomeOverviewConfig {
   type: "custom:home-dashboard-home-overview";
+  theme_mode?: "system" | "light" | "dark";
   today?: TodayConfig;
   persons?: PersonConfig[];
   security?: SecurityConfig;
@@ -73,6 +74,61 @@ function friendlyName(state: StateLike | undefined, fallback: string): string {
   return typeof state?.attributes?.friendly_name === "string" ? state.attributes.friendly_name : fallback;
 }
 
+interface WastePresentation {
+  icon: string;
+  label: string;
+  date: string;
+  relative: string;
+  tone: "green" | "blue" | "yellow" | "neutral";
+}
+
+function parseWasteDate(state: StateLike | undefined): Date | undefined {
+  const attributes = state?.attributes ?? {};
+  const candidates = [attributes.date, attributes.next_date, attributes.pickup_date, attributes.next_pickup, attributes.collection_date, state?.state];
+  for (const candidate of candidates) {
+    if (typeof candidate !== "string") continue;
+    const value = candidate.trim();
+    const iso = /^(\d{4})-(\d{2})-(\d{2})(?:T.*)?$/.exec(value);
+    const local = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/.exec(value);
+    const parts = iso ? [Number(iso[1]), Number(iso[2]), Number(iso[3])] : local ? [Number(local[3]), Number(local[2]), Number(local[1])] : undefined;
+    if (!parts) continue;
+    const parsed = new Date(parts[0]!, parts[1]! - 1, parts[2]!);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+  }
+  return undefined;
+}
+
+export function getWastePresentation(state: StateLike | undefined, entity: string, now = new Date()): WastePresentation {
+  const attributes = state?.attributes ?? {};
+  const source = [entity, friendlyName(state, ""), attributes.waste_type, attributes.type, attributes.material, attributes.description]
+    .filter((value) => typeof value === "string").join(" ").toLocaleLowerCase("nl-BE");
+  const fraction = source.includes("pmd") || source.includes("plastic") || source.includes("verpakking")
+    ? { icon: "mdi:recycle", label: "PMD", tone: "yellow" as const }
+    : source.includes("papier") || source.includes("paper") || source.includes("karton")
+      ? { icon: "mdi:file-document-outline", label: "Papier", tone: "blue" as const }
+      : source.includes("gft") || source.includes("organic") || source.includes("groente") || source.includes("keukenafval")
+        ? { icon: "mdi:food-apple-outline", label: "GFT", tone: "green" as const }
+        : source.includes("groen") || source.includes("tuin") || source.includes("snoei")
+          ? { icon: "mdi:leaf", label: "Groenafval", tone: "green" as const }
+          : source.includes("glas")
+            ? { icon: "mdi:bottle-wine-outline", label: "Glas", tone: "blue" as const }
+            : source.includes("rest") || source.includes("huisvuil")
+              ? { icon: "mdi:trash-can-outline", label: "Restafval", tone: "neutral" as const }
+              : { icon: "mdi:delete-outline", label: "Afval", tone: "neutral" as const };
+  const pickupDate = parseWasteDate(state);
+  const explicitDaysValue = [attributes.days, attributes.days_until, attributes.days_to, attributes.days_until_collection, attributes.days_to_pickup]
+    .find((value) => typeof value === "number" || (typeof value === "string" && /^\d+$/.test(value)));
+  const explicitDays = typeof explicitDaysValue === "string" ? Number(explicitDaysValue) : explicitDaysValue;
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const days = typeof explicitDays === "number" ? Math.round(explicitDays)
+    : pickupDate ? Math.round((pickupDate.getTime() - startToday.getTime()) / 86_400_000) : undefined;
+  const relative = days === 0 ? "Vandaag" : days === 1 ? "Morgen" : typeof days === "number" && days > 1 ? `Over ${days} dagen` : "Datum onbekend";
+  const date = pickupDate
+    ? new Intl.DateTimeFormat("nl-BE", { weekday: "short", day: "numeric", month: "short" }).format(pickupDate)
+    : formatState(state);
+  return { ...fraction, date, relative };
+}
+
 function showMoreInfo(host: HTMLElement, entity: string): void {
   host.dispatchEvent(new CustomEvent("hass-more-info", { detail: { entityId: entity }, bubbles: true, composed: true }));
 }
@@ -122,12 +178,51 @@ function stateButton(host: HTMLElement, hass: HomeAssistantLike | undefined, ent
   return button;
 }
 
-function wasteButton(host: HTMLElement, hass: HomeAssistantLike | undefined, entity: string): HTMLButtonElement {
-  const button = stateButton(host, hass, entity);
-  button.classList.add("waste-card");
+function metricButton(host: HTMLElement, hass: HomeAssistantLike | undefined, entity: string, label: string, iconName: string): HTMLButtonElement {
+  const state = hass?.states?.[entity];
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "metric-card";
+  button.dataset.entity = entity;
+  button.dataset.label = label;
+  button.title = label;
+  button.setAttribute("aria-label", `${label}: ${formatState(state)}. Open meer informatie.`);
   const icon = document.createElement("ha-icon") as HTMLElement & { icon?: string };
-  icon.icon = "mdi:trash-can-outline";
-  button.prepend(icon);
+  icon.icon = iconName;
+  const value = document.createElement("strong");
+  value.className = "metric-value";
+  value.textContent = formatState(state);
+  button.append(icon, value);
+  button.addEventListener("click", () => showMoreInfo(host, entity));
+  return button;
+}
+
+function wasteButton(host: HTMLElement, hass: HomeAssistantLike | undefined, entity: string): HTMLButtonElement {
+  const presentation = getWastePresentation(hass?.states?.[entity], entity);
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = `waste-card tone-${presentation.tone}`;
+  button.dataset.entity = entity;
+  button.setAttribute("aria-label", `${presentation.label}: ${presentation.date}, ${presentation.relative}. Open meer informatie.`);
+  const icon = document.createElement("ha-icon") as HTMLElement & { icon?: string };
+  icon.icon = presentation.icon;
+  const copy = document.createElement("span");
+  copy.className = "waste-copy";
+  const label = document.createElement("strong");
+  label.className = "waste-label";
+  label.textContent = presentation.label;
+  const meta = document.createElement("span");
+  meta.className = "waste-meta";
+  const date = document.createElement("span");
+  date.className = "waste-date";
+  date.textContent = presentation.date;
+  const relative = document.createElement("span");
+  relative.className = "waste-relative";
+  relative.textContent = presentation.relative;
+  meta.append(date, relative);
+  copy.append(label, meta);
+  button.append(icon, copy);
+  button.addEventListener("click", () => showMoreInfo(host, entity));
   return button;
 }
 
@@ -146,6 +241,7 @@ export class HomeDashboardHomeOverview extends HTMLElementBase {
 
   public setConfig(config: HomeOverviewConfig): void {
     this.config = config;
+    this.dataset.themeMode = config.theme_mode ?? "system";
     this.currentStructureSignature = "";
     this.hasRendered = false;
     void this.render();
@@ -182,6 +278,30 @@ export class HomeDashboardHomeOverview extends HTMLElementBase {
       if (name) name.textContent = label ?? friendlyName(state, entity);
       if (value) value.textContent = formatState(state);
       button.setAttribute("aria-label", `Open ${friendlyName(state, label ?? entity)}`);
+    });
+    this.shadowRoot.querySelectorAll<HTMLButtonElement>(".metric-card[data-entity]").forEach((button) => {
+      const entity = button.dataset.entity;
+      if (!entity) return;
+      const state = hass?.states?.[entity];
+      const label = button.dataset.label ?? friendlyName(state, entity);
+      const value = button.querySelector<HTMLElement>(".metric-value");
+      if (value) value.textContent = formatState(state);
+      button.setAttribute("aria-label", `${label}: ${formatState(state)}. Open meer informatie.`);
+    });
+    this.shadowRoot.querySelectorAll<HTMLButtonElement>(".waste-card[data-entity]").forEach((button) => {
+      const entity = button.dataset.entity;
+      if (!entity) return;
+      const presentation = getWastePresentation(hass?.states?.[entity], entity);
+      const icon = button.querySelector<HTMLElement & { icon?: string }>("ha-icon");
+      const label = button.querySelector<HTMLElement>(".waste-label");
+      const date = button.querySelector<HTMLElement>(".waste-date");
+      const relative = button.querySelector<HTMLElement>(".waste-relative");
+      if (icon) icon.icon = presentation.icon;
+      if (label) label.textContent = presentation.label;
+      if (date) date.textContent = presentation.date;
+      if (relative) relative.textContent = presentation.relative;
+      button.className = `waste-card tone-${presentation.tone}`;
+      button.setAttribute("aria-label", `${presentation.label}: ${presentation.date}, ${presentation.relative}. Open meer informatie.`);
     });
     const homeCount = (this.config.persons ?? []).filter((person) => hass?.states?.[person.entity]?.state === "home").length;
     const homePill = this.shadowRoot.querySelector<HTMLElement>("[data-live='home-count']");
@@ -222,11 +342,11 @@ export class HomeDashboardHomeOverview extends HTMLElementBase {
     const hass = this.currentHass;
     const style = document.createElement("style");
     style.textContent = `
-      :host{display:block;min-width:0}.home{display:grid;gap:24px;max-width:1180px;margin:0 auto}.top{display:flex;justify-content:space-between;align-items:end;gap:16px}.date{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--secondary-text-color)}h1{margin:3px 0 0;font-size:2rem}.pills{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.pill{padding:7px 10px;border:1px solid var(--divider-color);border-radius:999px;background:var(--ha-card-background,var(--card-background-color));font-size:.78rem}.pill.attention{background:color-mix(in srgb,var(--warning-color,#f0a000) 16%,var(--card-background-color));color:var(--primary-text-color)}
-      .attention-banner{display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:12px;padding:16px;border:1px solid color-mix(in srgb,var(--warning-color,#f0a000) 40%,var(--divider-color));border-radius:18px;background:color-mix(in srgb,var(--warning-color,#f0a000) 14%,var(--card-background-color))}.attention-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:var(--card-background-color);color:var(--warning-color,#f0a000)}.attention-copy{display:grid}.attention-copy span{font-size:.76rem;color:var(--secondary-text-color)}
-      section{display:grid;gap:10px}.section-header span{display:grid}.section-header strong{font-size:1.05rem}.section-header small{color:var(--secondary-text-color)}.today-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,1fr);gap:12px;align-items:start}.today-grid.with-security{grid-template-columns:minmax(300px,1.2fr) minmax(260px,1fr) minmax(270px,.9fr)}.today-side,.security-panel{display:grid;gap:10px;align-content:start}.kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.state-card{display:grid;text-align:left;gap:3px;padding:12px;border:1px solid var(--divider-color);border-radius:14px;background:var(--ha-card-background,var(--card-background-color));color:var(--primary-text-color);cursor:pointer}.state-card:hover{border-color:var(--primary-color)}.state-copy{display:grid;gap:3px;min-width:0}.state-copy strong,.state-copy span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.state-copy span{font-size:.8rem;color:var(--secondary-text-color)}.waste-group{display:grid;gap:7px;padding-top:2px}.waste-heading{display:grid}.waste-heading small{color:var(--secondary-text-color);font-size:.76rem}.waste{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.waste-card{grid-template-columns:28px minmax(0,1fr);align-items:center}.waste-card ha-icon{color:var(--primary-color)}
+      :host{display:block;min-width:0;--hd-surface:var(--ha-card-background,var(--card-background-color,#fff));--hd-surface-muted:var(--secondary-background-color,#e8eeea);--hd-text:var(--primary-text-color,#18231f);--hd-muted:var(--secondary-text-color,#66736d);--hd-border:var(--divider-color,#d8e1dc);--hd-brand:var(--primary-color,#276b5b);--hd-radius:16px;color:var(--hd-text)}:host([data-theme-mode="light"]){--primary-background-color:#f3f6f4;--secondary-background-color:#e8eeea;--card-background-color:#fff;--ha-card-background:#fff;--primary-text-color:#18231f;--secondary-text-color:#66736d;--divider-color:#d8e1dc;--primary-color:#276b5b;--hd-surface:#fff;--hd-surface-muted:#e8eeea;--hd-text:#18231f;--hd-muted:#66736d;--hd-border:#d8e1dc;--hd-brand:#276b5b}:host([data-theme-mode="dark"]){--primary-background-color:#101713;--secondary-background-color:#26332d;--card-background-color:#18211d;--ha-card-background:#18211d;--primary-text-color:#edf4f0;--secondary-text-color:#a8b7af;--divider-color:#34433c;--primary-color:#72c9af;--hd-surface:#18211d;--hd-surface-muted:#26332d;--hd-text:#edf4f0;--hd-muted:#a8b7af;--hd-border:#34433c;--hd-brand:#72c9af}.home{display:grid;gap:24px;max-width:1180px;margin:0 auto}.top{display:flex;justify-content:space-between;align-items:end;gap:16px}.date{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--hd-muted)}h1{margin:3px 0 0;font-size:2rem}.pills{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.pill{padding:7px 10px;border:1px solid var(--hd-border);border-radius:999px;background:var(--hd-surface);font-size:.78rem}.pill.attention{background:color-mix(in srgb,var(--warning-color,#f0a000) 16%,var(--hd-surface));color:var(--hd-text)}
+      .attention-banner{display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:12px;padding:16px;border:1px solid color-mix(in srgb,var(--warning-color,#f0a000) 40%,var(--hd-border));border-radius:18px;background:color-mix(in srgb,var(--warning-color,#f0a000) 14%,var(--hd-surface))}.attention-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:var(--hd-surface);color:var(--warning-color,#f0a000)}.attention-copy{display:grid}.attention-copy span{font-size:.76rem;color:var(--hd-muted)}
+      section{display:grid;gap:10px}.section-header span{display:grid}.section-header strong{font-size:1.05rem}.section-header small{color:var(--hd-muted)}.today-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,1.1fr);gap:12px;align-items:start}.today-grid.with-security{grid-template-columns:minmax(250px,.84fr) minmax(300px,1.12fr) minmax(270px,.94fr)}.today-side,.security-panel{display:grid;gap:10px;align-content:start}.weather-card{min-width:0}.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.metric-card{display:grid;grid-template-columns:32px minmax(0,1fr);align-items:center;gap:8px;min-height:58px;padding:10px 11px;border:1px solid var(--hd-border);border-radius:var(--hd-radius);background:var(--hd-surface);color:var(--hd-text);cursor:pointer;text-align:left}.metric-card:hover,.metric-card:focus-visible{border-color:var(--hd-brand)}.metric-card ha-icon{width:27px;height:27px;color:var(--hd-brand)}.metric-value{font-size:.94rem;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.state-card{display:grid;text-align:left;gap:3px;padding:12px;border:1px solid var(--hd-border);border-radius:14px;background:var(--hd-surface);color:var(--hd-text);cursor:pointer}.state-card:hover{border-color:var(--hd-brand)}.state-copy{display:grid;gap:3px;min-width:0}.state-copy strong,.state-copy span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.state-copy span{font-size:.8rem;color:var(--hd-muted)}.waste-group{display:grid;gap:7px;padding-top:2px}.waste-heading{display:grid}.waste-heading small{color:var(--hd-muted);font-size:.76rem}.waste{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.waste-card{display:grid;grid-template-columns:34px minmax(0,1fr);align-items:center;gap:8px;min-height:62px;padding:9px 10px;border:1px solid var(--hd-border);border-radius:var(--hd-radius);background:var(--hd-surface);color:var(--hd-text);cursor:pointer;text-align:left}.waste-card:hover,.waste-card:focus-visible{border-color:var(--hd-brand)}.waste-card ha-icon{width:28px;height:28px}.waste-card.tone-green ha-icon{color:var(--success-color,#3a8f57)}.waste-card.tone-blue ha-icon{color:var(--info-color,#287db8)}.waste-card.tone-yellow ha-icon{color:var(--warning-color,#d88a00)}.waste-card.tone-neutral ha-icon{color:var(--hd-muted)}.waste-copy{display:grid;gap:2px;min-width:0}.waste-label{font-size:.82rem}.waste-meta{display:flex;gap:5px;flex-wrap:wrap;font-size:.72rem;color:var(--hd-muted)}.waste-relative{font-weight:700;color:var(--hd-brand)}
       .people{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.person{display:grid;grid-template-columns:46px minmax(0,1fr) auto;align-items:center;gap:10px;padding:10px;border:1px solid var(--divider-color);border-radius:15px;background:var(--ha-card-background,var(--card-background-color));color:var(--primary-text-color);cursor:pointer;text-align:left}.avatar{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;overflow:hidden;background:var(--primary-color);color:var(--text-primary-color,#fff);font-weight:700}.avatar img{width:100%;height:100%;object-fit:cover}.person-copy{display:grid}.person-copy small{color:var(--secondary-text-color)}.person-state{padding:6px 9px;border-radius:999px;background:color-mix(in srgb,var(--primary-color) 12%,transparent);color:var(--primary-color);font-size:.76rem;font-weight:700}
-      .nav-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.nav-card{display:flex;align-items:center;gap:9px;min-height:48px;padding:10px 12px;border:1px solid var(--divider-color);border-radius:14px;background:var(--ha-card-background,var(--card-background-color));color:var(--primary-text-color);text-decoration:none;font-weight:650}.nav-card ha-icon{color:var(--primary-color)}.security{display:grid;gap:8px;align-items:start}.empty{padding:16px;border:1px dashed var(--divider-color);border-radius:14px;color:var(--secondary-text-color)}
+      .nav-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.nav-card{display:flex;align-items:center;gap:9px;min-height:48px;padding:10px 12px;border:1px solid var(--hd-border);border-radius:14px;background:var(--hd-surface);color:var(--hd-text);text-decoration:none;font-weight:650}.nav-card ha-icon{color:var(--hd-brand)}.security{display:grid;gap:8px;align-items:start}.empty{padding:16px;border:1px dashed var(--hd-border);border-radius:14px;color:var(--hd-muted)}
       @media(max-width:1050px){.today-grid.with-security{grid-template-columns:minmax(0,1.2fr) minmax(280px,1fr)}.security-panel{grid-column:1/-1}}
       @media(max-width:800px){.home{gap:20px}.top{align-items:flex-start;flex-direction:column}.pills{justify-content:flex-start}.today-grid,.today-grid.with-security{grid-template-columns:1fr}.security-panel{grid-column:auto}.nav-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
       @media(max-width:560px){h1{font-size:1.65rem}.people,.waste{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.attention-banner{grid-template-columns:38px minmax(0,1fr)}.attention-banner>a{display:none}.person{grid-template-columns:42px minmax(0,1fr) auto}}
@@ -288,7 +408,6 @@ export class HomeDashboardHomeOverview extends HTMLElementBase {
       if (!config.security?.enabled) return undefined;
       const panel = document.createElement("aside");
       panel.className = "security-panel";
-      panel.append(sectionHeader("Beveiliging", "Camera, privacy en alarm in één compacte kolom"));
       const layout = document.createElement("div");
       layout.className = "security";
       if (config.security.cameras.some((camera) => camera.camera_entity)) {
@@ -316,6 +435,7 @@ export class HomeDashboardHomeOverview extends HTMLElementBase {
       grid.className = "today-grid";
       if (config.show_weather !== false && config.today.weather_entity && helpers) {
         const weatherCard = helpers.createCardElement({ type: "weather-forecast", entity: config.today.weather_entity, forecast_type: "daily", show_forecast: true });
+        weatherCard.className = "weather-card";
         weatherCard.hass = hass;
         this.childCards.push(weatherCard);
         grid.append(weatherCard);
@@ -327,27 +447,27 @@ export class HomeDashboardHomeOverview extends HTMLElementBase {
       }
       const side = document.createElement("div");
       side.className = "today-side";
-      const namedKpis: Array<readonly [string, string]> = [
-        [config.today.battery_soc_entity, "Thuisbatterij SoC"],
-        [config.today.battery_charge_power_entity, "Batterij laden"],
-        [config.today.battery_discharge_power_entity, "Batterij ontladen"],
-        [config.today.solar_power_entity, "Zonnepanelen opbrengst"],
-        [config.today.home_consumption_entity, "Huisverbruik zonder batterijladen"],
-        [config.today.monthly_capacity_peak_entity, "Maandelijkse vermogenspiek"]
+      const namedKpis: Array<readonly [string, string, string]> = [
+        [config.today.battery_soc_entity, "Thuisbatterij SoC", "mdi:home-battery-outline"],
+        [config.today.battery_charge_power_entity, "Batterij laden", "mdi:battery-arrow-up-outline"],
+        [config.today.battery_discharge_power_entity, "Batterij ontladen", "mdi:battery-arrow-down-outline"],
+        [config.today.solar_power_entity, "Zonnepanelen opbrengst", "mdi:solar-power"],
+        [config.today.home_consumption_entity, "Huisverbruik zonder batterijladen", "mdi:home-lightning-bolt-outline"],
+        [config.today.monthly_capacity_peak_entity, "Maandelijkse vermogenspiek", "mdi:gauge"]
       ];
-      const configuredKpis = namedKpis.filter((candidate): candidate is readonly [string, string] => Boolean(candidate[0]));
+      const configuredKpis = namedKpis.filter((candidate): candidate is readonly [string, string, string] => Boolean(candidate[0]));
       const extraKpis = unique(config.today.energy_context_entities)
         .filter((entity) => !configuredKpis.some(([configured]) => configured === entity))
-        .map((entity) => [entity, undefined] as const);
+        .map((entity) => [entity, friendlyName(hass?.states?.[entity], "Energie"), "mdi:flash-outline"] as const);
       const fallbackKpis = [config.energy?.solar_entities[0], config.energy?.electricity_entities[0], config.energy?.battery_entities[0], config.energy?.ev_power_entity]
         .filter((entity): entity is string => Boolean(entity))
-        .map((entity) => [entity, undefined] as const);
+        .map((entity) => [entity, friendlyName(hass?.states?.[entity], "Energie"), "mdi:flash-outline"] as const);
       const kpiEntities = [...configuredKpis, ...extraKpis];
       const visibleKpis = (kpiEntities.length > 0 ? kpiEntities : fallbackKpis).slice(0, 6);
       if (visibleKpis.length > 0) {
         const kpis = document.createElement("div");
         kpis.className = "kpis";
-        visibleKpis.forEach(([entity, label]) => kpis.append(stateButton(this, hass, entity, label)));
+        visibleKpis.forEach(([entity, label, icon]) => kpis.append(metricButton(this, hass, entity, label, icon)));
         side.append(kpis);
       }
       if (config.today.waste_entities.length > 0) {

@@ -7,6 +7,7 @@ import {
   getCameraPresentation,
   getHomeStructureSignature,
   getRoomMetric,
+  getWastePresentation,
   migrateConfig,
   roomPath
 } from "../dist/home-dashboard.js";
@@ -91,6 +92,7 @@ test("Home levert één samenhangende compositie met volledige context en zes ca
   const expanded = await HomeDashboardViewStrategy.generate(home.strategy);
   const overview = expanded.sections[0].cards[0];
   assert.equal(overview.type, "custom:home-dashboard-home-overview");
+  assert.equal(overview.theme_mode, config.general.theme_mode);
   assert.equal(overview.security.cameras.length, 6);
   assert.deepEqual(overview.security.cameras.map((camera) => camera.key), config.security.cameras.map((camera) => camera.key));
   assert.deepEqual(overview.today.energy_context_entities, ["power_primary"]);
@@ -120,6 +122,19 @@ test("realtime vermogensupdates wijzigen Home in-place zonder structurele rerend
   assert.equal(getHomeStructureSignature(first, config), getHomeStructureSignature(second, config));
   second.states.safety_primary.state = "open";
   assert.notEqual(getHomeStructureSignature(first, config), getHomeStructureSignature(second, config));
+});
+
+test("afvalpresentatie herkent fractie, datum en relatieve ophaaltijd", () => {
+  const now = new Date(2026, 7, 24, 12, 0, 0);
+  assert.deepEqual(getWastePresentation({ state: "26-08-2026", attributes: { friendly_name: "GFT volgende ophaling" } }, "waste_gft_primary", now), {
+    icon: "mdi:food-apple-outline", label: "GFT", date: "wo 26 aug", relative: "Over 2 dagen", tone: "green"
+  });
+  assert.deepEqual(getWastePresentation({ state: "2026-08-25", attributes: { friendly_name: "Papier en karton" } }, "waste_paper_primary", now), {
+    icon: "mdi:file-document-outline", label: "Papier", date: "di 25 aug", relative: "Morgen", tone: "blue"
+  });
+  const pmd = getWastePresentation({ state: "2026-08-24", attributes: { friendly_name: "PMD" } }, "waste_pmd_primary", now);
+  assert.equal(pmd.icon, "mdi:recycle");
+  assert.equal(pmd.relative, "Vandaag");
 });
 
 test("Kamers gebruikt een overzichtskaart en een semantisch gegroepeerde detail-subview", async () => {
@@ -192,6 +207,9 @@ test("visuele cards openen alleen het standaard HA-detailvenster", async () => {
   assert.match(bundle, /Samenhangend Home-overzicht/);
   assert.doesNotMatch(bundle, /callService\(/);
   assert.doesNotMatch(bundle, /callWS\(/);
+  assert.match(bundle, /home-battery-outline/);
+  assert.match(bundle, /waste-relative/);
+  assert.doesNotMatch(bundle, /Camera, privacy en alarm in één compacte kolom/);
 });
 
 test("onbekende viewconfiguratie krijgt een native foutfallback", async () => {
