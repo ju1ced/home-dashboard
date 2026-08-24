@@ -22,14 +22,15 @@
     },
     "today": {
       "type": "object", "additionalProperties": false,
-      "required": ["enabled", "weather_entity", "forecast_days", "waste_entities", "battery_soc_entity", "battery_power_entity", "solar_power_entity", "home_consumption_entity", "monthly_capacity_peak_entity", "energy_context_entities"],
+      "required": ["enabled", "weather_entity", "forecast_days", "waste_entities", "battery_soc_entity", "battery_charge_power_entity", "battery_discharge_power_entity", "solar_power_entity", "home_consumption_entity", "monthly_capacity_peak_entity", "energy_context_entities"],
       "properties": {
         "enabled": { "type": "boolean", "x-editor": "today" },
         "weather_entity": { "$ref": "#/$defs/entityReference", "x-editor": "today" },
         "forecast_days": { "type": "integer", "minimum": 1, "maximum": 10, "x-editor": "today" },
         "waste_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "today" },
         "battery_soc_entity": { "$ref": "#/$defs/entityReference", "x-editor": "today" },
-        "battery_power_entity": { "$ref": "#/$defs/entityReference", "x-editor": "today" },
+        "battery_charge_power_entity": { "$ref": "#/$defs/entityReference", "x-editor": "today" },
+        "battery_discharge_power_entity": { "$ref": "#/$defs/entityReference", "x-editor": "today" },
         "solar_power_entity": { "$ref": "#/$defs/entityReference", "x-editor": "today" },
         "home_consumption_entity": { "$ref": "#/$defs/entityReference", "x-editor": "today" },
         "monthly_capacity_peak_entity": { "$ref": "#/$defs/entityReference", "x-editor": "today" },

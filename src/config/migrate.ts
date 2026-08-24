@@ -53,6 +53,15 @@ export function migrateConfig(input: unknown): MigrationResult {
 
   const merged = mergeKnown(defaults, input) as HomeDashboardConfigV1;
   merged.schema_version = CONFIG_SCHEMA_VERSION;
+  const inputToday = isObject(input.today) ? input.today : undefined;
+  const legacyBatteryPower = inputToday?.battery_power_entity;
+  if (typeof legacyBatteryPower === "string" && legacyBatteryPower) {
+    const hasSplitMapping = Boolean(inputToday?.battery_charge_power_entity || inputToday?.battery_discharge_power_entity);
+    if (!hasSplitMapping && !merged.today.energy_context_entities.includes(legacyBatteryPower)) {
+      merged.today.energy_context_entities.push(legacyBatteryPower);
+      warnings.push("De oude gecombineerde batterijvermogensbron is als extra energiecontext bewaard; kies afzonderlijke laad- en ontlaadsensoren onder Vandaag.");
+    }
+  }
   merged.persons = normalizeItems<PersonConfig>(merged.persons, (index) => ({
     key: `person_${index + 1}`,
     entity: "",

@@ -5,6 +5,7 @@ import {
   HomeDashboardStrategy,
   HomeDashboardViewStrategy,
   getCameraPresentation,
+  getHomeStructureSignature,
   getRoomMetric,
   migrateConfig,
   roomPath
@@ -17,7 +18,8 @@ async function normalConfig() {
   config.today.weather_entity = "weather_primary";
   config.today.waste_entities = ["waste_primary"];
   config.today.battery_soc_entity = "battery_soc_primary";
-  config.today.battery_power_entity = "battery_power_primary";
+  config.today.battery_charge_power_entity = "battery_charge_primary";
+  config.today.battery_discharge_power_entity = "battery_discharge_primary";
   config.today.solar_power_entity = "solar_power_primary";
   config.today.home_consumption_entity = "home_consumption_primary";
   config.today.monthly_capacity_peak_entity = "monthly_peak_primary";
@@ -93,13 +95,31 @@ test("Home levert één samenhangende compositie met volledige context en zes ca
   assert.deepEqual(overview.security.cameras.map((camera) => camera.key), config.security.cameras.map((camera) => camera.key));
   assert.deepEqual(overview.today.energy_context_entities, ["power_primary"]);
   assert.equal(overview.today.battery_soc_entity, "battery_soc_primary");
-  assert.equal(overview.today.battery_power_entity, "battery_power_primary");
+  assert.equal(overview.today.battery_charge_power_entity, "battery_charge_primary");
+  assert.equal(overview.today.battery_discharge_power_entity, "battery_discharge_primary");
   assert.equal(overview.today.solar_power_entity, "solar_power_primary");
   assert.equal(overview.today.home_consumption_entity, "home_consumption_primary");
   assert.equal(overview.today.monthly_capacity_peak_entity, "monthly_peak_primary");
   assert.deepEqual(overview.energy.solar_entities, ["solar_primary"]);
   assert.equal(overview.persons[0].show_location, false);
   assert.equal(expanded.sections[0].column_span, expanded.max_columns);
+});
+
+test("realtime vermogensupdates wijzigen Home in-place zonder structurele rerender", async () => {
+  const config = await normalConfig();
+  const first = {
+    states: {
+      battery_charge_primary: { state: "1200", attributes: { unit_of_measurement: "W" } },
+      battery_discharge_primary: { state: "0", attributes: { unit_of_measurement: "W" } },
+      safety_primary: { state: "closed" }
+    }
+  };
+  config.rooms[0].safety_entities = ["safety_primary"];
+  const second = structuredClone(first);
+  second.states.battery_charge_primary.state = "2450";
+  assert.equal(getHomeStructureSignature(first, config), getHomeStructureSignature(second, config));
+  second.states.safety_primary.state = "open";
+  assert.notEqual(getHomeStructureSignature(first, config), getHomeStructureSignature(second, config));
 });
 
 test("Kamers gebruikt een overzichtskaart en een semantisch gegroepeerde detail-subview", async () => {

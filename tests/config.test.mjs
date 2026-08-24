@@ -53,21 +53,23 @@ test("oude Vandaag-configuratie krijgt alle benoemde energie-KPI's zonder datave
   const migrated = migrateConfig({
     type: "custom:home-dashboard",
     schema_version: 1,
-    today: { weather_entity: "weather_primary", energy_context_entities: ["legacy_power"] }
+    today: { weather_entity: "weather_primary", battery_power_entity: "legacy_battery_power", energy_context_entities: ["legacy_power"] }
   }).config;
   assert.equal(migrated.today.battery_soc_entity, "");
-  assert.equal(migrated.today.battery_power_entity, "");
+  assert.equal(migrated.today.battery_charge_power_entity, "");
+  assert.equal(migrated.today.battery_discharge_power_entity, "");
   assert.equal(migrated.today.solar_power_entity, "");
   assert.equal(migrated.today.home_consumption_entity, "");
   assert.equal(migrated.today.monthly_capacity_peak_entity, "");
-  assert.deepEqual(migrated.today.energy_context_entities, ["legacy_power"]);
+  assert.deepEqual(migrated.today.energy_context_entities, ["legacy_power", "legacy_battery_power"]);
   assert.deepEqual(validateConfigSchema(migrated), []);
 });
 
-test("editor dekt de vijf afzonderlijke Vandaag-energie-KPI's", () => {
+test("editor dekt de zes afzonderlijke Vandaag-energie-KPI's", () => {
   for (const path of [
     "today.battery_soc_entity",
-    "today.battery_power_entity",
+    "today.battery_charge_power_entity",
+    "today.battery_discharge_power_entity",
     "today.solar_power_entity",
     "today.home_consumption_entity",
     "today.monthly_capacity_peak_entity"

@@ -185,3 +185,9 @@
 - **Status:** besloten en gecorrigeerd voor `v0.5.0-alpha.4`
 - **Besluit:** Home Assistant-entityselectors worden alleen via hun publieke `value-changed`-event bijgewerkt. De generieke native `change`-binding geldt uitsluitend voor echte `input`- en `select`-elementen. Optionele entityselectors krijgen bovendien expliciet `required = false`.
 - **Reden:** de Home Assistant-picker vuurt na `value-changed` ook een native `change` af. Wanneer beide bindings dezelfde custom selector verwerken, kan een synchrone rerender de tweede handler met een verouderde lege waarde achterlaten en zo de geldige keuze overschrijven.
+
+## D-032 — Home scheidt realtime stateupdates van structurele renders
+
+- **Status:** besloten voor `v0.5.0-alpha.5`; D-030 verfijnd naar zes KPI-mappings
+- **Besluit:** batterij laden en ontladen krijgen elk een eigen optionele entitymapping. Realtime KPI-, afval-, weer- en persoonswaarden worden in-place bijgewerkt; alleen een gewijzigde operationele aandachtstructuur veroorzaakt een volledige Home-rerender. Op brede schermen vormen weer, KPI/afval en security drie kolommen; kleinere schermen stapelen responsief.
+- **Reden:** afzonderlijke laad- en ontlaadsensoren hebben een andere betekenis en mogen niet onder één mapping worden samengevoegd. Vermogenssensoren wijzigen bovendien vaak; een volledige DOM-reconstructie per waarde-update herstart weer- en camerachildcards en oogt als een permanente refresh.
