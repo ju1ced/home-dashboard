@@ -34,6 +34,11 @@ export function createDefaultConfig(): HomeDashboardConfigV1 {
       weather_entity: "",
       forecast_days: 5,
       waste_entities: [],
+      battery_soc_entity: "",
+      battery_power_entity: "",
+      solar_power_entity: "",
+      home_consumption_entity: "",
+      monthly_capacity_peak_entity: "",
       energy_context_entities: []
     },
     persons: [],

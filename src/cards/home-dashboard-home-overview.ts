@@ -49,6 +49,11 @@ function configuredEntities(config: HomeOverviewConfig): string[] {
   return unique([
     config.today?.weather_entity,
     ...(config.today?.waste_entities ?? []),
+    config.today?.battery_soc_entity,
+    config.today?.battery_power_entity,
+    config.today?.solar_power_entity,
+    config.today?.home_consumption_entity,
+    config.today?.monthly_capacity_peak_entity,
     ...(config.today?.energy_context_entities ?? []),
     ...(config.persons ?? []).flatMap((person) => [person.entity, ...person.battery_entities]),
     config.security?.alarm_entity,
@@ -262,13 +267,26 @@ export class HomeDashboardHomeOverview extends HTMLElementBase {
       }
       const side = document.createElement("div");
       side.className = "today-side";
-      const configuredKpis = config.today.energy_context_entities;
-      const fallbackKpis = [config.energy?.solar_entities[0], config.energy?.electricity_entities[0], config.energy?.battery_entities[0], config.energy?.ev_power_entity];
-      const kpiEntities = unique(configuredKpis.length > 0 ? configuredKpis : fallbackKpis).slice(0, 4);
-      if (kpiEntities.length > 0) {
+      const namedKpis: Array<readonly [string, string]> = [
+        [config.today.battery_soc_entity, "Thuisbatterij SoC"],
+        [config.today.battery_power_entity, "Batterij laden/ontladen"],
+        [config.today.solar_power_entity, "Zonnepanelen opbrengst"],
+        [config.today.home_consumption_entity, "Huisverbruik zonder batterijladen"],
+        [config.today.monthly_capacity_peak_entity, "Maandelijkse vermogenspiek"]
+      ];
+      const configuredKpis = namedKpis.filter((candidate): candidate is readonly [string, string] => Boolean(candidate[0]));
+      const extraKpis = unique(config.today.energy_context_entities)
+        .filter((entity) => !configuredKpis.some(([configured]) => configured === entity))
+        .map((entity) => [entity, undefined] as const);
+      const fallbackKpis = [config.energy?.solar_entities[0], config.energy?.electricity_entities[0], config.energy?.battery_entities[0], config.energy?.ev_power_entity]
+        .filter((entity): entity is string => Boolean(entity))
+        .map((entity) => [entity, undefined] as const);
+      const kpiEntities = [...configuredKpis, ...extraKpis];
+      const visibleKpis = (kpiEntities.length > 0 ? kpiEntities : fallbackKpis).slice(0, 6);
+      if (visibleKpis.length > 0) {
         const kpis = document.createElement("div");
         kpis.className = "kpis";
-        kpiEntities.forEach((entity) => kpis.append(stateButton(this, hass, entity)));
+        visibleKpis.forEach(([entity, label]) => kpis.append(stateButton(this, hass, entity, label)));
         side.append(kpis);
       }
       if (config.today.waste_entities.length > 0) {

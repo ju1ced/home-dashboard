@@ -49,6 +49,31 @@ test("defaults zijn een geldige schema-v1-configuratie", () => {
   assert.deepEqual(validateConfigSchema(config), []);
 });
 
+test("oude Vandaag-configuratie krijgt alle benoemde energie-KPI's zonder dataverlies", () => {
+  const migrated = migrateConfig({
+    type: "custom:home-dashboard",
+    schema_version: 1,
+    today: { weather_entity: "weather_primary", energy_context_entities: ["legacy_power"] }
+  }).config;
+  assert.equal(migrated.today.battery_soc_entity, "");
+  assert.equal(migrated.today.battery_power_entity, "");
+  assert.equal(migrated.today.solar_power_entity, "");
+  assert.equal(migrated.today.home_consumption_entity, "");
+  assert.equal(migrated.today.monthly_capacity_peak_entity, "");
+  assert.deepEqual(migrated.today.energy_context_entities, ["legacy_power"]);
+  assert.deepEqual(validateConfigSchema(migrated), []);
+});
+
+test("editor dekt de vijf afzonderlijke Vandaag-energie-KPI's", () => {
+  for (const path of [
+    "today.battery_soc_entity",
+    "today.battery_power_entity",
+    "today.solar_power_entity",
+    "today.home_consumption_entity",
+    "today.monthly_capacity_peak_entity"
+  ]) assert.ok(EDITOR_COVERAGE.scalar.includes(path), `${path} ontbreekt in de grafische editor`);
+});
+
 test("normal fixture migreert, valideert en compileert zonder private waarden in manifest", async () => {
   const privateReference = ["camera", "private_entry"].join(".");
   const input = await fixture("normal");
