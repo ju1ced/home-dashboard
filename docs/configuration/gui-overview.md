@@ -1,8 +1,8 @@
 # Grafische configuratie
 
-## Reikwijdte van v0.5.0-alpha.1
+## Reikwijdte van v0.5.0-alpha.2
 
-De editor registreert zich als `home-dashboard-strategy-editor` en beheert schema v1 zonder handgeschreven YAML of JSON. De Community dashboard-kiezer maakt vijf hoofdviews en per kamer een semantische subview. `v0.5.0-alpha.1` levert Home/security, het Kamers-overzicht en gegroepeerde kamerdetails; bediening, volledige Energie en specialistische detailcards volgen via afzonderlijke releases.
+De editor registreert zich als `home-dashboard-strategy-editor` en beheert schema v1 zonder handgeschreven YAML of JSON. De Community dashboard-kiezer maakt vijf hoofdviews en per kamer een semantische subview. `v0.5.0-alpha.2` levert de visuele herbouw van Home/security, het Kamers-overzicht en kamerdetails; statechips openen het standaard HA-detailvenster, terwijl directe actionsequences, volledige Energie en specialistische detailcards via afzonderlijke releases volgen.
 
 De editor heeft tien onderdelen:
 

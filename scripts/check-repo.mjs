@@ -66,6 +66,7 @@ const required = [
   "docs/releases/results-v0.4.0-alpha.1.md",
   "docs/releases/testing-v0.4.0-alpha.2.md",
   "docs/releases/testing-v0.5.0-alpha.1.md",
+  "docs/releases/testing-v0.5.0-alpha.2.md",
   "docs/configuration/gui-overview.md",
   "docs/configuration/generated-views.md",
   "docs/configuration/home.md",

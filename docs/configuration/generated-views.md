@@ -1,11 +1,11 @@
 # Gegenereerde views
 
-De dashboard strategy maakt vijf stabiele hoofdviews en per geconfigureerde kamer een stabiele subview; een afzonderlijke view strategy bouwt iedere view als Sections-configuratie. `v0.5.0-alpha.1` levert Home/security en Kamers. Energie, Domeinen en Meer behouden bewust hun shell-alpha-inhoud tot hun eigen roadmaprelease.
+De dashboard strategy maakt vijf stabiele hoofdviews en per geconfigureerde kamer een stabiele subview; een afzonderlijke view strategy bouwt iedere view als Sections-configuratie. `v0.5.0-alpha.2` gebruikt binnen Home en Kamers begrensde compositiecards om de informatiehiërarchie van de goedgekeurde renders te behouden. Energie, Domeinen en Meer behouden bewust hun shell-alpha-inhoud tot hun eigen roadmaprelease.
 
 | View | Inhoud in deze alpha |
 |---|---|
-| Home | compacte Vandaag- en Gezinblokken, operationele aandacht uit de allowlist, alarmstatus, een brede horizontale camerastrook en compacte navigatie |
-| Kamers | hero, compacte kamerkaarten per verdieping en voor iedere kamer een afzonderlijk `room-<key>`-detailpad |
+| Home | begroeting/statusrail, aandacht, Vandaag met weer/afval/energie, gezin, directe routes, alarm en één compacte camera per carrouselpositie |
+| Kamers | hero, compacte kamerkaarten per verdieping, gemapte apparaatchips en voor iedere kamer een samenhangend `room-<key>`-detaildashboard |
 | Energie | geselecteerde elektriciteit-, zon-, batterij-, gas-, water-, apparaat-, EV-, UPS-, piek- en fasebronnen plus route naar het standaard Energy-panel |
 | Domeinen | via kamers geselecteerde states opnieuw gegroepeerd per functie |
 | Meer | configuratieaantallen en geactiveerde specialistcategorieën |

@@ -114,9 +114,9 @@ test("dashboard- en view-strategy zijn beide geregistreerd", () => {
   assert.ok(registry.has("ll-strategy-dashboard-home-dashboard"));
   assert.ok(registry.has("ll-strategy-view-home-dashboard-view"));
   assert.ok(registry.has("home-dashboard-camera-strip"));
+  assert.ok(registry.has("home-dashboard-home-overview"));
   assert.ok(registry.has("home-dashboard-room-overview"));
-  assert.ok(registry.has("home-dashboard-room-hero"));
-  assert.ok(registry.has("home-dashboard-room-climate"));
+  assert.ok(registry.has("home-dashboard-room-detail"));
 });
 
 function room(key) {

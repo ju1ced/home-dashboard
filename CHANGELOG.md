@@ -6,6 +6,21 @@ Alle betekenisvolle wijzigingen worden hier bijgehouden. Het project gebruikt Se
 
 Nog geen wijzigingen.
 
+## 0.5.0-alpha.2 — 2026-08-24
+
+### Changed
+
+- Herbouwt Home als één begrensde, responsive compositie met begroeting, aandacht, weer, energiecontext, afval, gezin, directe routes en security.
+- Verkleint de cameraviewport tot maximaal circa 520 px en de privacyrail tot compacte statussen naast het beeld.
+- Vervangt generieke capabilitylabels op kamerkaarten door state-aware chips voor werkelijk gemapte lichten, covers, klimaat, media, veiligheid en energie.
+- Herbouwt kamerdetails als één samenhangend dashboard met hero, primaire statussen, apparaatgroepen, klimaatcontext, media, veiligheid, energie en afzonderlijke historie.
+- Apparaatkaarten en chips openen uitsluitend het standaard Home Assistant-detailvenster; de bundle voert nog steeds geen servicecall uit.
+
+### Performance and validation
+
+- Verhoogt het expliciete bundlebudget van 100 kB naar 120 kB voor de twee begrensde visuele compositiecards; de gemeten minified bundle blijft onder dit plafond.
+- Voegt regressietests toe voor informatieoverdracht, compacte camera-afmetingen, room-detailcompositie en de afwezigheid van `callService`/`callWS`.
+
 ## 0.5.0-alpha.1 — 2026-08-24
 
 ### Added
