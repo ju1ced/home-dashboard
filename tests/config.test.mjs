@@ -72,6 +72,28 @@ test("Kia behoudt haar zelfstandige cardconfiguratie en corrigeert het cardcontr
   assert.ok(validateConfig(migrated).some((issue) => issue.path === "specialists.kia.card_config"));
 });
 
+test("oude Kia-resource-identiteit migreert naar het geregistreerde kaarttype", () => {
+  const { config, warnings } = migrateConfig({
+    type: "custom:home-dashboard",
+    schema_version: 1,
+    specialists: {
+      kia: {
+        enabled: true,
+        card_type: "custom:ha-kia-connect-dashboard",
+        minimum_version: "1.0.0",
+        mapping_keys: ["kia_vehicle"],
+        card_config: { title: "Auto", entities: { battery_level: "kia_battery_primary" } }
+      }
+    }
+  });
+
+  assert.equal(config.specialists.kia.card_type, "custom:kia-dashboard-card");
+  assert.deepEqual(config.specialists.kia.card_config, { title: "Auto", entities: { battery_level: "kia_battery_primary" } });
+  assert.ok(warnings.some((warning) => warning.includes("verouderde Kia-kaarttype")));
+  assert.deepEqual(validateConfigSchema(config), []);
+  assert.equal(validateConfig(config).filter((issue) => issue.severity === "error").length, 0);
+});
+
 test("oude Vandaag-configuratie krijgt alle benoemde energie-KPI's zonder dataverlies", () => {
   const migrated = migrateConfig({
     type: "custom:home-dashboard",
