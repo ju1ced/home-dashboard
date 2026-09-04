@@ -60,6 +60,13 @@ export function migrateConfig(input: unknown): MigrationResult {
     // geversioneerde Kia-card. mergeKnown bewaart dynamische cardvelden niet.
     merged.specialists.kia.card_config = structuredClone(inputKia.card_config);
   }
+  if (merged.specialists.kia.card_type === "custom:ha-kia-connect-dashboard") {
+    // De HACS-resource heet ha-kia-connect-dashboard.js, maar registreert de
+    // Lovelace-kaart als custom:kia-dashboard-card. Bewaar bestaande private
+    // configuratie en corrigeer alleen deze historische systeemwaarde.
+    merged.specialists.kia.card_type = "custom:kia-dashboard-card";
+    warnings.push("Het verouderde Kia-kaarttype is hersteld naar custom:kia-dashboard-card.");
+  }
   const inputToday = isObject(input.today) ? input.today : undefined;
   const legacyBatteryPower = inputToday?.battery_power_entity;
   if (typeof legacyBatteryPower === "string" && legacyBatteryPower) {
