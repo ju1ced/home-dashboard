@@ -2,6 +2,12 @@
 
 Alle betekenisvolle wijzigingen worden hier bijgehouden. Het project gebruikt Semantic Versioning met prereleases tijdens de testfasen.
 
+## 0.7.0-alpha.2 — 2026-09-04
+
+### Fixed
+
+- Migreert de historische Kia-resource-identiteit `custom:ha-kia-connect-dashboard` automatisch naar het geregistreerde Lovelace-kaarttype `custom:kia-dashboard-card`, zonder de private Kia-cardconfiguratie te wijzigen.
+
 ## 0.7.0-alpha.1 — 2026-09-04
 
 ### Added
