@@ -52,7 +52,7 @@ De hoofdview **Domeinen** is geen entityinventaris meer. Zij groepeert geconfigu
 - Veiligheid & openingen → alarmstatus en relevante kamers;
 - Water en Energie & apparaten → Energie;
 - Media → relevante kamerdetails;
-- Mobiliteit & buiten → geactiveerde specialistische ingangen, voorlopig via Meer tot hun detailroutes worden geleverd;
+- Mobiliteit & buiten → geactiveerde specialistische ingangen; Kia opent vanaf deze release rechtstreeks `specialist-kia`, de overige ingangen blijven voorlopig via Meer;
 - Systeem → het ingestelde beheerdashboard of de veilige Meer-fallback.
 
 Kamerlijsten worden alleen samengesteld uit expliciete capabilities en mappings. Friendly-nameherkenning of automatische runtimeclassificatie wordt niet gebruikt. Daardoor kan een niet-geconfigureerd domein veilig verdwijnen en worden area-loze of woningbrede bronnen niet per ongeluk als kamer gepresenteerd.

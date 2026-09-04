@@ -24,6 +24,8 @@ V1 bevat geen custom panel en geen extra summary-component. De minimale onderste
 - [Security en camerastrook](docs/configuration/security.md)
 - [Kamers en kamerdetails](docs/configuration/rooms.md)
 - [Energie en Domeinen](docs/configuration/energy.md)
+- [Specialistische kaarten](docs/configuration/specialists.md)
+- [Kia-testchecklist (voorbereid)](docs/releases/testing-v0.7.0-alpha.1.md)
 - [Configuratieschema v1](docs/reference/config-schema.md)
 - [Compatibility](docs/reference/compatibility.md)
 - [Requirements en evidence](docs/discovery/requirements.md)

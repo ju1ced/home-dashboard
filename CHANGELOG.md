@@ -4,7 +4,18 @@ Alle betekenisvolle wijzigingen worden hier bijgehouden. Het project gebruikt Se
 
 ## Unreleased
 
-Nog geen wijzigingen.
+### Added
+
+- Voegt een read-only Kia-summary en stabiele `specialist-kia`-subview toe, met acculading, bereik, laadstatus, dataversheid en een veilige route naar de bestaande HACS Kia-card.
+- Geeft de private Kia-cardconfiguratie transparant door, zonder voertuiglogica, acties, confirmations of mappingdiagnostiek in deze repository te kopiëren.
+
+### Changed
+
+- Corrigeert het vaste Kia-cardcontract naar `custom:kia-dashboard-card` en bewaakt voor de nieuwe integratielaag een harde minified bundlelimiet van 168 kB.
+
+### Safety and validation
+
+- Toont een native fallback bij ontbrekende resource, onvolledige mapping of stale/unavailable voertuigdata; er zijn geen Home Assistant-writes of servicecalls toegevoegd.
 
 ## 0.6.0-alpha.1 — 2026-08-24
 

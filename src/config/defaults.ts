@@ -68,9 +68,10 @@ export function createDefaultConfig(): HomeDashboardConfigV1 {
     specialists: {
       kia: {
         enabled: false,
-        card_type: "custom:ha-kia-connect-dashboard",
+        card_type: "custom:kia-dashboard-card",
         minimum_version: "",
-        mapping_keys: []
+        mapping_keys: [],
+        card_config: {}
       },
       robot: {
         enabled: false,

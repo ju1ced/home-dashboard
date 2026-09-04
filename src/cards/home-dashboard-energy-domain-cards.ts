@@ -323,7 +323,7 @@ export function buildDomainSections(sources: DomainSources, maxColumns: number):
   ];
 
   const mobilityOutdoor: LovelaceCardConfig[] = [];
-  if (sources.specialists?.kia.enabled) mobilityOutdoor.push(navigationButton("Auto", "mdi:car-electric", "more"));
+  if (sources.specialists?.kia.enabled) mobilityOutdoor.push(navigationButton("Auto", "mdi:car-electric", "specialist-kia"));
   if (sources.specialists?.robot.enabled) mobilityOutdoor.push(navigationButton("Robot", "mdi:robot-vacuum", "more"));
   if (sources.specialists?.garden.enabled) mobilityOutdoor.push(navigationButton("Tuin", "mdi:flower", "more"));
   if (sources.specialists?.pool.enabled) mobilityOutdoor.push(navigationButton("Zwembad", "mdi:pool", "more"));

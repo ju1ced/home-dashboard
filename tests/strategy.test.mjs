@@ -6,6 +6,7 @@ import {
   HomeDashboardViewStrategy,
   getCameraPresentation,
   getHomeStructureSignature,
+  getKiaPresentation,
   getRoomMetric,
   getWastePresentation,
   migrateConfig,
@@ -273,6 +274,70 @@ test("Domeinen routeert gecureerd per woningfunctie zonder platte entityinventar
   assert.doesNotMatch(serialized, /living_hvac/);
   assert.doesNotMatch(serialized, /living_media/);
   assert.equal(domains.sections.every((section) => section.column_span === domains.max_columns), true);
+});
+
+test("Kia krijgt een stabiele specialistroute, stale fallback en een zelfstandige cardgrens", async () => {
+  const config = await normalConfig();
+  config.specialists.kia = {
+    enabled: true,
+    card_type: "custom:kia-dashboard-card",
+    minimum_version: "1.0.0",
+    mapping_keys: ["kia_vehicle"],
+    card_config: {
+      title: "Auto",
+      type: "custom:mag-niet-doorgegeven-worden",
+      entities: {
+        battery_level: "kia_battery_primary",
+        battery_range: "kia_range_primary",
+        charging_state: "kia_charging_primary",
+        last_updated: "kia_updated_primary",
+        door_lock: "kia_lock_primary"
+      }
+    }
+  };
+  const dashboard = await HomeDashboardStrategy.generate(config);
+  const specialist = dashboard.views.find((view) => view.path === "specialist-kia");
+  assert.equal(specialist.title, "Auto");
+  assert.equal(specialist.subview, true);
+  assert.equal(specialist.back_path, "domains");
+
+  const current = getKiaPresentation({ states: {
+    kia_battery_primary: { state: "73", attributes: { unit_of_measurement: "%" } },
+    kia_range_primary: { state: "312", attributes: { unit_of_measurement: "km" } },
+    kia_charging_primary: { state: "charging" },
+    kia_updated_primary: { state: "2026-08-26T10:00:00Z" },
+    kia_lock_primary: { state: "locked" }
+  } }, config.specialists.kia, 30, new Date("2026-08-26T10:10:00Z"));
+  assert.equal(current.status, "Auto laadt");
+  assert.equal(current.battery, "73 %");
+  assert.equal(current.range, "312 km");
+
+  const stale = getKiaPresentation({ states: {
+    kia_battery_primary: { state: "73", attributes: { unit_of_measurement: "%" } },
+    kia_range_primary: { state: "312", attributes: { unit_of_measurement: "km" } },
+    kia_charging_primary: { state: "off" },
+    kia_updated_primary: { state: "2026-08-26T08:00:00Z" }
+  } }, config.specialists.kia, 30, new Date("2026-08-26T10:10:00Z"));
+  assert.equal(stale.status, "Voertuigstatus verouderd");
+  assert.equal(stale.battery, "Niet beschikbaar");
+
+  const unavailableResource = await HomeDashboardViewStrategy.generate(specialist.strategy);
+  const fallbackTypes = unavailableResource.sections[0].cards.map((card) => card.type);
+  assert.deepEqual(fallbackTypes, ["custom:home-dashboard-kia-summary", "markdown"]);
+  assert.match(unavailableResource.sections[0].cards[1].content, /Kia-card niet gevonden|Installeer of update/);
+
+  const originalCustomElements = globalThis.customElements;
+  globalThis.customElements = { get: (tag) => tag === "kia-dashboard-card" ? class KiaDashboardCard {} : undefined };
+  try {
+    const availableResource = await HomeDashboardViewStrategy.generate(specialist.strategy);
+    const card = availableResource.sections[0].cards.at(-1);
+    assert.equal(card.type, "custom:kia-dashboard-card");
+    assert.equal(card.title, "Auto");
+    assert.equal(card.grid_options.columns, "full");
+  } finally {
+    if (originalCustomElements === undefined) delete globalThis.customElements;
+    else globalThis.customElements = originalCustomElements;
+  }
 });
 
 test("lege en unavailable fixtures blijven renderbaar", async () => {
