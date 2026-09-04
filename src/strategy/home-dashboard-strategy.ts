@@ -68,7 +68,8 @@ export class HomeDashboardStrategy extends HTMLElementBase {
       title: config.general.title,
       views: [
         ...orderedPaths.map((path) => createView(path, config)),
-        ...config.rooms.map((room) => createRoomView(room, config))
+        ...config.rooms.map((room) => createRoomView(room, config)),
+        ...(config.specialists.kia.enabled ? [createKiaView(config)] : [])
       ]
     };
   }
@@ -123,6 +124,24 @@ function createRoomView(room: HomeDashboardConfigV1["rooms"][number], config: Ho
       view: "room",
       density: config.general.density,
       room
+    } satisfies HomeDashboardViewConfig
+  };
+}
+
+function createKiaView(config: HomeDashboardConfigV1): Record<string, unknown> {
+  return {
+    title: typeof config.specialists.kia.card_config.title === "string" && config.specialists.kia.card_config.title.trim() ? config.specialists.kia.card_config.title : "Kia",
+    path: "specialist-kia",
+    icon: "mdi:car-electric",
+    subview: true,
+    back_path: "domains",
+    strategy: {
+      type: "custom:home-dashboard-view",
+      view: "specialist-kia",
+      density: config.general.density,
+      theme_mode: config.general.theme_mode,
+      kia: config.specialists.kia,
+      diagnostics: config.diagnostics
     } satisfies HomeDashboardViewConfig
   };
 }

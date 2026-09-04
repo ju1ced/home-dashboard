@@ -1,14 +1,15 @@
 # Gegenereerde views
 
-De dashboard strategy maakt vijf stabiele hoofdviews en per geconfigureerde kamer een stabiele subview; een afzonderlijke view strategy bouwt iedere view als Sections-configuratie. `v0.5.0-alpha.9` gebruikt binnen Home en Kamers begrensde compositiecards om de informatiehiërarchie van de goedgekeurde renders te behouden, verenigt weer, zes configureerbare energie-KPI's en afvalophaling in één Vandaag-kaart en werkt realtime waarden zonder volledige Home-rerender bij. Energie, Domeinen en Meer behouden bewust hun shell-alpha-inhoud tot hun eigen roadmaprelease.
+De dashboard strategy maakt vijf stabiele hoofdviews en per geconfigureerde kamer een stabiele subview; een afzonderlijke view strategy bouwt iedere view als Sections-configuratie. `v0.7.0-alpha.1` levert de read-only Home-, Kamers-, Energie- en Domeinenbasis met de optionele Kia-subview `specialist-kia`; zij blijft buiten de primaire navigatie.
 
 | View | Inhoud in deze alpha |
 |---|---|
 | Home | begroeting/statusrail, aandacht, Vandaag met compact weer, zes iconische energie-KPI's en fractiegebonden afvalophaling, security als derde desktopkolom, gezin en directe routes |
 | Kamers | hero, compacte kamerkaarten per verdieping, gemapte apparaatchips en voor iedere kamer een samenhangend `room-<key>`-detaildashboard |
 | Energie | geselecteerde elektriciteit-, zon-, batterij-, gas-, water-, apparaat-, EV-, UPS-, piek- en fasebronnen plus route naar het standaard Energy-panel |
-| Domeinen | via kamers geselecteerde states opnieuw gegroepeerd per functie |
+| Domeinen | via kamers geselecteerde states opnieuw gegroepeerd per functie, inclusief Kia-route wanneer ingeschakeld |
 | Meer | configuratieaantallen en geactiveerde specialistcategorieën |
+| `specialist-kia` | native Kia-summary en de zelfstandige HACS Kia-card, of een veilige resource-/mappingfallback |
 
 De ingestelde `start_view` wordt als eerste gegenereerd; de overige vier volgen de GUI-volgorde zonder numerieke paden. Lege optionele groepen verdwijnen of krijgen een korte configuratiehint.
 
@@ -26,7 +27,7 @@ Deze alpha is bedoeld om echte informatie, routes en responsive gedrag veilig te
 
 - De Home/security-release toont aandacht alleen voor de expliciete operationele allowlist. Actieve kamers, `Nu` en de twee algemene quick actions volgen pas na hun afzonderlijke actiegate; deze alpha blijft read-only.
 - De cameracarrousel ondersteunt ieder geconfigureerd aantal camera's, bronvolgorde, muis/touchscroll en toetsenbord, maar toont één beeld per viewport. Privacy-actieve camera's worden niet als beeld getoond en blijven alleen in de compacte statusrail zichtbaar. `hidden` verbergt `unavailable`/`unknown`; `placeholder` en `last_image` gebruiken voorlopig de native camerafout-/snapshotweergave.
-- Kamerbediening en quick actions blijven achter hun actiegate; volledige Energy-pariteit en specialistische Kia-, robot-, tuin- en zwembadcards volgen in hun eigen PR en prerelease.
+- Kamerbediening en quick actions blijven achter hun actiegate; robot-, tuin- en zwembadcards volgen in hun eigen PR en prerelease. Kia behoudt de eigen bronkaart en haar afzonderlijke actiecontract.
 - Home toont maximaal drie dagen uit de geconfigureerde dagelijkse forecast in een compacte eigen presentatie. De data komt via de officiële read-only forecastsubscription; bij ontbrekende forecast blijft de actuele weerstatus zichtbaar.
 - `theme_mode` en `mobile_disclosure` blijven in schema v1 bewaard; deze shell-alpha erft het actieve HA-thema en gebruikt de native responsive Sections-layout.
 - `language: en` bewaart de configuratiekeuze, maar de gegenereerde shelllabels zijn in deze eerste testrelease nog Nederlands.

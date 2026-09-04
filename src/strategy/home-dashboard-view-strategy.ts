@@ -11,12 +11,13 @@ import {
   buildEnergySections,
   registerHomeDashboardEnergyOverview
 } from "../cards/home-dashboard-energy-domain-cards";
+import { buildKiaDetailSections, registerHomeDashboardKiaIntegration } from "../cards/home-dashboard-kia-integration";
 
 type LovelaceConfig = Record<string, unknown>;
 
 export interface HomeDashboardViewConfig {
   type: "custom:home-dashboard-view";
-  view: ViewPath | "room";
+  view: ViewPath | "room" | "specialist-kia";
   density: HomeDashboardConfigV1["general"]["density"];
   theme_mode?: HomeDashboardConfigV1["general"]["theme_mode"];
   show_weather?: boolean;
@@ -29,6 +30,7 @@ export interface HomeDashboardViewConfig {
   counts?: { rooms: number; persons: number; cameras: number };
   diagnostics?: DiagnosticsConfig;
   room?: RoomConfig;
+  kia?: SpecialistsConfig["kia"];
 }
 
 const HTMLElementBase = (typeof HTMLElement === "undefined" ? class {} : HTMLElement) as typeof HTMLElement;
@@ -127,13 +129,14 @@ function moreSections(config: HomeDashboardViewConfig): LovelaceConfig[] {
 }
 
 export function buildView(config: HomeDashboardViewConfig): LovelaceConfig {
-  if (!["home", "rooms", "energy", "domains", "more", "room"].includes(config.view)) {
+  if (!["home", "rooms", "energy", "domains", "more", "room", "specialist-kia"].includes(config.view)) {
     return { type: "sections", max_columns: 1, dense_section_placement: false, sections: [{ type: "grid", cards: [markdown("Deze viewconfiguratie wordt niet ondersteund.", "Home Dashboard")] }] };
   }
   const maxColumns = config.density === "compact" ? 4 : 3;
   const sections = config.view === "home" ? homeSections(config, maxColumns)
     : config.view === "rooms" ? roomsSections(config.rooms ?? [], maxColumns)
       : config.view === "room" ? roomDetailSections(config.room, maxColumns)
+      : config.view === "specialist-kia" ? buildKiaDetailSections(config.kia, config.diagnostics, maxColumns, config.theme_mode)
       : config.view === "energy" ? buildEnergySections(config.energy, maxColumns, config.theme_mode)
         : config.view === "domains" ? buildDomainSections({ rooms: config.rooms, energy: config.energy, security: config.security, specialists: config.specialists, diagnostics: config.diagnostics }, maxColumns)
           : moreSections(config);
@@ -155,6 +158,7 @@ export class HomeDashboardViewStrategy extends HTMLElementBase {
 
 export function registerHomeDashboardViewStrategy(): void {
   registerHomeDashboardEnergyOverview();
+  registerHomeDashboardKiaIntegration();
   if (typeof customElements === "undefined") return;
   const tag = "ll-strategy-view-home-dashboard-view";
   if (!customElements.get(tag)) customElements.define(tag, HomeDashboardViewStrategy);

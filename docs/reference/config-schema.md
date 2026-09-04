@@ -31,6 +31,10 @@ Alle stabiele objecten weigeren onbekende properties. Collecties hebben een `key
 
 De browserbundle voert het canonieke JSON Schema zelf uit bij import en compilatie. Integer-, uniqueness-, required-, enum-, pattern-, `additionalProperties`- en area-of-devicevoorwaarden zijn dus geen documentatie-only regels.
 
+### Kia-cardconfiguratie
+
+`specialists.kia.card_config` is een expliciet geavanceerd object. Het bewaart de publieke configuratie van `custom:kia-dashboard-card` zonder die voertuiglogica naar deze repository te verplaatsen. Het object wordt bij migratie en export verliesvrij bewaard en altijd met het vaste cardtype `custom:kia-dashboard-card` gerenderd. Zie [Specialistische kaarten](../configuration/specialists.md) voor de minimale summarymappings en fallbacks.
+
 ## Coverage
 
 De test vergelijkt alle editorvelden en complexe GUI-collecties met het JSON Schema. Defaults, normal/warning/missing/unavailable-fixtures, validator, migratie en compiler worden uit dezelfde gebundelde release getest.

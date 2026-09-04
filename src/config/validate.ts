@@ -145,7 +145,7 @@ export function validateConfig(config: HomeDashboardConfigV1): ValidationIssue[]
   }
 
   const expectedCardTypes: Record<string, string> = {
-    kia: "custom:ha-kia-connect-dashboard",
+    kia: "custom:kia-dashboard-card",
     robot: "custom:robot-vacuum-card",
     garden: "custom:garden-dashboard-card",
     pool: "custom:pool-dashboard-card"
@@ -163,6 +163,9 @@ export function validateConfig(config: HomeDashboardConfigV1): ValidationIssue[]
     for (const mappingKey of specialist.mapping_keys) {
       if (!LOGICAL_KEY.test(mappingKey)) issues.push(issue(`specialists.${key}.mapping_keys`, "invalid_logical_key", `Ongeldige mappingsleutel '${mappingKey}'.`));
     }
+  }
+  if (typeof config.specialists.kia.card_config !== "object" || config.specialists.kia.card_config === null || Array.isArray(config.specialists.kia.card_config)) {
+    issues.push(issue("specialists.kia.card_config", "card_config", "Kia-cardconfiguratie moet een object zijn."));
   }
 
   if (!Number.isInteger(config.diagnostics.stale_after_minutes) || config.diagnostics.stale_after_minutes < 1) {

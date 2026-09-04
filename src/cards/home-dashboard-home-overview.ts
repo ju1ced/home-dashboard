@@ -907,12 +907,12 @@ export class HomeDashboardHomeOverview extends HTMLElementBase {
     const navGrid = document.createElement("div");
     navGrid.className = "nav-grid";
     (config.rooms ?? []).slice(0, 4).forEach((room) => navGrid.append(navigationLink(room.name, room.icon || "mdi:sofa-outline", roomPath(room))));
-    const specialistNames: Record<keyof SpecialistsConfig, [string, string]> = {
-      kia: ["Auto", "mdi:car-electric"], robot: ["Robot", "mdi:robot-vacuum"], garden: ["Tuin", "mdi:flower"], pool: ["Zwembad", "mdi:pool"]
+    const specialistNames: Record<keyof SpecialistsConfig, [string, string, string]> = {
+      kia: ["Auto", "mdi:car-electric", "specialist-kia"], robot: ["Robot", "mdi:robot-vacuum", "more"], garden: ["Tuin", "mdi:flower", "more"], pool: ["Zwembad", "mdi:pool", "more"]
     };
     (Object.entries(config.specialists ?? {}) as Array<[keyof SpecialistsConfig, SpecialistsConfig[keyof SpecialistsConfig]]>)
       .filter(([, specialist]) => specialist.enabled)
-      .forEach(([key]) => navGrid.append(navigationLink(specialistNames[key][0], specialistNames[key][1], "more")));
+      .forEach(([key]) => navGrid.append(navigationLink(specialistNames[key][0], specialistNames[key][1], specialistNames[key][2])));
     if (navGrid.childElementCount > 0) {
       navigation.append(navGrid);
       root.append(navigation);

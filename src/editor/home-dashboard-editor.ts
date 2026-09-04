@@ -187,6 +187,7 @@ function renderSpecialists(config: HomeDashboardConfigV1): string {
     <label class="check"><input type="checkbox" data-specialist="${key}" data-field="enabled" ${specialist.enabled ? "checked" : ""}> Inschakelen</label>
     <label>Geteste minimumversie<input data-specialist="${key}" data-field="minimum_version" value="${escapeHtml(specialist.minimum_version)}"></label>
     <label>Logische mappingsleutels<input data-specialist="${key}" data-field="mapping_keys" value="${escapeHtml(specialist.mapping_keys.join(", "))}"></label>
+    ${key === "kia" ? `<label>Geavanceerde Kia-cardconfiguratie<small>Deze private configuratie wordt ongewijzigd aan de zelfstandige Kia-card doorgegeven. Gebruik daarin onder meer <code>entities</code>; geen echte mappings in Git opslaan.</small><textarea rows="9" data-specialist="kia" data-field="card_config">${escapeHtml(JSON.stringify(config.specialists.kia.card_config, null, 2))}</textarea></label>` : ""}
   </article>`;
   }).join("");
 }
@@ -391,12 +392,27 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
       this.focusActiveSection = true;
       this.render();
     }));
-    this.shadowRoot.querySelectorAll<HTMLInputElement>("[data-specialist]").forEach((element) => element.addEventListener("change", () => {
+    this.shadowRoot.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("[data-specialist]").forEach((element) => element.addEventListener("change", () => {
       const specialist = this._config.specialists[element.dataset.specialist as keyof typeof this._config.specialists];
-      const field = element.dataset.field as "enabled" | "minimum_version" | "mapping_keys";
+      const field = element.dataset.field as "enabled" | "minimum_version" | "mapping_keys" | "card_config";
       if (!specialist || !field) return;
-      if (field === "enabled") specialist.enabled = element.checked;
+      if (field === "enabled") {
+        if (!(element instanceof HTMLInputElement)) return;
+        specialist.enabled = element.checked;
+      }
       else if (field === "mapping_keys") specialist.mapping_keys = element.value.split(",").map((value) => value.trim()).filter(Boolean);
+      else if (field === "card_config") {
+        if (!("card_config" in specialist)) return;
+        try {
+          const parsed = JSON.parse(element.value);
+          if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("geen object");
+          specialist.card_config = parsed as Record<string, unknown>;
+        } catch {
+          this.message = "De geavanceerde Kia-cardconfiguratie moet geldige JSON-objecttekst zijn; de eerdere geldige configuratie blijft behouden.";
+          this.render();
+          return;
+        }
+      }
       else specialist.minimum_version = element.value;
       this.commit();
     }));
@@ -476,7 +492,7 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
       .editor-layout{display:grid;grid-template-columns:minmax(170px,220px) minmax(0,1fr);gap:12px;margin-top:12px}.section-nav{display:grid;gap:6px;align-self:start;position:sticky;top:8px}.section-tab{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--divider-color);border-radius:10px;background:var(--card-background-color);color:inherit;text-align:left;cursor:pointer}.section-tab[aria-selected=true]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--card-background-color));font-weight:700}.nav-state{display:grid;place-items:center;min-width:24px;height:24px;padding:0 6px;border-radius:999px;background:var(--secondary-background-color);font-size:.78rem}.nav-state.valid{color:var(--success-color,#27824a)}
       .section-panel{min-width:0;border:1px solid var(--divider-color);border-radius:14px;background:var(--card-background-color);overflow:hidden}.section-heading{padding:16px;border-bottom:1px solid var(--divider-color)}.section-heading h3{margin:0;font-size:1.25rem}.section{display:grid;gap:12px;padding:14px}
       .field,label{display:grid;gap:5px}.field{grid-template-columns:minmax(180px,1fr) minmax(220px,1fr);align-items:center;padding:9px 0;border-top:1px solid var(--divider-color)}small{display:block;color:var(--secondary-text-color);margin-top:3px}
-      input,select{width:100%;padding:10px;border:1px solid var(--divider-color);border-radius:8px;background:var(--secondary-background-color);color:inherit}input[type=checkbox]{width:22px;height:22px}.check{display:flex;align-items:center;gap:8px}
+      input,select,textarea{width:100%;padding:10px;border:1px solid var(--divider-color);border-radius:8px;background:var(--secondary-background-color);color:inherit}textarea{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;resize:vertical}input[type=checkbox]{width:22px;height:22px}.check{display:flex;align-items:center;gap:8px}
       .items{display:grid;gap:10px}.item{margin:0;border:1px solid var(--divider-color);border-radius:12px;background:var(--secondary-background-color);overflow:hidden}.item summary{padding:12px;font-weight:700;cursor:pointer}.item-body{display:grid;gap:10px;padding:0 12px 12px}.item-toolbar{display:flex;justify-content:flex-end}.item-actions{display:flex;gap:4px}.item button{color:var(--error-color);background:transparent;border:0;min-width:40px;min-height:40px;cursor:pointer}.item button[disabled]{opacity:.35;cursor:not-allowed}code{display:block;overflow-wrap:anywhere;color:var(--secondary-text-color)}
       fieldset.config{border:0;margin:0;padding:0;min-width:0}.config[disabled]{pointer-events:none;opacity:.72}.order{display:grid;gap:6px}.order>div{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border:1px solid var(--divider-color);border-radius:8px}.order button{min-width:40px;min-height:40px;border:0;border-radius:8px;margin-left:4px}.fatal{color:var(--error-color);font-weight:700}
       .add{justify-self:start;padding:9px 12px;border:0;border-radius:9px;background:var(--accent);color:var(--text-primary-color,#fff);cursor:pointer}.guidance{display:grid;gap:8px;padding:12px;border:1px solid color-mix(in srgb,var(--accent) 35%,var(--divider-color));border-radius:12px;background:color-mix(in srgb,var(--accent) 8%,var(--card-background-color))}.guidance button{justify-self:start;min-height:42px;padding:8px 12px;border:1px solid var(--accent);border-radius:9px;background:var(--card-background-color);color:var(--accent);font-weight:700;cursor:pointer}.issues{margin:0;padding-left:20px}.error{color:var(--error-color)}.warning{color:var(--warning-color,#b26a00)}.section-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;border-top:1px solid var(--divider-color)}.section-footer button{min-height:42px;padding:8px 14px;border:1px solid var(--divider-color);border-radius:9px;background:var(--secondary-background-color);color:inherit}.section-footer button[disabled]{opacity:.45}

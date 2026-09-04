@@ -49,6 +49,29 @@ test("defaults zijn een geldige schema-v1-configuratie", () => {
   assert.deepEqual(validateConfigSchema(config), []);
 });
 
+test("Kia behoudt haar zelfstandige cardconfiguratie en corrigeert het cardcontract", () => {
+  const migrated = migrateConfig({
+    type: "custom:home-dashboard",
+    schema_version: 1,
+    specialists: {
+      kia: {
+        enabled: true,
+        card_type: "custom:kia-dashboard-card",
+        minimum_version: "1.0.0",
+        mapping_keys: ["kia_vehicle"],
+        card_config: { title: "Auto", entities: { battery_level: "kia_battery_primary" } }
+      }
+    }
+  }).config;
+  assert.equal(migrated.specialists.kia.card_type, "custom:kia-dashboard-card");
+  assert.deepEqual(migrated.specialists.kia.card_config, { title: "Auto", entities: { battery_level: "kia_battery_primary" } });
+  assert.deepEqual(validateConfigSchema(migrated), []);
+  assert.equal(validateConfig(migrated).filter((issue) => issue.severity === "error").length, 0);
+
+  migrated.specialists.kia.card_config = [];
+  assert.ok(validateConfig(migrated).some((issue) => issue.path === "specialists.kia.card_config"));
+});
+
 test("oude Vandaag-configuratie krijgt alle benoemde energie-KPI's zonder dataverlies", () => {
   const migrated = migrateConfig({
     type: "custom:home-dashboard",

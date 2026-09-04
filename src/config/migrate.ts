@@ -53,6 +53,13 @@ export function migrateConfig(input: unknown): MigrationResult {
 
   const merged = mergeKnown(defaults, input) as HomeDashboardConfigV1;
   merged.schema_version = CONFIG_SCHEMA_VERSION;
+  const inputSpecialists = isObject(input.specialists) ? input.specialists : undefined;
+  const inputKia = inputSpecialists && isObject(inputSpecialists.kia) ? inputSpecialists.kia : undefined;
+  if (inputKia && isObject(inputKia.card_config)) {
+    // Dit is bewust een transparante doorgeefconfiguratie naar de zelfstandig
+    // geversioneerde Kia-card. mergeKnown bewaart dynamische cardvelden niet.
+    merged.specialists.kia.card_config = structuredClone(inputKia.card_config);
+  }
   const inputToday = isObject(input.today) ? input.today : undefined;
   const legacyBatteryPower = inputToday?.battery_power_entity;
   if (typeof legacyBatteryPower === "string" && legacyBatteryPower) {

@@ -128,8 +128,17 @@ export interface SpecialistConfig {
   mapping_keys: LogicalKey[];
 }
 
+/**
+ * De volledige Kia-configuratie blijft het publieke contract van de
+ * zelfstandige Kia-card. De centrale shell leest hiervan alleen de drie
+ * samenvattingswaarden en geeft de rest ongewijzigd door aan die kaart.
+ */
+export interface KiaSpecialistConfig extends SpecialistConfig {
+  card_config: Record<string, unknown>;
+}
+
 export interface SpecialistsConfig {
-  kia: SpecialistConfig;
+  kia: KiaSpecialistConfig;
   robot: SpecialistConfig;
   garden: SpecialistConfig;
   pool: SpecialistConfig;
