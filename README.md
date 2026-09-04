@@ -1,6 +1,6 @@
 # Home Dashboard — ontwerpvoorstel
 
-Deze repository bouwt een HACS-installeerbare community dashboard strategy voor een centraal Home Assistant-dashboard. De HACS-foundation en grafische configuratie zijn in Home Assistant gevalideerd; `v0.6.0-alpha.1` voegt rijkere operationele Home-context, semantische kamerpagina's, een volledige read-only Energie-view en gecureerde Domeinen toe. Home Assistant is niet door deze repository gewijzigd.
+Deze repository bouwt een HACS-installeerbare community dashboard strategy voor een centraal Home Assistant-dashboard. De HACS-foundation en grafische configuratie zijn in Home Assistant gevalideerd; de lokale `v0.7.0-alpha.1`-testcandidate voegt een read-only Kia-summary en specialistische detailroute toe bovenop Home, Kamers, Energie en Domeinen. Home Assistant is niet door deze repository gewijzigd.
 
 ## Aanbevolen richting
 
@@ -25,7 +25,7 @@ V1 bevat geen custom panel en geen extra summary-component. De minimale onderste
 - [Kamers en kamerdetails](docs/configuration/rooms.md)
 - [Energie en Domeinen](docs/configuration/energy.md)
 - [Specialistische kaarten](docs/configuration/specialists.md)
-- [Kia-testchecklist (voorbereid)](docs/releases/testing-v0.7.0-alpha.1.md)
+- [Kia-testchecklist](docs/releases/testing-v0.7.0-alpha.1.md)
 - [Configuratieschema v1](docs/reference/config-schema.md)
 - [Compatibility](docs/reference/compatibility.md)
 - [Requirements en evidence](docs/discovery/requirements.md)
@@ -49,7 +49,7 @@ Open daarna `http://127.0.0.1:4173/`. De fixtureselector wisselt tussen normaal,
 
 ## HACS-installatie
 
-[`v0.1.0-alpha.1`](https://github.com/ju1ced/home-dashboard/releases/tag/v0.1.0-alpha.1) heeft de volledige HACS-lifecycle doorlopen: installatie, update, verwijdering en herinstallatie. Zie [het geanonimiseerde resultaat](docs/releases/results-v0.1.0-alpha.1.md). De `v0.2`-reeks valideerde de GUI; de `v0.3`-reeks bracht de eerste views; `v0.4.0-alpha.2` verfijnt de cameracarrousel; de `v0.5`-reeks bouwde Home en Kamers uit. `v0.6.0-alpha.1` is de actuele testrelease voor Home, Kamers, Energie en Domeinen.
+[`v0.1.0-alpha.1`](https://github.com/ju1ced/home-dashboard/releases/tag/v0.1.0-alpha.1) heeft de volledige HACS-lifecycle doorlopen: installatie, update, verwijdering en herinstallatie. Zie [het geanonimiseerde resultaat](docs/releases/results-v0.1.0-alpha.1.md). De `v0.2`-reeks valideerde de GUI; de `v0.3`-reeks bracht de eerste views; `v0.4.0-alpha.2` verfijnt de cameracarrousel; de `v0.5`-reeks bouwde Home en Kamers uit. `v0.7.0-alpha.1` staat lokaal klaar als testcandidate voor Kia bovenop Home, Kamers, Energie en Domeinen; een GitHub-prerelease volgt alleen na expliciete toestemming.
 
 ## Checks
 
@@ -91,4 +91,4 @@ scripts/          lokale preview en repositorychecks
 
 ## Status
 
-De ontwerpbaseline, deliveryroadmap en HACS-fundering zijn gepubliceerd; installatie, configuratie en de compacte editor zijn praktisch gevalideerd. `v0.6.0-alpha.1` is de actuele runtimegate voor Home/security, Kamers, Energie en Domeinen. De specialistische Kia-, robot-, tuin- en zwembaddetails blijven afzonderlijke roadmapstappen. Home Assistant-writes en directe servicecalls starten niet automatisch en behouden hun afzonderlijke menselijke gates.
+De ontwerpbaseline, deliveryroadmap en HACS-fundering zijn gepubliceerd; installatie, configuratie en de compacte editor zijn praktisch gevalideerd. `v0.7.0-alpha.1` is lokaal testklaar voor Kia bovenop Home/security, Kamers, Energie en Domeinen. Robot-, tuin- en zwembaddetails blijven afzonderlijke roadmapstappen. Home Assistant-writes en directe servicecalls starten niet automatisch en behouden hun afzonderlijke menselijke gates.

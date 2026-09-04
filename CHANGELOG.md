@@ -2,7 +2,7 @@
 
 Alle betekenisvolle wijzigingen worden hier bijgehouden. Het project gebruikt Semantic Versioning met prereleases tijdens de testfasen.
 
-## Unreleased
+## 0.7.0-alpha.1 — 2026-09-04
 
 ### Added
 

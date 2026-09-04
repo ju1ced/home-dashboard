@@ -1,6 +1,6 @@
 # Gegenereerde views
 
-De dashboard strategy maakt vijf stabiele hoofdviews en per geconfigureerde kamer een stabiele subview; een afzonderlijke view strategy bouwt iedere view als Sections-configuratie. `v0.6.0-alpha.1` levert de read-only Home-, Kamers-, Energie- en Domeinenbasis. De volgende Kia-stap voegt bij een ingeschakelde Kia-configuratie de subview `specialist-kia` toe; zij blijft buiten de primaire navigatie.
+De dashboard strategy maakt vijf stabiele hoofdviews en per geconfigureerde kamer een stabiele subview; een afzonderlijke view strategy bouwt iedere view als Sections-configuratie. `v0.7.0-alpha.1` levert de read-only Home-, Kamers-, Energie- en Domeinenbasis met de optionele Kia-subview `specialist-kia`; zij blijft buiten de primaire navigatie.
 
 | View | Inhoud in deze alpha |
 |---|---|
