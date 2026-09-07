@@ -1,5 +1,7 @@
 # Finaal voorstel — startbasis Home Dashboard
 
+> Actuele ontwerprichting (7 september 2026): [vaste kamerbediening, rustige dataversheid en behoud van afvalophaling](room-controls-direction.md). Dit besluit heeft voor deze onderwerpen voorrang op de eerdere ontwerpbaseline hieronder; implementatie volgt afzonderlijk.
+
 ## Besluit
 
 We starten met **Huis in beeld**: een informatievol maar rustig Home Assistant Sections-dashboard op minimaal Home Assistant 2026.8.2. De bestaande Home Assistant-sidebar blijft de applicatieshell. Binnen het dashboard staan vijf vaste native views: **Home, Kamers, Energie, Domeinen en Meer**.

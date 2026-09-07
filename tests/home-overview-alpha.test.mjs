@@ -39,12 +39,12 @@ test("Home structureert alleen wijzigingen in aandacht en actuele activiteit opn
   assert.notEqual(getHomeStructureSignature(normal, config), getHomeStructureSignature(unavailable, config));
 });
 
-test("Home alpha bevat betekenisvolle, toegankelijke read-only presentaties", async () => {
+test("Home behoudt statuspresentaties naast expliciete kamerbediening", async () => {
   const bundle = await readFile(new URL("../dist/home-dashboard.js", import.meta.url), "utf8");
   for (const contract of [
-    "Nu actief", "Kamers in beeld", "Niet recent", "Bron ontbreekt", "Controleer bron",
-    "priority-critical", "metric-meta", "activity-card", "room-highlight", "Andere locatie", "Batterij "
+    "Nu actief", "Kamers & bediening", "Alle kamers", "Bron ontbreekt", "Controleer bron",
+    "priority-critical", "metric-meta", "activity-card", "Andere locatie", "Batterij "
   ]) assert.match(bundle, new RegExp(contract));
-  assert.doesNotMatch(bundle, /callService\(/);
+  assert.match(bundle, /callService\(/);
   assert.doesNotMatch(bundle, /perform_action/);
 });

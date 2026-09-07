@@ -95,6 +95,8 @@ export function migrateConfig(input: unknown): MigrationResult {
     device_ids: [],
     capabilities: [],
     quick_actions: [],
+    home_favorite: false, controls_enabled: false,
+    control_light_entity: "", control_cover_entity: "", control_awning_entity: "", control_media_entity: "",
     light_entities: [],
     cover_entities: [],
     media_entities: [],

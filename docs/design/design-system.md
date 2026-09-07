@@ -1,5 +1,7 @@
 # Designsysteem — Juiced Horizon Calm
 
+> Actuele ontwerprichting (7 september 2026): [vaste kamerbediening, rustige dataversheid en behoud van afvalophaling](room-controls-direction.md). Dit besluit heeft voor deze onderwerpen voorrang op de eerdere ontwerpbaseline hieronder; implementatie volgt afzonderlijk.
+
 ## Principes
 
 - Rustige neutrale oppervlakken; kleur wordt voor betekenis gereserveerd.

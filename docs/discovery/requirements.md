@@ -1,5 +1,7 @@
 # Geverifieerde requirements
 
+> Actuele ontwerprichting (7 september 2026): [vaste kamerbediening, rustige dataversheid en behoud van afvalophaling](../design/room-controls-direction.md). Dit besluit heeft voor deze onderwerpen voorrang op de eerdere ontwerpbaseline hieronder; implementatie volgt afzonderlijk.
+
 ## Doelen en prioriteiten
 
 1. Home toont binnen enkele seconden uitsluitend wat nu aandacht vraagt, primaire woningstatus en de meest gebruikte acties.

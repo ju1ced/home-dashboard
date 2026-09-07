@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.0-alpha.1 — 2026-09-07
+
+- Vaste favoriete kamers met maximaal vier expliciete capabilitydoelen en opt-in voor directe bediening.
+- Rolluik-/luifelstrook met ondersteunde richtingen, stop tijdens wachtend verzoek en luifelbevestiging; radio pauze/hervatten met detailfallback voor bronkeuze.
+- Geen generieke stale-presentatie op Home; echte uitval blijft herkenbaar. Afvalophaling, forecast, camera's en specialistische routes behouden.
+- Fictieve runtime-renders, tests voor acties/fouten/focus en een releasechecklist. Geen automatische activatie bij migratie.
+
+
 Alle betekenisvolle wijzigingen worden hier bijgehouden. Het project gebruikt Semantic Versioning met prereleases tijdens de testfasen.
 
 ## 0.7.0-alpha.2 — 2026-09-04

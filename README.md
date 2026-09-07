@@ -1,6 +1,13 @@
 # Home Dashboard — ontwerpvoorstel
 
-Deze repository bouwt een HACS-installeerbare community dashboard strategy voor een centraal Home Assistant-dashboard. De HACS-foundation en grafische configuratie zijn in Home Assistant gevalideerd; de lokale `v0.7.0-alpha.2`-testcandidate voegt een read-only Kia-summary en specialistische detailroute toe bovenop Home, Kamers, Energie en Domeinen. Home Assistant is niet door deze repository gewijzigd.
+> Actuele ontwerprichting (7 september 2026): [vaste kamerbediening, rustige dataversheid en behoud van afvalophaling](docs/design/room-controls-direction.md). Dit besluit heeft voor deze onderwerpen voorrang op de eerdere ontwerpbaseline hieronder; implementatie volgt afzonderlijk.
+
+Deze repository bouwt een HACS-installeerbare community dashboard strategy. **v0.8.0-alpha.1** voegt vaste favoriete kamerkaarten, expliciete licht-/cover-/luifel-/radiobediening en rustige dataversheid toe. Afvalophaling en voorspelling blijven behouden. Bestaande configuraties activeren geen bediening automatisch.
+
+- [Instellen en testchecklist](docs/releases/testing-v0.8.0-alpha.1.md)
+- [Actuele runtime-renders](docs/renders/room-controls/README.md)
+
+![Kamerbediening op Home](docs/renders/room-controls/desktop.png)
 
 ## Aanbevolen richting
 
@@ -91,4 +98,4 @@ scripts/          lokale preview en repositorychecks
 
 ## Status
 
-De ontwerpbaseline, deliveryroadmap en HACS-fundering zijn gepubliceerd; installatie, configuratie en de compacte editor zijn praktisch gevalideerd. `v0.7.0-alpha.2` is lokaal testklaar voor Kia bovenop Home/security, Kamers, Energie en Domeinen. Robot-, tuin- en zwembaddetails blijven afzonderlijke roadmapstappen. Home Assistant-writes en directe servicecalls starten niet automatisch en behouden hun afzonderlijke menselijke gates.
+v0.8.0-alpha.1 is de testcandidate voor kamerbediening bovenop de bestaande Home-, Kamers-, Energie-, Domeinen- en Kia-integratie. PR en prerelease zijn op 7 september 2026 door de eigenaar aangevraagd. Deze ontwikkeling voert geen live HA-writes uit; runtimevalidatie op het goedgekeurde testdashboard volgt de releasechecklist.

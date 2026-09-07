@@ -1,15 +1,24 @@
 # Kamers en kamerdetails
 
-`v0.5.0-alpha.1` vervangt de technische entiteitenlijst door twee niveaus.
 
-## Kamers-overzicht
+Kamers heeft een overzicht en volledige details per ruimte.
 
-- Een hero toont het totale aantal geconfigureerde echte ruimtes.
-- Kamers worden volgens hun gekozen `floor_id` gegroepeerd. Als de frontend geen vriendelijke verdiepingnaam aanbiedt, gebruikt de card tijdelijk `Verdieping 1`, `Verdieping 2`, enzovoort; interne IDs worden niet getoond.
-- Iedere kamerkaart toont icon, naam, primaire context en een status zoals temperatuur/lichten/openingen. Afwijkende safety-statussen en niet-beschikbare bronnen krijgen voorrang in de contextregel.
-- De onderste rij bevat maximaal vier state-aware chips voor werkelijk gemapte apparaten. Een chip gebruikt de Home Assistant-naam en toont zowel de actuele betekenis als toestand, bijvoorbeeld `Leeslamp · Aan · 42%`, `Rolluik tuin · Open · 60%` of `Sonos · Speelt · Radio 1`; het is dus geen generiek capabilitylabel.
-- Iedere chip heeft een afzonderlijk touchvlak van minimaal 44 px, zichtbare toetsenbordfocus en opent uitsluitend het standaard Home Assistant-detailvenster van die bron. De chip voert zelf geen servicecall uit.
-- De volledige kamerkaart opent het semantische detailpad `room-<logische-sleutel>`.
+## Kamers-overzicht en favorieten
+
+Vanaf v0.8.0-alpha.1 delen Home en het volledige verdiepingenoverzicht dezelfde compacte kamerkaart. De kamernaam/pijl opent details; aparte knoppen tonen Lichten, Rolluiken, Luifel en Radio met hun toestand. Alleen expliciet gemapte functies verschijnen.
+
+Onder Dashboard bewerken → Kamers:
+
+- **Favoriet op Home** kiest maximaal vier kamers; de bestaande pijlen bepalen de volgorde. Niet-favorieten blijven op Kamers bereikbaar.
+- **Directe bediening toestaan** is standaard uit. Zonder opt-in openen de knoppen alleen HA-details.
+- Vier afzonderlijke actiedoelen kiezen de exacte lamp/groep, rolluik, luifel en speler. Geen afleiding uit de oude apparaatlijsten en geen impliciete area-/devicegroepering.
+- **Layout → Quick actions** regelt de zichtbaarheid van deze knoppen op beide overzichten.
+
+Lichten gebruikt aan/uit volgens de actuele state. Rolluiken klapt Open/Stop/Dicht uit; luifels gebruiken Uit/Stop/In en vragen bevestiging voor beweging. Alleen ondersteunde coverfuncties zijn beschikbaar; deuren/poorten blijven uitgesloten. Radio pauzeert of hervat een gepauzeerde bron, en opent details voor bronkeuze bij idle/uit of een niet-ondersteunde actie.
+
+Een request verandert de zichtbare apparaatstate niet optimistisch. Fouten/timeout krijgen feedback zonder interne foutpayload. HA handhaaft autorisatie en integratievoorwaarden; Stop blijft beschikbaar tijdens een wachtend bewegingsverzoek. Missing/unknown/unavailable opent details en voert geen directe actie uit.
+
+Kamerkaarten gebruiken minimaal 44×44 px knoppen, toetsenbordfocus, tekst naast statuskleur en responsive disclosure. Zie de [testrelease](../releases/testing-v0.8.0-alpha.1.md).
 
 ## Kamerdetail
 
@@ -24,6 +33,6 @@ Iedere kamer krijgt een Home Assistant-subview met terugpad naar Kamers. `v0.5.0
 7. **Apparaten & energie:** geselecteerde powerbronnen; deze zware lijst start op smalle schermen ingeklapt.
 8. **Historie:** herkenbare broningangen plus gecombineerde kamer- en klimaathistorie over 72 uur; de bronnenlijst start op smalle schermen ingeklapt.
 
-Lege onderdelen worden niet gerenderd. Een gemapte maar ontbrekende bron toont `Niet gevonden`; `unknown` en `unavailable` krijgen respectievelijk `Onbekend` en `Niet beschikbaar` zonder een nulwaarde te fabriceren. Apparaatkaarten openen het standaard Home Assistant-detailvenster; de dashboardbundle voert zelf geen servicecall uit.
+Lege onderdelen worden niet gerenderd. Een gemapte maar ontbrekende bron toont `Niet gevonden`; `unknown` en `unavailable` krijgen respectievelijk `Onbekend` en `Niet beschikbaar` zonder een nulwaarde te fabriceren. Apparaatkaarten op het detail openen het standaard Home Assistant-detailvenster. Expliciete actiedoelen worden ook in de passende detailgroepen opgenomen.
 
 De maximaal twee geconfigureerde `quick_actions` blijven bewaard, maar worden in deze read-only alpha niet als uitvoerbare knoppen gerenderd. Dat gebeurt pas na de afzonderlijke actionscope-, confirmation- en verificatiegate. Tot die gate zijn de kamerkaart en entitychips uitsluitend navigatie naar een semantisch detailpad of Home Assistant `more-info`.

@@ -1,5 +1,7 @@
 # Dashboardvoorstel — Huis in beeld
 
+> Actuele ontwerprichting (7 september 2026): [vaste kamerbediening, rustige dataversheid en behoud van afvalophaling](room-controls-direction.md). Dit besluit heeft voor deze onderwerpen voorrang op de eerdere ontwerpbaseline hieronder; implementatie volgt afzonderlijk.
+
 ## Executive summary
 
 Het aanbevolen dashboard is een rustige, attention-first Home Assistant-ervaring. De informatiearchitectuur voelt als een heldere woningapp, maar de implementatie blijft een native Sections-dashboard. Home beantwoordt steeds drie vragen: **vraagt iets aandacht, wat gebeurt er nu en wat wil ik doen?**

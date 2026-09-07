@@ -1,3 +1,5 @@
+import { registerRoomControls } from "./cards/home-dashboard-room-controls";
+export { favoriteRooms, planRoomControl, executeRoomControl, HomeDashboardRoomControls } from "./cards/home-dashboard-room-controls";
 declare const __HOME_DASHBOARD_VERSION__: string;
 
 import { compileConfig, parseImportedConfig, serializeConfig } from "./config/compiler";
@@ -20,7 +22,7 @@ export type { HomeDashboardConfigV1, ValidationIssue } from "./config/types";
 export interface HomeDashboardBuildInfo {
   readonly name: "Home Dashboard";
   readonly version: string;
-  readonly phase: "kia-integration";
+  readonly phase: "room-controls";
   readonly minimumHomeAssistant: "2026.8.2";
 }
 
@@ -33,11 +35,12 @@ declare global {
 export const buildInfo: HomeDashboardBuildInfo = Object.freeze({
   name: "Home Dashboard",
   version: __HOME_DASHBOARD_VERSION__,
-  phase: "kia-integration",
+  phase: "room-controls",
   minimumHomeAssistant: "2026.8.2"
 });
 
 if (typeof window !== "undefined") {
+  registerRoomControls();
   registerHomeDashboardCameraStrip();
   registerHomeDashboardHomeOverview();
   registerHomeDashboardRoomCards();

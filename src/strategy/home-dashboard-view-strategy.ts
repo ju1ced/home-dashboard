@@ -21,6 +21,7 @@ export interface HomeDashboardViewConfig {
   density: HomeDashboardConfigV1["general"]["density"];
   theme_mode?: HomeDashboardConfigV1["general"]["theme_mode"];
   show_weather?: boolean;
+  show_quick_actions?: boolean;
   today?: HomeDashboardConfigV1["today"];
   persons?: HomeDashboardConfigV1["persons"];
   security?: HomeDashboardConfigV1["security"];
@@ -73,17 +74,18 @@ function homeSections(config: HomeDashboardViewConfig, maxColumns: number): Love
       diagnostics: config.diagnostics,
       energy: config.energy,
       show_weather: config.show_weather,
+      show_quick_actions: config.show_quick_actions,
       grid_options: { columns: "full", rows: "auto" }
     }]
   }];
 }
 
-function roomsSections(rooms: readonly RoomConfig[], maxColumns: number): LovelaceConfig[] {
+function roomsSections(rooms: readonly RoomConfig[], maxColumns: number, showControls = true): LovelaceConfig[] {
   if (rooms.length === 0) return [{ type: "grid", cards: [markdown("Voeg kamers toe via **Dashboard bewerken → Kamers**.", "Kamers")] }];
   return [{
     type: "grid",
     column_span: maxColumns,
-    cards: [{ type: "custom:home-dashboard-room-overview", rooms, grid_options: { columns: "full", rows: "auto" } }]
+    cards: [{ type: "custom:home-dashboard-room-overview", rooms, show_controls: showControls, grid_options: { columns: "full", rows: "auto" } }]
   }];
 }
 
@@ -134,7 +136,7 @@ export function buildView(config: HomeDashboardViewConfig): LovelaceConfig {
   }
   const maxColumns = config.density === "compact" ? 4 : 3;
   const sections = config.view === "home" ? homeSections(config, maxColumns)
-    : config.view === "rooms" ? roomsSections(config.rooms ?? [], maxColumns)
+    : config.view === "rooms" ? roomsSections(config.rooms ?? [], maxColumns, config.show_quick_actions !== false)
       : config.view === "room" ? roomDetailSections(config.room, maxColumns)
       : config.view === "specialist-kia" ? buildKiaDetailSections(config.kia, config.diagnostics, maxColumns, config.theme_mode)
       : config.view === "energy" ? buildEnergySections(config.energy, maxColumns, config.theme_mode)

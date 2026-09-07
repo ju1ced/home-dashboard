@@ -1,28 +1,28 @@
 # Home
 
-Home is een operationeel startscherm, geen volledige inventaris. `v0.5.0-alpha.9` rendert de inhoud als één begrensde, responsive compositie in plaats van losse Sections-kolommen:
+Vanaf v0.8.0-alpha.1 combineert Home rustige context met vaste favoriete kamerbediening.
 
-1. **Aandacht nodig** combineert operationele uitval en expliciet gemapte kamer-safety. Onveilige/probleemstates staan vóór open/unlocked en die staan vóór `unknown`/`unavailable`. De banner toont de volledige telling en maximaal drie doelgerichte detailknoppen; iedere knop opent uitsluitend het standaard entitydetail. Generieke buttons, events of overige diagnostiek worden niet als alarm behandeld.
-2. **Vandaag** vormt op desktop één samengestelde kaart over de twee linker kolommen: weer, energie-rail en **Afvalophaling** delen één buitenrand en worden alleen door interne lijnen gescheiden. Maximaal vier afvalfracties staan in één rij; op mobiel blijven ze twee per rij. Security blijft als derde kolom rechts staan en stapelt op smallere schermen. Afvalfracties krijgen waar herkenbaar hun eigen icoon en korte naam, plus datum en `Vandaag`, `Morgen` of `Over n dagen`. Extra energiecontext blijft optioneel.
-3. **Gezin** toont de geconfigureerde person cards compact, vermeldt de dataversheid en toont een geconfigureerde persoonsbatterij alleen onder 20%. `show_location` maakt geen vrije locatielekken mogelijk: Home toont **Thuis**, een expliciet toegestane zone, **Andere locatie** of een onbekend/onbeschikbaar fallbacklabel.
-4. **Nu actief** toont maximaal vier betrouwbare toestanden uit bestaande mappings: spelende media, actieve HVAC, bewegende covers, ingeschakelde verlichting en EV-laden. De kaarten zijn read-only en openen alleen entitydetails.
-5. **Kamers in beeld** toont maximaal vier kamers met een safety-afwijking of actuele activiteit. Safety krijgt voorrang; een kaart navigeert naar de stabiele kamerdetailroute.
-6. **Snel naar** groepeert maximaal vier rechtstreekse kamerdetailroutes en ingeschakelde specialistische ingangen.
-7. **Beveiliging & privacy** staat zonder dubbele buitenkop op brede schermen als compacte derde kolom naast weer en energiesensoren, en stapelt op tablet/mobiel. Het toont alarmstatus en één camerabeeld per positie; private camera's verdwijnen uit de carrousel en blijven alleen in de smalle privacyrail zichtbaar.
+1. **Aandacht nodig** behoudt operationele uitval en expliciet gemapte safety, ook buiten favoriete kamers. Kritieke states krijgen voorrang; de knoppen openen details.
+2. **Vandaag** behoudt één samengestelde kaart met weer, maximaal drie voorspeldagen, zes benoemde energievelden en **Afvalophaling**. Afval toont fractie, datum en relatieve termijn, maximaal vier naast elkaar en twee op mobiel. Security blijft zelfstandig rechts of stapelt op smallere schermen.
+3. **Gezin** toont aanwezigheid en relevante batterijwaarschuwingen, zonder generieke dataversheidstekst. Toegestane zones blijven privacybewust; geen adres of coördinaten.
+4. **Nu actief** toont conditioneel overige woningactiviteit. Een bron die al in een favoriete kamerknop staat wordt niet gedupliceerd. Andere activiteit, bijvoorbeeld HVAC in diezelfde kamer, blijft zichtbaar.
+5. **Kamers & bediening** toont maximaal vier expliciet gekozen favorieten in configuratievolgorde, ook wanneer alles uitstaat. Zonder favorieten verschijnt een instelhint. Alle kamers blijft altijd bereikbaar.
+6. **Snel naar** bevat ingeschakelde specialistische ingangen, zonder dubbele kamerlinks.
 
-De Home-compositie erft standaard de actieve Home Assistant-themetokens. Wanneer **Thema** expliciet op licht of donker staat, begrenst die keuze dezelfde Juiced Horizon Calm-tokens tot de dashboardcompositie en haar childcards.
+Kies favorieten en actiedoelen via Dashboard bewerken → Kamers. [Kamerbediening](rooms.md) beschrijft de afzonderlijke doelen en opt-in voor directe acties. De native kamerdetails blijven behouden.
 
-Statecards en de weerkaart openen het standaard Home Assistant-detailvenster; camerakaarten blijven read-only. De dagelijkse forecast gebruikt uitsluitend de officiële read-only `weather/subscribe_forecast`-subscription. De bundle roept zelf geen service aan. De algemene quick actions blijven verborgen tot hun afzonderlijke action- en confirmationgate is doorlopen.
+Home erft de actieve HA-themetokens; expliciet licht/donker blijft ondersteund. Nieuwe kamerkaarten behouden neutrale surfaces, afgeronde randen, duidelijke labels en zachtblauwe activiteit. Mobiel heeft één kolom kamers en waar nodig twee kolommen knoppen, met minimaal 44×44 px doelen.
 
-Ieder benoemd KPI-veld is optioneel. Iedere KPI toont naast icoon en waarde ook een compact semantisch label. Een ontbrekende, `unknown` of `unavailable` bron krijgt tekstuele uitleg; een bron ouder dan **Diagnostiek → stale after** wordt als **Niet recent** aangeduid. Daarmee is geen status uitsluitend van kleur of icoon afhankelijk.
+## Datakwaliteit en updates
 
-Realtime waardewijzigingen werken bestaande teksten en childcards in-place bij. Alleen een structurele wijziging — nieuw aandachtspunt, gestart/gestopt actief proces of een veranderde actieve-kamerset — bouwt Home opnieuw op. Een wijzigend vermogen alleen veroorzaakt dus geen permanente refresh. Wanneer alle benoemde velden én **Extra energiecontext** leeg zijn, gebruikt Home maximaal één bron uit de geconfigureerde zon-, elektriciteit-, batterij- en EV-context als veilige informatieve fallback. Energie/Domeinen en specialistische detailpagina's behouden hun afzonderlijke PR's en prereleases.
+Een generieke ouderdomsdrempel geeft op Home geen Niet recent-label, ouderdomstekst of waarschuwingkleur. Dit geldt ook voor energie en personen. Een onveranderde state is geen bewijs van uitval. Instellingen voor diagnostische bronouderdom blijven voor compatibiliteit bewaard.
 
-## Fallbacks en grenzen
+Missing, unknown en unavailable houden hun eigen fallback; er wordt geen nulwaarde of afvaldatum verzonnen. Operationele uitval en safety blijven zichtbaar. Private camera's blijven zonder preview.
 
-- **Normal:** niet-actieve secties verdwijnen; Home blijft een operationeel overzicht en geen inventaris.
-- **Warning:** safety-items staan boven operationele uitval en de betrokken kamer verschijnt onder **Kamers in beeld**.
-- **Missing:** een ontbrekende optionele KPI toont **Bron ontbreekt**; ontbrekende optionele secties worden niet gefabriceerd.
-- **Unavailable/stale:** de waarde blijft zichtbaar als **Niet beschikbaar**, **Controleer bron** of **Niet recent**, met hetzelfde detailpad.
-- **Mobiel:** Vandaag blijft de goedgekeurde samengestelde kaart; aandacht, activiteit en kamers worden onder 560 px één kolom met minimaal 44 px hoge doelen.
-- **Veiligheid:** deze Home-slice bevat geen servicecall, actionsequence of configuratiewrite. Directe bediening en confirmation blijven een afzonderlijke actiegate.
+Gewone waarde-updates werken teksten en kamercontrols bij zonder de hele Home-compositie te vervangen. Camerachildcards, een open coverstrook en toetsenbordfocus blijven bij zulke updates behouden. Structurele wijzigingen in aandacht of overige activiteit kunnen de compositie wel opnieuw opbouwen.
+
+## Veiligheid en teststatus
+
+Alleen expliciet toegestane kameracties gebruiken de begrensde service-allowlist. Weer, energie, personen, aandacht en camerabeelden behouden hun bestaande read-only interactie. De kaart vervangt geen backendrechten of integratiebeveiliging.
+
+Zie de [testchecklist](../releases/testing-v0.8.0-alpha.1.md) en [fictieve runtime-renders](../renders/room-controls/README.md). Publicatie van de bundle wijzigt geen Home Assistant-configuratie.

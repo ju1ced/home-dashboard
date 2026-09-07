@@ -1,5 +1,11 @@
 # Deliveryroadmap — agents, PR's, GUI, HACS en releases
 
+> Actuele ontwerprichting (7 september 2026): [vaste kamerbediening, rustige dataversheid en behoud van afvalophaling](room-controls-direction.md). Dit besluit heeft voor deze onderwerpen voorrang op de eerdere ontwerpbaseline hieronder; implementatie volgt afzonderlijk.
+
+## Volgende teststap
+
+De kamerbedieningsslice is uitgewerkt in v0.8.0-alpha.1. Volg de [testchecklist](../releases/testing-v0.8.0-alpha.1.md) voor GUI-instelling, gerichte acties, regressies en rollback. Productiecutover blijft een aparte beslissing.
+
 ## Status en doel
 
 Deze roadmap vertaalt het goedgekeurde ontwerp naar een uitvoerbaar leveringsmodel. De initiële ontwerpbaseline staat op `main`. Iedere volgende productwijziging loopt via een kleine pull request met een vaste eigenaar, tests, documentatie en—wanneer er iets door een gebruiker getest moet worden—een afzonderlijke GitHub prerelease.

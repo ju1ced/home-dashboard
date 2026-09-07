@@ -1,14 +1,17 @@
+import { HomeDashboardRoomControls } from "./home-dashboard-room-controls";
 import type { RoomConfig } from "../config/types";
 
 type StateLike = { state?: string; attributes?: Record<string, unknown> };
 type HomeAssistantLike = {
   states?: Record<string, StateLike>;
+  callService?: (domain: string, service: string, data: Record<string, unknown>) => Promise<unknown>;
   floors?: Array<{ floor_id?: string; id?: string; name?: string }> | Record<string, { name?: string }>;
 };
 
 interface RoomOverviewConfig {
   type: "custom:home-dashboard-room-overview";
   rooms: RoomConfig[];
+  show_controls?: boolean;
 }
 
 interface RoomDetailConfig {
@@ -40,6 +43,7 @@ export function roomPath(room: Pick<RoomConfig, "key">): string {
 
 function roomEntities(room: RoomConfig): string[] {
   return [...new Set([
+    room.control_light_entity ?? "", room.control_cover_entity ?? "", room.control_awning_entity ?? "", room.control_media_entity ?? "",
     ...room.light_entities,
     ...room.cover_entities,
     room.hvac.entity,
@@ -254,11 +258,7 @@ export class HomeDashboardRoomOverview extends RoomCardBase<RoomOverviewConfig> 
 
   public set hass(value: HomeAssistantLike) {
     this.currentHass = value;
-    const next = (this.config?.rooms ?? []).map((room) => stateSignature(value, room)).join("||");
-    if (next !== this.signature) {
-      this.signature = next;
-      this.render();
-    }
+    this.shadowRoot?.querySelectorAll<HomeDashboardRoomControls>("home-dashboard-room-controls").forEach(card => { card.hass = value; });
   }
 
   public connectedCallback(): void {
@@ -272,9 +272,6 @@ export class HomeDashboardRoomOverview extends RoomCardBase<RoomOverviewConfig> 
       :host{display:block;min-width:0}.overview{display:grid;gap:20px}.hero{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:24px;border-radius:22px;background:var(--primary-color,#245c4d);color:var(--text-primary-color,#fff)}
       .hero-copy{display:grid;gap:4px}.eyebrow{font-size:.74rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.8}.hero h2{margin:0;font-size:1.7rem}.hero p{margin:0;opacity:.78}.count{display:grid;text-align:right}.count strong{font-size:2rem}.count span{font-size:.78rem;opacity:.8}
       .floor{display:grid;gap:10px}.floor-heading{display:grid;gap:2px;padding-inline:2px}.floor-heading h3{margin:0;font-size:1.25rem}.floor-heading span{font-size:.82rem;color:var(--secondary-text-color)}.room-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-      .room{display:grid;border-radius:16px;background:var(--ha-card-background,var(--card-background-color));box-shadow:var(--ha-card-box-shadow);overflow:hidden}.room-main{display:grid;grid-template-columns:44px minmax(0,1fr) auto 24px;align-items:center;gap:10px;padding:14px;color:var(--primary-text-color);text-decoration:none;min-height:66px}.room-main:focus-visible{outline:2px solid var(--primary-color);outline-offset:-3px}
-      .room-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:color-mix(in srgb,var(--primary-color) 14%,transparent);color:var(--primary-color)}.room-icon ha-icon{width:24px;height:24px}.room-copy{display:grid;min-width:0}.room-copy strong,.room-copy small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.room-copy small{color:var(--secondary-text-color)}.metric{padding:6px 9px;border:1px solid var(--divider-color);border-radius:999px;font-size:.76rem;white-space:nowrap}.chevron{color:var(--secondary-text-color)}
-      .chips{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:8px 12px;border-top:1px solid var(--divider-color)}.chip{display:grid;grid-template-columns:28px minmax(0,1fr);align-items:center;gap:7px;min-height:44px;padding:6px 8px;border:1px solid transparent;border-radius:11px;background:color-mix(in srgb,var(--primary-color) 9%,transparent);color:var(--primary-color);cursor:pointer;text-align:left}.chip:hover{background:color-mix(in srgb,var(--primary-color) 16%,transparent)}.chip:focus-visible{outline:2px solid var(--primary-color);outline-offset:2px}.chip.warning{color:var(--error-color,#b3261e);background:color-mix(in srgb,var(--error-color,#b3261e) 10%,transparent)}.chip.unavailable{color:var(--secondary-text-color);background:var(--secondary-background-color)}.chip ha-icon{width:22px;height:22px}.chip-copy{display:grid;min-width:0}.chip-copy strong,.chip-copy small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.chip-copy strong{font-size:.75rem;color:var(--primary-text-color)}.chip-copy small{font-size:.7rem;color:var(--secondary-text-color);font-weight:500}
       @media(max-width:700px){.hero{padding:18px}.hero h2{font-size:1.45rem}.hero p{display:none}.room-grid{grid-template-columns:1fr}.room-main{grid-template-columns:40px minmax(0,1fr) auto 20px}.metric{max-width:110px;overflow:hidden;text-overflow:ellipsis}}
     `;
     const root = document.createElement("div");
@@ -315,51 +312,9 @@ export class HomeDashboardRoomOverview extends RoomCardBase<RoomOverviewConfig> 
       const grid = document.createElement("div");
       grid.className = "room-grid";
       for (const room of this.config?.rooms.filter((candidate) => (candidate.floor_id || "") === floorId) ?? []) {
-        const article = document.createElement("article");
-        article.className = "room";
-        const link = document.createElement("a");
-        link.className = "room-main";
-        link.href = roomPath(room);
-        link.setAttribute("aria-label", `Open details van ${room.name}`);
-        const roomIcon = document.createElement("span");
-        roomIcon.className = "room-icon";
-        roomIcon.append(icon(room.icon));
-        const copy = document.createElement("span");
-        copy.className = "room-copy";
-        const name = document.createElement("strong");
-        name.textContent = room.name;
-        const meta = document.createElement("small");
-        meta.textContent = roomContext(this.currentHass, room).join(" · ") || "Basisstatus";
-        copy.append(name, meta);
-        const metric = document.createElement("span");
-        metric.className = "metric";
-        metric.textContent = getRoomMetric(this.currentHass, room);
-        const chevron = document.createElement("span");
-        chevron.className = "chevron";
-        chevron.append(icon("mdi:chevron-right"));
-        link.append(roomIcon, copy, metric, chevron);
-        const chips = document.createElement("div");
-        chips.className = "chips";
-        for (const device of roomDeviceChips(this.currentHass, room)) {
-          const chip = document.createElement("button");
-          chip.type = "button";
-          chip.className = `chip ${device.tone}`;
-          chip.append(icon(device.icon));
-          const chipCopy = document.createElement("span");
-          chipCopy.className = "chip-copy";
-          const deviceName = document.createElement("strong");
-          deviceName.textContent = device.label;
-          const deviceState = document.createElement("small");
-          deviceState.textContent = device.value;
-          chipCopy.append(deviceName, deviceState);
-          chip.append(chipCopy);
-          chip.setAttribute("aria-label", `Open ${device.label}: ${device.value}`);
-          chip.title = `${device.label} · ${device.value}`;
-          chip.addEventListener("click", () => showMoreInfo(this, device.entity));
-          chips.append(chip);
-        }
-        article.append(link);
-        if (chips.childElementCount > 0) article.append(chips);
+        const article = document.createElement("home-dashboard-room-controls") as HomeDashboardRoomControls;
+        article.setConfig({ room, show_controls: this.config?.show_controls !== false });
+        if (this.currentHass) article.hass = this.currentHass;
         grid.append(article);
       }
       section.append(heading, grid);
@@ -439,7 +394,12 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
 
   private render(): void {
     if (!this.shadowRoot || !this.config) return;
-    const room = this.config.room;
+    const sourceRoom = this.config.room;
+    const room = { ...sourceRoom,
+      light_entities: [...new Set([...sourceRoom.light_entities, sourceRoom.control_light_entity].filter((value): value is string => Boolean(value)))],
+      cover_entities: [...new Set([...sourceRoom.cover_entities, sourceRoom.control_cover_entity, sourceRoom.control_awning_entity].filter((value): value is string => Boolean(value)))],
+      media_entities: [...new Set([...sourceRoom.media_entities, sourceRoom.control_media_entity].filter((value): value is string => Boolean(value)))]
+    };
     const style = document.createElement("style");
     style.textContent = `
       :host{display:block;min-width:0}.detail{display:grid;gap:22px;max-width:1180px;margin:0 auto}.hero{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:24px;border-radius:22px;background:var(--primary-color,#245c4d);color:var(--text-primary-color,#fff)}.hero-copy{display:grid;gap:4px}.eyebrow{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.75}.hero h1{margin:0;font-size:1.85rem}.hero p{margin:0;opacity:.75}.hero-pills{display:flex;justify-content:flex-end;gap:7px;flex-wrap:wrap}.hero-pill{padding:7px 10px;border:1px solid color-mix(in srgb,currentColor 28%,transparent);border-radius:999px;font-size:.78rem;font-weight:650}
