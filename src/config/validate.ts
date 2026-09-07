@@ -73,7 +73,13 @@ export function validateConfig(config: HomeDashboardConfigV1): ValidationIssue[]
 
   issues.push(...validateKeys(config.rooms, "rooms"));
   const actionKeys = new Set(config.actions.map((action) => action.key));
+  if (config.rooms.filter(room => room.home_favorite).length > 4) issues.push(issue("rooms", "favorite_limit", "Kies maximaal vier favoriete kamers."));
   config.rooms.forEach((room, index) => {
+    for (const [field, domain] of [["control_light_entity", "light"], ["control_cover_entity", "cover"], ["control_awning_entity", "cover"], ["control_media_entity", "media_player"]] as const) {
+      const reference = room[field];
+      if (reference?.includes(".") && reference.split(".")[0] !== domain) issues.push(issue(`rooms[${index}].${field}`, "control_domain", "Het actiedoel heeft niet het passende domein."));
+    }
+    if (room.control_cover_entity && room.control_cover_entity === room.control_awning_entity) issues.push(issue(`rooms[${index}].control_awning_entity`, "duplicate_control", "Kies afzonderlijke doelen voor rolluik en luifel."));
     if (!room.name.trim()) issues.push(issue(`rooms[${index}].name`, "required", "Een kamernaam is verplicht."));
     if (!room.area_id && room.device_ids.length === 0) issues.push(issue(`rooms[${index}].area_id`, "required", "Kies een area of minstens één expliciet device voor area-loze mapping."));
     if (room.quick_actions.length > 2) issues.push(issue(`rooms[${index}].quick_actions`, "quick_action_limit", "Een kamer heeft maximaal twee quick actions."));

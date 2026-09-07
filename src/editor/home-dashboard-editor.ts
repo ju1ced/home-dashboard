@@ -138,7 +138,14 @@ function renderRooms(config: HomeDashboardConfigV1, expandedItems: Set<string>):
     <label>Area${renderSelector("rooms", index, "area_id", roomConfig.area_id, { area: {} })}</label>
     <label>Extra devices${renderSelector("rooms", index, "device_ids", roomConfig.device_ids, { device: { multiple: true } })}</label>
     <label>Functies<select multiple data-collection="rooms" data-index="${index}" data-field="capabilities">${ROOM_CAPABILITIES.map((value) => `<option value="${value}" ${roomConfig.capabilities.includes(value) ? "selected" : ""}>${value}</option>`).join("")}</select></label>
-    <label>Quick actions (max. 2)<select multiple data-collection="rooms" data-index="${index}" data-field="quick_actions">${config.actions.map((action) => `<option value="${escapeHtml(action.key)}" ${roomConfig.quick_actions.includes(action.key) ? "selected" : ""}>${escapeHtml(action.label || action.key)}</option>`).join("")}</select></label>
+    <label><input type="checkbox" data-collection="rooms" data-index="${index}" data-field="home_favorite" ${roomConfig.home_favorite ? "checked" : ""}>Favoriet op Home (maximaal vier, volgorde via pijlen)</label>
+    <label><input type="checkbox" data-collection="rooms" data-index="${index}" data-field="controls_enabled" ${roomConfig.controls_enabled ? "checked" : ""}>Directe bediening toestaan voor onderstaande doelen</label>
+    <p>Kies één lamp/groep, rolluik, luifel en speler. De knop bedient precies dat doel. Luifelbeveiliging hoort in Home Assistant. Zonder toestemming openen knoppen alleen details.</p>
+    <label>Lichten actiedoel${renderSelector("rooms", index, "control_light_entity", roomConfig.control_light_entity || "", { entity: { domain: "light" } })}</label>
+    <label>Rolluik actiedoel${renderSelector("rooms", index, "control_cover_entity", roomConfig.control_cover_entity || "", { entity: { domain: "cover" } })}</label>
+    <label>Luifel actiedoel${renderSelector("rooms", index, "control_awning_entity", roomConfig.control_awning_entity || "", { entity: { domain: "cover" } })}</label>
+    <label>Radio actiedoel${renderSelector("rooms", index, "control_media_entity", roomConfig.control_media_entity || "", { entity: { domain: "media_player" } })}</label>
+    <label>Scripts (bewaard, max. 2)<select multiple data-collection="rooms" data-index="${index}" data-field="quick_actions">${config.actions.map((action) => `<option value="${escapeHtml(action.key)}" ${roomConfig.quick_actions.includes(action.key) ? "selected" : ""}>${escapeHtml(action.label || action.key)}</option>`).join("")}</select></label>
     <h4>Bronmappings</h4>
     <label>Verlichting${renderSelector("rooms", index, "light_entities", roomConfig.light_entities, { entity: { domain: "light", multiple: true } })}</label>
     <label>Covers en openingen${renderSelector("rooms", index, "cover_entities", roomConfig.cover_entities, { entity: { multiple: true } })}</label>
@@ -315,7 +322,7 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
       const encodedSelector = element.dataset.selector;
       element.selector = field?.selector ?? (encodedSelector ? JSON.parse(encodedSelector) as Record<string, unknown> : { entity: {} });
       element.value = JSON.parse(element.dataset.value ?? "null") as unknown;
-      if (path) element.required = false;
+      element.required = false;
     });
   }
 

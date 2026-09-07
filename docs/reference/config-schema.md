@@ -38,3 +38,7 @@ De browserbundle voert het canonieke JSON Schema zelf uit bij import en compilat
 ## Coverage
 
 De test vergelijkt alle editorvelden en complexe GUI-collecties met het JSON Schema. Defaults, normal/warning/missing/unavailable-fixtures, validator, migratie en compiler worden uit dezelfde gebundelde release getest.
+
+## Optionele kamervelden vanaf v0.8
+
+Schema v1 behoudt compatibiliteit. Per kamer zijn home_favorite en controls_enabled booleans (migratiestandaard false). control_light_entity, control_cover_entity, control_awning_entity en control_media_entity zijn optionele enkele bronreferenties (standaard leeg). De editor kiest het passende domein. Maximaal vier home_favorite-kamers; arrayvolgorde bepaalt de Home-volgorde. Geen automatische actiedoelen uit bestaande entitylijsten. De twee legacy quick_actions blijven afzonderlijk opgeslagen en zijn geen uitvoerbare capabilityknoppen.

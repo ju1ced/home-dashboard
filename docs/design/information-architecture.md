@@ -1,5 +1,7 @@
 # Informatiearchitectuur
 
+> Actuele ontwerprichting (7 september 2026): [vaste kamerbediening, rustige dataversheid en behoud van afvalophaling](room-controls-direction.md). Dit besluit heeft voor deze onderwerpen voorrang op de eerdere ontwerpbaseline hieronder; implementatie volgt afzonderlijk.
+
 ## Navigatiemodel
 
 De gewone Home Assistant-sidebar blijft buiten het dashboard. Binnen `home-dashboard` zijn er vijf vaste native hoofdviews. Alle detailpagina's zijn subviews met enkelvoudige, stabiele paths en een expliciet `back_path`.

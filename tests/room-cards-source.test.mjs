@@ -10,9 +10,7 @@ test("kameroverzicht toont concrete, state-aware apparaatpresentaties", async ()
   assert.match(source, /brightness/);
   assert.match(source, /current_position/);
   assert.match(source, /media_title/);
-  assert.match(source, /device\.label/);
-  assert.match(source, /device\.value/);
-  assert.match(source, /Open \$\{device\.label\}: \$\{device\.value\}/);
+
   assert.doesNotMatch(source, /chip\.textContent = device\.label/);
 });
 
@@ -37,8 +35,9 @@ test("kamerdetail heeft herkenbare capabilityblokken met veilige HA-detailbedien
 
 test("roominteracties hebben touch-, focus- en mobiele disclosurecontracten", async () => {
   const source = await readFile(sourceUrl, "utf8");
-  assert.match(source, /\.chip\{[^}]*min-height:44px/);
-  assert.match(source, /\.chip:focus-visible/);
+  const controls = await readFile(new URL("../src/cards/home-dashboard-room-controls.ts", import.meta.url), "utf8");
+  assert.match(controls, /min-height:44px/);
+  assert.match(controls, /button:focus-visible/);
   assert.match(source, /\.entity:focus-visible/);
   assert.match(source, /\.status:focus-visible/);
   assert.match(source, /document\.createElement\(progressive \? "details" : "section"\)/);

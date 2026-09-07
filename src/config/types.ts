@@ -75,6 +75,12 @@ export interface RoomConfig {
   device_ids: string[];
   capabilities: RoomCapability[];
   quick_actions: LogicalKey[];
+  home_favorite?: boolean;
+  controls_enabled?: boolean;
+  control_light_entity?: EntityReference;
+  control_cover_entity?: EntityReference;
+  control_awning_entity?: EntityReference;
+  control_media_entity?: EntityReference;
   light_entities: EntityReference[];
   cover_entities: EntityReference[];
   media_entities: EntityReference[];

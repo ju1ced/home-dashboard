@@ -222,8 +222,21 @@
 - **Besluit:** het minified bundlebudget groeit gecontroleerd van 128 kB naar 160 kB. De limiet blijft een harde buildgate. De groei is uitsluitend bestemd voor state-aware Home-samenvattingen, semantische kamerbediening via `hass-more-info` en een eerste volledige Energie-/Domeinencompositie; directe servicecalls en specialistische bronlogica worden niet meegebundeld.
 - **Reden:** de drie eigen compositielagen vervangen een veel zwaardere verzameling globaal geladen Lovelace-resources en behouden informatiehiërarchie zonder die afhankelijkheden te kopiëren. Een vaste bovengrens houdt verdere groei zichtbaar; runtime-, DOM- en rerendermetingen blijven verplicht vóór productie.
 
+## D-039 — Vaste kamerbediening en rustige dataversheid
+
+- **Status:** ontwerprichting aanvaard door de eigenaar op 7 september 2026; documentatie bijgewerkt, implementatie volgt afzonderlijk.
+- **Besluit:** Home krijgt vaste favoriete kamerkaarten met passende licht-, rolluik-, luifel- en radioacties. Generieke Niet recent-presentatie verdwijnt van Home; echte operationele uitval blijft herkenbaar. Afvalophaling en weersvoorspelling blijven in Vandaag behouden, ook al ontbraken ze in de conceptafbeelding.
+- **Uitwerking:** [ontwerprichting en acceptatiecriteria](room-controls-direction.md). Dit verfijnt de eerdere Home-hiërarchie en vervangt de tweeknoppenlimiet voor deze kamerkaarten. Huidige read-only code en live gates blijven van kracht tot de afzonderlijke implementatiestap.
+
 ## D-038 — Kia-integratie krijgt een afzonderlijk begrensd bundlebudget
 
 - **Status:** besloten voor `v0.7.0-alpha.1`
 - **Besluit:** de harde minified bundlelimiet groeit van 160 kB naar 168 kB. De extra ruimte is uitsluitend voor de native read-only Kia-summary, resource-/mappingfallback en de `specialist-kia`-route. De bestaande HACS Kia-card blijft extern geladen en haar voertuiglogica, acties en configuratie worden niet meegebundeld.
 - **Reden:** de eerdere 160 kB-limiet dekte alleen de semantische Home-, Kamers-, Energie- en Domeinencompositie. De beperkt gehouden specialistische integratielaag vraagt aantoonbaar circa 2 kB meer, terwijl een nieuwe harde grens verdere ongecontroleerde groei verhindert.
+
+## D-040 — Opt-in kameracties en begrensde runtime-uitbreiding
+
+- **Status:** ontwikkeling, PR en testrelease expliciet aangevraagd op 7 september 2026; v0.8.0-alpha.1.
+- **Besluit:** maximaal vier afzonderlijke capabilitydoelen per kamer en een standaard uitgeschakelde bedieningsoptie. Eén gedeelde kamercomponent voor Home en Kamers; vaste service-allowlist, backendautorisatie, luifelbevestiging, capabilitygating en geen optimistische apparaatstate.
+- **Budget:** de harde bundlegrens groeit van 168 naar 180 kB voor gedeelde bediening, editor, scopevalidatie en foutafhandeling. Overbodige oude overzichtsstyling is verwijderd. De gemeten omvang staat in de buildcheck; verdere groei blijft begrensd.
+- **Bewijs:** fictieve browserchecks en [releasechecklist](../releases/testing-v0.8.0-alpha.1.md). Live HA-writes blijven een afzonderlijke gate.

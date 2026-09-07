@@ -1,5 +1,7 @@
 # Multi-agent implementatieplan
 
+> Actuele ontwerprichting (7 september 2026): [vaste kamerbediening, rustige dataversheid en behoud van afvalophaling](room-controls-direction.md). Dit besluit heeft voor deze onderwerpen voorrang op de eerdere ontwerpbaseline hieronder; implementatie volgt afzonderlijk.
+
 Dit plan beschrijft de latere bouwfase. Het autoriseert nog geen Home Assistant-write, deployment of productiecutover.
 
 De operationele afspraken voor de custom dashboard strategy, volledige GUI-configuratie, agentrollen, PR/releasekoppeling en HACS-distributie staan in de [deliveryroadmap](delivery-roadmap.md). Bij een verschil geldt die roadmap voor leveringsvolgorde en dit document voor de technische definition of done.

@@ -1,5 +1,7 @@
 # Gegenereerde views
 
+> Vanaf v0.8 kunnen Home en Kamers expliciet geconfigureerde kameracties uitvoeren. Bestaande configuratie migreert zonder automatische activatie. Zie [kamerbediening](rooms.md); historische read-only beschrijvingen hieronder gelden voor de oudere alpha.
+
 De dashboard strategy maakt vijf stabiele hoofdviews en per geconfigureerde kamer een stabiele subview; een afzonderlijke view strategy bouwt iedere view als Sections-configuratie. `v0.7.0-alpha.1` levert de read-only Home-, Kamers-, Energie- en Domeinenbasis met de optionele Kia-subview `specialist-kia`; zij blijft buiten de primaire navigatie.
 
 | View | Inhoud in deze alpha |
