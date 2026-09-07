@@ -1,11 +1,13 @@
 # Kamers en kamerdetails
 
+Werkversie v0.8.0-alpha.2: de kamerkop klapt de bediening open/dicht. Verlichting, radio, rolluiken, luifel en airco/verwarming verschijnen als chips waar bronnen zijn ingesteld. De klimaat-chip gebruikt de bestaande Klimaatbron. Voor licht/media/covers zonder direct actiedoel blijven de bestaande bronmappings als detailkeuze bereikbaar, zonder automatische activering van services. Volledige kamer is een afzonderlijke link. Escape sluit het paneel en herstelt focus op de kamerkop.
+
 
 Kamers heeft een overzicht en volledige details per ruimte.
 
 ## Kamers-overzicht en favorieten
 
-Vanaf v0.8.0-alpha.1 delen Home en het volledige verdiepingenoverzicht dezelfde compacte kamerkaart. De kamernaam/pijl opent details; aparte knoppen tonen Lichten, Rolluiken, Luifel en Radio met hun toestand. Alleen expliciet gemapte functies verschijnen.
+Home en het volledige verdiepingenoverzicht delen dezelfde compacte kamerkaart. In v0.8.0-alpha.2 klapt de kamernaam/pijl het paneel open. Alleen Volledige kamer navigeert naar de kamerpagina. Chips tonen de beschikbare functies en hun toestand. Bij meerdere bronnen telt de chip de actieve en onbekende apparaten samen; de keuzelijst geeft de individuele toestanden weer.
 
 Onder Dashboard bewerken → Kamers:
 

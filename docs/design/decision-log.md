@@ -240,3 +240,10 @@
 - **Besluit:** maximaal vier afzonderlijke capabilitydoelen per kamer en een standaard uitgeschakelde bedieningsoptie. Eén gedeelde kamercomponent voor Home en Kamers; vaste service-allowlist, backendautorisatie, luifelbevestiging, capabilitygating en geen optimistische apparaatstate.
 - **Budget:** de harde bundlegrens groeit van 168 naar 180 kB voor gedeelde bediening, editor, scopevalidatie en foutafhandeling. Overbodige oude overzichtsstyling is verwijderd. De gemeten omvang staat in de buildcheck; verdere groei blijft begrensd.
 - **Bewijs:** fictieve browserchecks en [releasechecklist](../releases/testing-v0.8.0-alpha.1.md). Live HA-writes blijven een afzonderlijke gate.
+
+## D-041 — Kamerkop opent bediening op Home
+
+- **Status:** richting en publicatie als testrelease goedgekeurd door de eigenaar op 7 september 2026.
+- **Besluit:** de kamerkop klapt een paneel open met chips voor verlichting, radio, rolluiken, luifel en airco/verwarming. Alleen Volledige kamer navigeert. Klimaat gebruikt de bestaande bron en het native detailvenster; oude apparaatmappings blijven bereikbaar zonder impliciete directe actiedoelen.
+- **Layout:** de interne Home-limiet van 1180 px vervalt; de beschikbare HA-dashboardbreedte bepaalt de buitenmaat. Responsive stapeling en afvalophaling blijven behouden.
+- **Validatie:** 62 tests en zeven fictieve browser-renders; toetsenbord, focus, bronfallback en bestaande actiegates gecontroleerd. Zie [runtime-renders](../renders/expandable-rooms/README.md). Publicatie wijzigt geen Home Assistant-dashboard en voert geen live HA-write uit.
