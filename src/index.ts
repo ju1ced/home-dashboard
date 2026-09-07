@@ -1,5 +1,5 @@
 import { registerRoomControls } from "./cards/home-dashboard-room-controls";
-export { favoriteRooms, planRoomControl, executeRoomControl, HomeDashboardRoomControls } from "./cards/home-dashboard-room-controls";
+export { favoriteRooms, roomControlSources, planRoomControl, executeRoomControl, HomeDashboardRoomControls } from "./cards/home-dashboard-room-controls";
 declare const __HOME_DASHBOARD_VERSION__: string;
 
 import { compileConfig, parseImportedConfig, serializeConfig } from "./config/compiler";

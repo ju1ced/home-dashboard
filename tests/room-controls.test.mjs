@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { migrateConfig, favoriteRooms, planRoomControl, executeRoomControl, validateConfig, validateConfigSchema, getHomeStructureSignature } from '../dist/home-dashboard.js';
+import { migrateConfig, favoriteRooms, roomControlSources, planRoomControl, executeRoomControl, validateConfig, validateConfigSchema, getHomeStructureSignature } from '../dist/home-dashboard.js';
 
 const ref = (domain, key) => [domain, key].join('.');
 function setup() {
@@ -79,13 +79,22 @@ test('verkeerd domein, ongekende actie en backendweigering worden niet omzeild',
   hass.callService=async()=>{throw new Error('permission denied');};
   await assert.rejects(executeRoomControl(room,hass,'cover','stop'),/permission denied/);
 });
-test('HVAC buiten de vier kamerknoppen blijft zichtbaar, ook in een favoriete kamer', () => {
+test('HVAC in de klimaat-chip wordt niet gedupliceerd; verborgen chips behouden activiteit', () => {
   const {room,hass}=setup();room.hvac.entity='climate_primary';room.light_entities=[room.control_light_entity];
   const config={rooms:[room]};const before=getHomeStructureSignature(hass,config);
   hass.states[room.control_light_entity].state='on';
   assert.equal(before,getHomeStructureSignature(hass,config));
   hass.states.climate_primary={state:'heat',attributes:{hvac_action:'heating'}};
-  assert.notEqual(before,getHomeStructureSignature(hass,config));
+  assert.equal(before,getHomeStructureSignature(hass,config));
+  assert.notEqual(before,getHomeStructureSignature(hass,{...config,show_quick_actions:false}));
+});
+test('bestaande kamerbronnen worden detailchips zonder automatische actiedoelen', () => {
+  const {room,hass}=setup();room.control_light_entity='';room.light_entities=['light_first','light_second'];
+  assert.deepEqual(roomControlSources(room,'light'),room.light_entities);
+  assert.equal(planRoomControl(room,hass,'light'),undefined);
+  room.hvac.entity='climate_primary';hass.states.climate_primary={state:'heat',attributes:{temperature:21}};
+  assert.deepEqual(roomControlSources(room,'climate'),['climate_primary']);
+  assert.equal(planRoomControl(room,hass,'climate'),undefined);
 });
 test('schema accepteert optionele velden en validator weigert verkeerde of dubbele coverdoelen', () => {
   const {room}=setup();const config=migrateConfig({rooms:[room]}).config;

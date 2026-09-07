@@ -2,19 +2,27 @@ import type { RoomConfig } from "../config/types";
 
 type State = { state?: string; attributes?: Record<string, unknown> };
 type Hass = { states?: Record<string, State>; callService?: (domain: string, service: string, data: Record<string, unknown>) => Promise<unknown> };
-type Kind = "light" | "cover" | "awning" | "media";
+type Kind = "light" | "cover" | "awning" | "media" | "climate";
 type Command = "toggle" | "open" | "stop" | "close";
 type Plan = { entity: string; domain: string; service: string; confirmation: boolean };
-const kinds: Kind[] = ["light", "cover", "awning", "media"];
-const labels: Record<Kind, string> = { light: "Lichten", cover: "Rolluiken", awning: "Luifel", media: "Radio" };
-const icons: Record<Kind, string> = { light: "mdi:lightbulb-outline", cover: "mdi:window-shutter", awning: "mdi:awning-outline", media: "mdi:radio" };
+const kinds: Kind[] = ["light", "media", "cover", "awning", "climate"];
+const labels: Record<Kind, string> = { light: "Lichten", cover: "Rolluiken", awning: "Luifel", media: "Radio", climate: "Airco / verwarming" };
+const icons: Record<Kind, string> = { light: "mdi:lightbulb-outline", cover: "mdi:window-shutter", awning: "mdi:awning-outline", media: "mdi:radio", climate: "mdi:thermostat" };
 
 export function favoriteRooms(rooms: readonly RoomConfig[]): RoomConfig[] {
   return rooms.filter(room => room.home_favorite === true).slice(0, 4);
 }
 
-function target(room: RoomConfig, kind: Kind): string { return room[`control_${kind}_entity`] ?? ""; }
+function target(room: RoomConfig, kind: Kind): string { return kind === "climate" ? room.hvac.entity : room[`control_${kind}_entity`] ?? ""; }
+export function roomControlSources(room: RoomConfig, kind: Kind): string[] {
+  const explicit = target(room, kind);
+  if (explicit) return [explicit];
+  return [...new Set(kind === "light" ? room.light_entities : kind === "media" ? room.media_entities : kind === "cover" ? room.cover_entities.filter(entity => entity !== room.control_awning_entity) : [])];
+}
 function known(state?: State): boolean { return Boolean(state?.state && !["unknown", "unavailable"].includes(state.state)); }
+function isActive(kind: Kind, state?: State): boolean {
+  return kind === "light" ? state?.state === "on" : kind === "media" ? state?.state === "playing" : kind === "climate" ? ["heating", "cooling"].includes(String(state?.attributes?.hvac_action)) : ["opening", "closing"].includes(state?.state ?? "");
+}
 
 /** An explicit single target and a fixed service allowlist; no area/device expansion. */
 export function planRoomControl(room: RoomConfig, hass: Hass | undefined, kind: Kind, command: Command = "toggle"): Plan | undefined {
@@ -55,13 +63,13 @@ function icon(name: string): HTMLElement {
 }
 function stateLabel(state?: State): string {
   if (!state) return "Niet gevonden";
-  const text: Record<string, string> = { on: "Aan", off: "Uit", open: "Open", closed: "Gesloten", opening: "Opent", closing: "Sluit", playing: "Speelt", paused: "Gepauzeerd", idle: "Kies een bron", unavailable: "Niet beschikbaar", unknown: "Onbekend" };
+  const text: Record<string, string> = { on: "Aan", off: "Uit", open: "Open", closed: "Gesloten", opening: "Opent", closing: "Sluit", playing: "Speelt", paused: "Gepauzeerd", idle: "Kies een bron", heat: "Verwarmen", cool: "Koelen", heat_cool: "Auto", auto: "Auto", dry: "Ontvochtigen", fan_only: "Ventileren", unavailable: "Niet beschikbaar", unknown: "Onbekend" };
   return text[state.state ?? "unknown"] ?? state.state ?? "Onbekend";
 }
 const Base = (typeof HTMLElement === "undefined" ? class {} : HTMLElement) as typeof HTMLElement;
 
 export class HomeDashboardRoomControls extends Base {
-  private config?: { room: RoomConfig; show_controls?: boolean };
+  private config?: { room: RoomConfig; show_controls?: boolean; expanded?: boolean };
   private currentHass?: Hass;
   private buttons = new Map<Kind, HTMLButtonElement>();
   private strips = new Map<Kind, HTMLElement>();
@@ -70,15 +78,20 @@ export class HomeDashboardRoomControls extends Base {
   private meta?: HTMLElement;
   private signature = "";
   private generation = 0;
+  private expanded = false;
 
   constructor() { super(); this.attachShadow?.({ mode: "open" }); }
-  public setConfig(config: { room: RoomConfig; show_controls?: boolean }): void {
+  public get isExpanded(): boolean { return this.expanded; }
+  public get roomKey(): string | undefined { return this.config?.room.key; }
+  public setConfig(config: { room: RoomConfig; show_controls?: boolean; expanded?: boolean }): void {
+    if (this.config?.room.key !== config.room.key) this.expanded = false;
+    if (config.expanded !== undefined) this.expanded = config.expanded;
     this.config = config; this.generation++; this.pending.clear(); this.signature = ""; this.render();
   }
   public set hass(value: Hass) {
     this.currentHass = value;
     const room = this.config?.room;
-    const entities = room ? [...kinds.map(kind => target(room, kind)), ...room.hvac.comfort_entities, ...room.safety_entities] : [];
+    const entities = room ? [...kinds.flatMap(kind => roomControlSources(room, kind)), ...room.hvac.comfort_entities, ...room.safety_entities] : [];
     const signature = JSON.stringify(entities.map(entity => value.states?.[entity]));
     if (signature !== this.signature) { this.signature = signature; this.update(); }
   }
@@ -124,18 +137,26 @@ export class HomeDashboardRoomControls extends Base {
       this.meta.classList.toggle("warning", safety);
     }
     this.buttons.forEach((button, kind) => {
-      const entity = target(room, kind); const state = this.currentHass?.states?.[entity];
+      const sources = roomControlSources(room, kind);
+      const entity = target(room, kind) || sources[0] || ""; const state = this.currentHass?.states?.[entity];
+      const states = sources.map(source => this.currentHass?.states?.[source]);
+      const activeCount = states.filter(source => isActive(kind, source)).length;
+      const missingCount = states.filter(source => !known(source)).length;
+      const summary = sources.length > 1 ? [`${sources.length} apparaten`, activeCount ? `${activeCount} ${kind === "light" ? "aan" : kind === "media" ? "speelt" : "in beweging"}` : "", missingCount ? `${missingCount} onbekend` : ""].filter(Boolean).join(" · ") : "";
       const label = button.querySelector("small");
-      if (label) label.textContent = kind === "awning" && state?.state === "closed" ? "In" : kind === "awning" && state?.state === "open" ? "Uit" : stateLabel(state);
+      if (label) label.textContent = summary || (kind === "climate" && known(state) ? [stateLabel(state), typeof state?.attributes?.temperature === "number" ? `Doel ${state.attributes.temperature}°` : ""].filter(Boolean).join(" · ") : kind === "awning" && state?.state === "closed" ? "In" : kind === "awning" && state?.state === "open" ? "Uit" : stateLabel(state));
       const stripLabel = this.strips.get(kind)?.querySelector(".strip-label");
       if (stripLabel) stripLabel.textContent = `${room.name} · ${state?.attributes?.friendly_name ?? labels[kind]}`;
-      const active = kind === "light" ? state?.state === "on" : kind === "media" ? state?.state === "playing" : ["opening", "closing"].includes(state?.state ?? "");
-      button.classList.toggle("active", active);
+      button.classList.toggle("active", activeCount > 0);
       button.disabled = this.pending.has(kind);
-      const detailOnly = !room.controls_enabled || !this.currentHass?.callService || !known(state) || (kind === "light" || kind === "media") && !planRoomControl(room, this.currentHass, kind);
+      const detailOnly = kind === "climate" || !target(room, kind) || !room.controls_enabled || !this.currentHass?.callService || !known(state) || (kind === "light" || kind === "media") && !planRoomControl(room, this.currentHass, kind);
       const name = String(state?.attributes?.friendly_name ?? labels[kind]);
       button.title = `${room.name} · ${name}`;
-      button.setAttribute("aria-label", `${room.name} · ${labels[kind]} · ${name}: ${stateLabel(state)}. ${detailOnly ? "Open details" : kind === "light" ? state?.state === "on" ? "Uitschakelen" : "Inschakelen" : kind === "media" ? state?.state === "playing" ? "Pauzeren" : "Hervatten" : "Toon bediening"}`);
+      button.setAttribute("aria-label", `${room.name} · ${labels[kind]} · ${summary || `${name}: ${stateLabel(state)}`}. ${sources.length > 1 ? "Toon apparaten" : detailOnly ? "Open details" : kind === "light" ? state?.state === "on" ? "Uitschakelen" : "Inschakelen" : kind === "media" ? state?.state === "playing" ? "Pauzeren" : "Hervatten" : "Toon bediening"}`);
+      this.strips.get(kind)?.querySelectorAll<HTMLButtonElement>("button[data-source]").forEach(control => {
+        const source = this.currentHass?.states?.[control.dataset.source ?? ""];
+        control.textContent = `${source?.attributes?.friendly_name ?? labels[kind]} · ${stateLabel(source)}`;
+      });
       this.strips.get(kind)?.querySelectorAll<HTMLButtonElement>("button[data-command]").forEach(control => {
         control.disabled = (control.dataset.command === "stop" ? this.pending.has(`${kind}:stop`) : this.pending.has(kind)) || !this.currentHass?.callService || !planRoomControl(room, this.currentHass, kind, control.dataset.command as Command);
       });
@@ -149,25 +170,37 @@ export class HomeDashboardRoomControls extends Base {
     style.textContent = `
       :host{display:block;min-width:0;color:var(--hd-text,var(--primary-text-color,#17212b))}*{box-sizing:border-box}
       article{height:100%;padding:12px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:18px;background:var(--hd-surface,var(--ha-card-background,var(--card-background-color,#fff)));box-shadow:var(--hd-shadow,0 2px 5px #00000009)}
-      a{display:flex;gap:12px;align-items:center;color:inherit;text-decoration:none;min-height:52px;padding:2px 4px 10px}a>ha-icon{color:var(--primary-color,#0088cc)}.copy{display:grid;gap:4px;flex:1;min-width:0}strong{font-size:14px}small{font-size:12px;color:var(--hd-muted,var(--secondary-text-color,#596777));overflow-wrap:anywhere}.warning{color:var(--error-color,#b3261e)}
-      .controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:8px}.control{display:flex;align-items:center;gap:8px;min-height:58px;text-align:left;padding:8px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:12px;background:transparent;color:inherit;cursor:pointer}.control span{display:grid;gap:3px}.control strong{font-size:12px}.active{background:color-mix(in srgb,#0088cc 10%,transparent);border-color:color-mix(in srgb,#0088cc 35%,transparent)}.active ha-icon{color:var(--info-color,#0088cc)}ha-icon{width:23px;height:23px;flex-shrink:0}
+      .room-toggle{display:flex;width:100%;border:0;background:transparent;font:inherit;text-align:left;cursor:pointer;}a,.room-toggle{display:flex;gap:12px;align-items:center;color:inherit;text-decoration:none;min-height:52px;padding:2px 4px 10px}a>ha-icon,.room-toggle>ha-icon{color:var(--primary-color,#0088cc)}.copy{display:grid;gap:4px;flex:1;min-width:0}strong{font-size:14px}small{font-size:12px;color:var(--hd-muted,var(--secondary-text-color,#596777));overflow-wrap:anywhere}.warning{color:var(--error-color,#b3261e)}
+      [hidden]{display:none!important}.panel{padding-top:10px;border-top:1px solid var(--hd-border,var(--divider-color,#dce2e8))}.room-toggle[aria-expanded="true"]>.expand-icon{transform:rotate(180deg)}.full-room{font-size:12px;min-height:44px;padding-top:12px;color:var(--primary-color,#0088cc)}.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:8px}.control{display:flex;align-items:center;gap:8px;min-height:48px;text-align:left;padding:8px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:12px;background:transparent;color:inherit;cursor:pointer}.control span{display:grid;gap:3px}.control strong{font-size:12px}.active{background:color-mix(in srgb,#0088cc 10%,transparent);border-color:color-mix(in srgb,#0088cc 35%,transparent)}.active ha-icon{color:var(--info-color,#0088cc)}ha-icon{width:23px;height:23px;flex-shrink:0}
       button{font:inherit}button:disabled{opacity:.5;cursor:default}button:focus-visible,a:focus-visible{outline:2px solid var(--primary-color,#0088cc);outline-offset:2px}.strip{margin-top:8px;padding:8px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:12px}.strip[hidden]{display:none}.strip-label{font-size:12px;display:block;margin-bottom:6px}.commands{display:flex;gap:8px;flex-wrap:wrap}.commands button{flex:1;min-height:44px;min-width:62px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:8px;background:transparent;color:inherit;cursor:pointer;font-size:12px}.notice{display:block;font-size:12px;line-height:1.4;margin-top:6px}.notice:empty{display:none}@media(max-width:450px){.controls{grid-template-columns:repeat(2,minmax(0,1fr))}}
     `;
     const article = document.createElement("article");
-    const link = document.createElement("a"); link.href = `room-${room.key.replaceAll("_", "-")}`;
-    link.setAttribute("aria-label", `Open details van ${room.name}`);
+    const link = document.createElement("button"); link.type = "button"; link.className = "room-toggle";
+    link.setAttribute("aria-label", `Bediening ${room.name}`);
+    link.setAttribute("aria-expanded", String(this.expanded)); link.setAttribute("aria-controls", "room-panel");
+    const panel = document.createElement("div"); panel.id = "room-panel"; panel.className = "panel"; panel.hidden = !this.expanded;
+    link.addEventListener("click", () => { this.expanded = !this.expanded; panel.hidden = !this.expanded; link.setAttribute("aria-expanded", String(this.expanded)); });
+    panel.addEventListener("keydown", event => { if (event.key === "Escape") { event.stopPropagation(); this.expanded = false; panel.hidden = true; link.setAttribute("aria-expanded", "false"); link.focus(); } });
     const copy = document.createElement("span"); copy.className = "copy";
     const title = document.createElement("strong"); title.textContent = room.name;
     this.meta = document.createElement("small"); copy.append(title, this.meta);
-    link.append(icon(room.icon || "mdi:sofa-outline"), copy, icon("mdi:chevron-right")); article.append(link);
+    const chevron = icon("mdi:chevron-down"); chevron.className = "expand-icon";
+    link.append(icon(room.icon || "mdi:sofa-outline"), copy, chevron); article.append(link);
     const controls = document.createElement("div"); controls.className = "controls";
-    if (this.config.show_controls !== false) kinds.filter(kind => target(room, kind)).forEach(kind => {
+    if (this.config.show_controls !== false) kinds.filter(kind => roomControlSources(room, kind).length).forEach(kind => {
       const button = document.createElement("button"); button.type = "button"; button.className = "control";
       const text = document.createElement("span"); const title = document.createElement("strong"); title.textContent = labels[kind];
       text.append(title, document.createElement("small")); button.append(icon(icons[kind]), text);
       this.buttons.set(kind, button); controls.append(button);
       const strip = document.createElement("div"); strip.className = "strip"; strip.hidden = true; strip.id = `controls-${kind}`;
-      if (kind === "cover" || kind === "awning") {
+      const sources = roomControlSources(room, kind);
+      if (sources.length > 1) {
+        button.setAttribute("aria-expanded", "false"); button.setAttribute("aria-controls", strip.id);
+        const commands = document.createElement("div"); commands.className = "commands";
+        sources.forEach(entity => { const control = document.createElement("button"); control.type = "button"; control.dataset.source = entity;
+          control.addEventListener("click", () => this.moreInfo(entity)); commands.append(control); });
+        strip.append(commands); this.strips.set(kind, strip);
+      } else if ((kind === "cover" || kind === "awning") && target(room, kind)) {
         button.setAttribute("aria-expanded", "false"); button.setAttribute("aria-controls", strip.id);
         const label = document.createElement("strong"); label.className = "strip-label";
         label.textContent = `${room.name} · ${labels[kind]}`; strip.append(label);
@@ -182,6 +215,8 @@ export class HomeDashboardRoomControls extends Base {
         this.strips.set(kind, strip);
       }
       button.addEventListener("click", () => {
+        if (sources.length > 1) { strip.hidden = !strip.hidden; button.setAttribute("aria-expanded", String(!strip.hidden)); return; }
+        if (kind === "climate" || !target(room, kind)) { this.moreInfo(sources[0]!); return; }
         const state = this.currentHass?.states?.[target(room, kind)];
         if (!room.controls_enabled || !this.currentHass?.callService || !known(state)) { this.moreInfo(target(room, kind)); return; }
         if (kind === "cover" || kind === "awning") {
@@ -190,9 +225,12 @@ export class HomeDashboardRoomControls extends Base {
         else this.moreInfo(target(room, kind));
       });
       const notice = document.createElement("span"); notice.className = "notice"; notice.setAttribute("role", "status");
-      this.notices.set(kind, notice); article.append(strip, notice);
+      this.notices.set(kind, notice); panel.append(strip, notice);
     });
-    article.insertBefore(controls, link.nextSibling);
+    panel.prepend(controls);
+    if (!controls.childElementCount) { const empty = document.createElement("small"); empty.textContent = "Nog geen functies ingesteld voor deze kamer."; panel.append(empty); }
+    const fullRoom = document.createElement("a"); fullRoom.className = "full-room"; fullRoom.href = `room-${room.key.replaceAll("_", "-")}`; fullRoom.textContent = "Volledige kamer"; fullRoom.setAttribute("aria-label", `Volledige kamer ${room.name}`); panel.append(fullRoom);
+    article.append(panel);
     this.shadowRoot.replaceChildren(style, article); this.update();
   }
 }

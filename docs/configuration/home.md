@@ -1,5 +1,7 @@
 # Home
 
+Werkversie v0.8.0-alpha.2: Home benut de beschikbare dashboardbreedte. De kamerkop opent een paneel met chips; alleen de afzonderlijke link Volledige kamer navigeert. Airco / verwarming opent het native klimaatvenster op Home. Zie de [nieuwe renders](../renders/expandable-rooms/README.md).
+
 Vanaf v0.8.0-alpha.1 combineert Home rustige context met vaste favoriete kamerbediening.
 
 1. **Aandacht nodig** behoudt operationele uitval en expliciet gemapte safety, ook buiten favoriete kamers. Kritieke states krijgen voorrang; de knoppen openen details.

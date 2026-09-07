@@ -8,10 +8,12 @@ class FixtureIcon extends HTMLElement {
       sofa:'M4 12V7h16v5M2 11h4v7h12v-7h4v10H2z',
       awning:'M3 11l3-7h12l3 7zM5 11v10M19 11v10M5 17h14',
       arrow:'M9 5l7 7-7 7',
+      down:'M5 9l7 7 7-7',
+      left:'M15 5l-7 7 7 7',
       weather:'M6 18h12a4 4 0 0 0 0-8 6 6 0 0 0-11-2 5 5 0 0 0-1 10',
       generic:'M4 4h16v16H4zM8 8h8M8 12h8M8 16h5'
     };
-    const key=/lightbulb/.test(value)?'bulb':/shutter/.test(value)?'cover':/radio|speaker|play/.test(value)?'radio':/sofa|chair/.test(value)?'sofa':/awning/.test(value)?'awning':/chevron|arrow/.test(value)?'arrow':/weather/.test(value)?'weather':'generic';
+    const key=/lightbulb/.test(value)?'bulb':/shutter/.test(value)?'cover':/radio|speaker|play/.test(value)?'radio':/sofa|chair/.test(value)?'sofa':/awning/.test(value)?'awning':/chevron-down/.test(value)?'down':/chevron-left/.test(value)?'left':/chevron|arrow/.test(value)?'arrow':/weather/.test(value)?'weather':'generic';
     this.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display:block;width:100%;height:100%"><path d="${paths[key]}"/></svg>`;
   }
 }
@@ -32,7 +34,7 @@ const rooms=['Woonkamer','Bureau','Keuken','Terras'].map((name,index)=>({
   control_cover_entity:index<3?put('cover',`cover_${index}`,'open',{friendly_name:`${name} rolluik`,supported_features:11,device_class:'shutter'}):'',
   control_awning_entity:index===0||index===3?put('cover',`awning_${index}`,'closed',{friendly_name:`${name} luifel`,supported_features:11,device_class:'awning'}):'',
   control_media_entity:put('media_player',`radio_${index}`,index<2?'playing':'idle',{friendly_name:`${name} radio`,supported_features:16385}),
-  hvac:{comfort_entities:[put('sensor',`temperature_${index}`,String(21-index),{unit_of_measurement:'°C'})]}
+  hvac:{entity:index<3?put('climate',`climate_${index}`,'heat',{temperature:21,current_temperature:20,hvac_action:'heating',friendly_name:`${name} klimaat`}):'',comfort_entities:[put('sensor',`temperature_${index}`,String(21-index),{unit_of_measurement:'°C'})]}
 }));
 const config=migrateConfig({rooms,today:{enabled:true,weather_entity:put('weather','weather','cloudy',{temperature:19,temperature_unit:'°C'}),forecast_days:3,
   battery_soc_entity:put('sensor','battery','42',{unit_of_measurement:'%'}),battery_charge_power_entity:put('sensor','charge','0',{unit_of_measurement:'W'}),battery_discharge_power_entity:put('sensor','discharge','0',{unit_of_measurement:'W'}),solar_power_entity:put('sensor','solar','320',{unit_of_measurement:'W'}),home_consumption_entity:put('sensor','consumption','860',{unit_of_measurement:'W'}),monthly_capacity_peak_entity:put('sensor','peak','4.2',{unit_of_measurement:'kW'}),

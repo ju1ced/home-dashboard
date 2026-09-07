@@ -5,13 +5,14 @@ import assert from 'node:assert/strict';
 const require=createRequire(process.env.HD_BROWSER_PACKAGES ? `${process.env.HD_BROWSER_PACKAGES}/package.json` : import.meta.url);
 const {chromium}=require('playwright');
 const browser=await chromium.launch({headless:true,channel:process.env.HD_BROWSER_CHANNEL || 'msedge'});
-const directory='docs/renders/room-controls';await mkdir(directory,{recursive:true});
+const directory='docs/renders/expandable-rooms';await mkdir(directory,{recursive:true});
 const page=await browser.newPage();
 await page.addInitScript(()=>{const RealDate=Date;window.Date=class extends RealDate {constructor(...args){super(...(args.length?args:['2026-09-07T08:00:00+02:00']));}static now(){return new RealDate('2026-09-07T08:00:00+02:00').getTime();}};});
 const errors=[];page.on('pageerror',error=>errors.push(error.message));
 async function open(query='') {
   await page.goto(`http://127.0.0.1:4173/room-controls.html${query}`);
   await page.waitForFunction(()=>window.roomFixture && document.querySelector('home-dashboard-home-overview').shadowRoot.querySelector('home-dashboard-room-controls'));
+  await page.getByRole('button',{name:'Bediening Woonkamer',exact:true}).click();
 }
 try {
   for(const [name,width,height,query] of [ ['desktop',1440,1100,''],['tablet',1024,1100,''],['mobile',390,844,''],['dark',1440,1100,'?theme=dark'],['warning',1440,1100,'?fixture=warning'],['missing',390,844,'?fixture=missing'],['unavailable',390,844,'?fixture=unavailable'] ]) {
@@ -26,6 +27,21 @@ try {
     await page.screenshot({path:`${directory}/${name}.png`,fullPage:true});
   }
   await page.setViewportSize({width:1440,height:1100});await open();
+  const roomToggle=page.getByRole('button',{name:'Bediening Woonkamer',exact:true});
+  assert.equal(await roomToggle.getAttribute('aria-expanded'),'true');
+  await page.evaluate(()=>{window.lastDetails='';roomFixture.home.addEventListener('hass-more-info',event=>window.lastDetails=event.detail.entityId);});
+  const climate=page.getByRole('button',{name:/Woonkamer · Airco \/ verwarming/});
+  await climate.click();
+  assert.equal(await page.evaluate(()=>lastDetails===roomFixture.config.rooms[0].hvac.entity),true);
+  assert.equal(await page.evaluate(()=>roomFixture.calls.length),0);
+  await climate.press('Escape');
+  assert.equal(await roomToggle.getAttribute('aria-expanded'),'false');
+  assert.equal(await roomToggle.evaluate(el=>el.getRootNode().activeElement===el),true);
+  await roomToggle.press('Enter');
+  assert.equal(await page.getByRole('link',{name:'Volledige kamer Woonkamer',exact:true}).getAttribute('href'),'room-room-0');
+  assert.equal(await page.evaluate(()=>location.pathname),'/room-controls.html');
+  const homeWidth=await page.locator('home-dashboard-home-overview').evaluate(el=>el.shadowRoot.querySelector('.home').getBoundingClientRect().width);
+  assert.ok(homeWidth>1300);
   const light=page.getByRole('button',{name:/Woonkamer · Lichten.*Uitschakelen/});
   await light.click();
   assert.equal(await page.evaluate(()=>roomFixture.calls.length),1);
@@ -60,6 +76,7 @@ try {
   assert.equal(await page.evaluate(()=>roomFixture.calls.length),0);
   // Explicit opt-out exposes details only, even with all target mappings present.
   await page.evaluate(()=>{const f=roomFixture;f.config.rooms.forEach(r=>r.controls_enabled=false);f.home.setConfig({...f.config,type:'custom:home-dashboard-home-overview'});f.home.hass=f.hass;});
+  assert.equal(await page.getByRole('button',{name:'Bediening Woonkamer',exact:true}).getAttribute('aria-expanded'),'true');
   await page.getByRole('button',{name:/Woonkamer · Lichten.*Open details/}).click();
   assert.equal(await page.evaluate(()=>roomFixture.calls.length),0);
   await open();
@@ -73,6 +90,18 @@ try {
     return {ms:window.performance.now()-start,same:card===f.home.shadowRoot.querySelector('home-dashboard-room-controls'),html:before===card.shadowRoot.innerHTML};
   });
   assert.equal(performance.same,true);assert.equal(performance.html,true);
+  await page.evaluate(()=>{const f=roomFixture;const room=f.config.rooms[0];room.light_entities=[room.control_light_entity,'second_light_fixture'];room.control_light_entity='';f.hass.states.second_light_fixture={state:'off',attributes:{friendly_name:'Tweede lamp'}};f.home.setConfig({...f.config,type:'custom:home-dashboard-home-overview'});f.home.hass=f.hass;f.home.addEventListener('hass-more-info',event=>window.lastDetails=event.detail.entityId);});
+  await page.getByRole('button',{name:/Woonkamer · Lichten.*Toon apparaten/}).click();
+  await page.getByRole('button',{name:'Tweede lamp · Uit',exact:true}).click();
+  assert.equal(await page.evaluate(()=>lastDetails),'second_light_fixture');
+  assert.equal(await page.evaluate(()=>roomFixture.calls.length),0);
+  const multipleLights=page.getByRole('button',{name:/Woonkamer · Lichten.*Toon apparaten/});
+  assert.match(await multipleLights.getAttribute('aria-label'),/2 apparaten · 1 aan/);
+  await page.evaluate(()=>{const f=roomFixture;f.hass.states[f.config.rooms[0].light_entities[0]].state='off';f.hass.states.second_light_fixture.state='on';f.home.hass={...f.hass};});
+  assert.equal(await multipleLights.evaluate(el=>el.classList.contains('active')),true);
+  await page.evaluate(()=>{const f=roomFixture;f.hass.states.second_light_fixture.state='unavailable';f.home.hass={...f.hass};});
+  assert.match(await multipleLights.getAttribute('aria-label'),/2 apparaten · 1 onbekend/);
+  assert.equal(await multipleLights.evaluate(el=>el.classList.contains('active')),false);
   // Real editor events, including selector change bubbling, preserve the new fields.
   await page.goto('http://127.0.0.1:4173/editor.html');
   await page.locator('[data-section-nav="rooms"]').click();

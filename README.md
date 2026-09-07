@@ -1,5 +1,7 @@
 # Home Dashboard — ontwerpvoorstel
 
+Testrelease **v0.8.0-alpha.2** voegt een bredere Home-weergave en uitklapbare kamerpanelen met vijf soorten chips toe. [Renders en validatie](docs/renders/expandable-rooms/README.md) en de [testchecklist](docs/releases/testing-v0.8.0-alpha.2.md) beschrijven de nieuwe bediening.
+
 > Actuele ontwerprichting (7 september 2026): [vaste kamerbediening, rustige dataversheid en behoud van afvalophaling](docs/design/room-controls-direction.md). Dit besluit heeft voor deze onderwerpen voorrang op de eerdere ontwerpbaseline hieronder; implementatie volgt afzonderlijk.
 
 Deze repository bouwt een HACS-installeerbare community dashboard strategy. **v0.8.0-alpha.1** voegt vaste favoriete kamerkaarten, expliciete licht-/cover-/luifel-/radiobediening en rustige dataversheid toe. Afvalophaling en voorspelling blijven behouden. Bestaande configuraties activeren geen bediening automatisch.

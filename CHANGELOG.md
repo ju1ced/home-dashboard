@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.0-alpha.2 — 2026-09-07
+
+- Home gebruikt de beschikbare breedte, zonder interne limiet van 1180 px.
+- Kamerkoppen klappen een paneel open met chips; Volledige kamer blijft een aparte link.
+- Airco/verwarming is bereikbaar via de bestaande klimaatbron. Oudere licht-/media-/covermappings krijgen veilige detailchips zonder nieuwe directe actiedoelen.
+- Uitgeklapte toestand blijft behouden bij Home-updates; toetsenbord- en browserchecks uitgebreid.
+
 ## 0.8.0-alpha.1 — 2026-09-07
 
 - Vaste favoriete kamers met maximaal vier expliciete capabilitydoelen en opt-in voor directe bediening.
