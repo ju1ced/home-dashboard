@@ -260,3 +260,10 @@
 - **Besluit:** een optionele `control_entities`-lijst bepaalt per kamer exact welke nul tot zestien quick-actionchips zichtbaar zijn en in welke volgorde. Licht, cover, mediaspeler en klimaat mogen elk meermaals voorkomen. Iedere directe servicecall blijft beperkt tot de gekozen entiteit en bestaande capability- en confirmationregels.
 - **Migratie:** zolang het nieuwe veld ontbreekt, blijft de gepubliceerde bediening uit alpha.3 zichtbaar. Een opgeslagen lege lijst is een bewuste keuze voor geen quick actions.
 - **Navigatie:** de extra Home-knop verdwijnt uit de kamerhero. De native terugpijl krijgt `back_path: home`, zodat Home op hetzelfde niveau als de pijl bereikbaar is.
+
+## D-044 — Directe ordening en semantisch contrast
+
+- **Status:** visuele uitwerking gevraagd door de eigenaar op 8 september 2026; lokale candidate `v0.8.0-alpha.5`.
+- **Besluit:** iedere quick action krijgt in de editor een directe positiekeuze. Chips gebruiken het entiteitsicoon, verwijderen een dubbele kamernaam en tonen actieve verlichting, media, covers en klimaat met een eigen contrastrijke accentkleur, rand, linkerbalk en gevulde icoontegel.
+- **Visuele taal:** Home gebruikt een vaste blauwe welkomstbalk zoals de kamerhero's. De expliciete light/dark-paletten verschuiven naar koel blauwgrijs; Home Assistant-themevariabelen blijven in systeemmodus leidend.
+- **Budget:** de harde minified bundlegrens groeit van 180 naar 184 kB voor naamnormalisatie, entiteitsiconen, directe herordening en de semantische actieve-statepresentatie. De limiet blijft een buildgate.

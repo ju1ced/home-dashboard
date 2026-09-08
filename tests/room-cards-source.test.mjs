@@ -46,3 +46,14 @@ test("roominteracties hebben touch-, focus- en mobiele disclosurecontracten", as
   assert.match(source, /matchMedia\?\.\("\(max-width: 600px\)"\)/);
   assert.match(source, /room\.safety_entities, \.\.\.room\.hvac\.comfort_entities/);
 });
+
+test("kameracties gebruiken korte namen, entiteitsiconen en duidelijke actieve types", async () => {
+  const controls = await readFile(new URL("../src/cards/home-dashboard-room-controls.ts", import.meta.url), "utf8");
+  const editor = await readFile(new URL("../src/editor/home-dashboard-editor.ts", import.meta.url), "utf8");
+  assert.match(controls, /function shortName/);
+  assert.match(controls, /attributes\?\.icon/);
+  assert.match(controls, /kind-\$\{kind\}/);
+  assert.match(controls, /box-shadow:inset 4px 0 var\(--control-accent\)/);
+  assert.match(editor, /data-room-control-position/);
+  assert.match(editor, /moveItemTo/);
+});
