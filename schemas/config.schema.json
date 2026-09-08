@@ -104,6 +104,7 @@
         "control_cover_entity": {"$ref":"#/$defs/entityReference","x-editor":"rooms"},
         "control_awning_entity": {"$ref":"#/$defs/entityReference","x-editor":"rooms"},
         "control_media_entity": {"$ref":"#/$defs/entityReference","x-editor":"rooms"},
+        "control_entities": { "type": "array", "maxItems": 16, "uniqueItems": true, "items": { "$ref": "#/$defs/entityReference" }, "x-editor": "rooms" },
         "quick_actions": { "type": "array", "maxItems": 2, "uniqueItems": true, "items": { "$ref": "#/$defs/logicalKey" }, "x-editor": "rooms" },
           "light_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "rooms" },
           "cover_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "rooms" },

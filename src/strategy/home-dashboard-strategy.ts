@@ -118,7 +118,7 @@ function createRoomView(room: HomeDashboardConfigV1["rooms"][number], config: Ho
     path: roomPath(room),
     icon: room.icon || "mdi:sofa-outline",
     subview: true,
-    back_path: "rooms",
+    back_path: "home",
     strategy: {
       type: "custom:home-dashboard-view",
       view: "room",

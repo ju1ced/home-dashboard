@@ -75,6 +75,8 @@ export interface RoomConfig {
   device_ids: string[];
   capabilities: RoomCapability[];
   quick_actions: LogicalKey[];
+  /** Ordered, optional entity targets for the room's visible quick-action row. */
+  control_entities?: EntityReference[];
   home_favorite?: boolean;
   controls_enabled?: boolean;
   control_light_entity?: EntityReference;

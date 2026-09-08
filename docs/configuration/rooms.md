@@ -1,6 +1,6 @@
 # Kamers en kamerdetails
 
-Werkversie v0.8.0-alpha.3: een kamer toont maximaal één geopende bron- of actiestrook tegelijk. Kamerdetails hebben geen interne breedtelimiet meer. De Home-knop in de kamerheader vult de bestaande terugpijl naar Kamers aan.
+Werkversie v0.8.0-alpha.4: iedere favoriete kamer heeft een optionele, geordende lijst van nul tot zestien quick actions. Meerdere lichten, covers, mediaspelers en klimaatbronnen van hetzelfde type zijn toegestaan. De kamerdetailpagina gebruikt de beschikbare breedte en de native terugpijl voert rechtstreeks naar Home.
 
 Werkversie v0.8.0-alpha.2: de kamerkop klapt de bediening open/dicht. Verlichting, radio, rolluiken, luifel en airco/verwarming verschijnen als chips waar bronnen zijn ingesteld. De klimaat-chip gebruikt de bestaande Klimaatbron. Voor licht/media/covers zonder direct actiedoel blijven de bestaande bronmappings als detailkeuze bereikbaar, zonder automatische activering van services. Volledige kamer is een afzonderlijke link. Escape sluit het paneel en herstelt focus op de kamerkop.
 
@@ -15,7 +15,8 @@ Onder Dashboard bewerken → Kamers:
 
 - **Favoriet op Home** kiest maximaal vier kamers; de bestaande pijlen bepalen de volgorde. Niet-favorieten blijven op Kamers bereikbaar.
 - **Directe bediening toestaan** is standaard uit. Zonder opt-in openen de knoppen alleen HA-details.
-- Vier afzonderlijke actiedoelen kiezen de exacte lamp/groep, rolluik, luifel en speler. Geen afleiding uit de oude apparaatlijsten en geen impliciete area-/devicegroepering.
+- **Knoppen op Home** kiest nul tot zestien afzonderlijke entiteiten. De pijlen bepalen de zichtbare volgorde; types mogen worden herhaald. Een lege lijst toont geen quick actions.
+- Bestaande configuraties gebruiken de vier oude actiedoelen en bronmappings als beginweergave totdat de nieuwe lijst wordt opgeslagen. Daarna is de gekozen lijst leidend. Er is geen impliciete area-/devicegroepering.
 - **Layout → Quick actions** regelt de zichtbaarheid van deze knoppen op beide overzichten.
 
 Lichten gebruikt aan/uit volgens de actuele state. Rolluiken klapt Open/Stop/Dicht uit; luifels gebruiken Uit/Stop/In en vragen bevestiging voor beweging. Alleen ondersteunde coverfuncties zijn beschikbaar; deuren/poorten blijven uitgesloten. Radio pauzeert of hervat een gepauzeerde bron, en opent details voor bronkeuze bij idle/uit of een niet-ondersteunde actie.
@@ -26,7 +27,7 @@ Kamerkaarten gebruiken minimaal 44×44 px knoppen, toetsenbordfocus, tekst naast
 
 ## Kamerdetail
 
-Iedere kamer krijgt een Home Assistant-subview met terugpad naar Kamers. `v0.5.0-alpha.2` gebruikt één samenhangende responsive compositie, zodat secties niet meer als losse technische tilekolommen over het scherm worden verspreid. De beschikbare bronmappings bepalen welke onderdelen verschijnen:
+Iedere kamer krijgt een Home Assistant-subview met terugpad naar Home. `v0.5.0-alpha.2` gebruikt één samenhangende responsive compositie, zodat secties niet meer als losse technische tilekolommen over het scherm worden verspreid. De beschikbare bronmappings bepalen welke onderdelen verschijnen:
 
 1. **Ruimtestatus:** comfort- en relevante safetystatussen; warnings blijven ook op mobiel buiten ingeklapte inhoud zichtbaar.
 2. **Verlichting:** alle geselecteerde lichtgroepen, lampen en scènes, met helderheid waar Home Assistant die aanbiedt.

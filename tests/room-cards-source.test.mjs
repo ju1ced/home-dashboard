@@ -29,7 +29,7 @@ test("kamerdetail heeft herkenbare capabilityblokken met veilige HA-detailbedien
   assert.match(source, /hass-more-info/);
   assert.match(source, /Niet gevonden/);
   assert.match(source, /Niet beschikbaar/);
-  assert.match(source, /homeLink\.href = "home"/);
+  assert.doesNotMatch(source, /homeLink\.href/);
   assert.doesNotMatch(source, /max-width:1180px/);
   assert.doesNotMatch(source, /callService\(/);
   assert.doesNotMatch(source, /callWS\(/);

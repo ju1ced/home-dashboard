@@ -130,7 +130,9 @@ export function getHomeStructureSignature(hass: HomeAssistantLike | undefined, c
 }
 
 function remainingActivities(hass: HomeAssistantLike | undefined, config: HomeOverviewConfig): ActivityItem[] {
-  const visibleTargets = new Set(config.show_quick_actions === false ? [] : favoriteRooms(config.rooms ?? []).flatMap(room => [room.control_light_entity, room.control_cover_entity, room.control_awning_entity, room.control_media_entity, room.hvac.entity]).filter(Boolean));
+  const visibleTargets = new Set(config.show_quick_actions === false ? [] : favoriteRooms(config.rooms ?? []).flatMap(room => room.control_entities !== undefined
+    ? room.control_entities
+    : [room.control_light_entity, room.control_cover_entity, room.control_awning_entity, room.control_media_entity, room.hvac.entity]).filter(Boolean));
   return activeItems(hass, config).filter(item => !visibleTargets.has(item.entity)).slice(0, 4);
 }
 
