@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.8.0-alpha.3 — werkversie
+## 0.8.0-alpha.3 — 2026-09-08
 
 - Vandaag en de compacte camerakaart delen op desktop dezelfde boven- en onderlijn.
 - Kamerchips en bronkeuzes krijgen meer visuele hiërarchie; per kamer blijft maximaal één bron-/actiestrook open.

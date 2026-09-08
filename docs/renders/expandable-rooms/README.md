@@ -1,6 +1,6 @@
-# Uitklapbare kamerpanelen — v0.8.0-alpha.3 werkversie
+# Uitklapbare kamerpanelen — v0.8.0-alpha.3
 
-De lokale v0.8.0-alpha.3-iteratie lijnt Vandaag en camera uit, verfijnt de chips en bronstroken en maakt de kamerdetailpagina breder. Klik op een kamerkop om de chips te tonen; alleen Volledige kamer navigeert. Airco / verwarming gebruikt de bestaande klimaatbron en opent het native HA-detailvenster op Home.
+V0.8.0-alpha.3 lijnt Vandaag en camera uit, verfijnt de chips en bronstroken en maakt de kamerdetailpagina breder. Klik op een kamerkop om de chips te tonen; alleen Volledige kamer navigeert. Airco / verwarming gebruikt de bestaande klimaatbron en opent het native HA-detailvenster op Home.
 
 De vier bestaande directe actiedoelen behouden hun opt-in en veiligheidsregels. Zonder actiedoel zijn bestaande licht-, media- en covermappings bereikbaar als detailchips; meerdere bronnen tonen een keuzelijst. Hieruit worden nooit automatisch directe actiedoelen gemaakt. De luifel blijft afzonderlijk expliciet gemapt.
 
