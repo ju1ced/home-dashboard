@@ -1,6 +1,6 @@
 # Home Dashboard — ontwerpvoorstel
 
-Werkcandidate **v0.8.0-alpha.4** maakt de quick-actionrij per kamer volledig optioneel en geordend: meerdere lichten, covers, mediaspelers en klimaatbronnen kunnen afzonderlijk door elkaar staan. De native terugpijl van een kamer voert rechtstreeks naar Home. Zie de [renders](docs/renders/expandable-rooms/README.md) en [testchecklist](docs/releases/testing-v0.8.0-alpha.4.md).
+Werkcandidate **v0.8.0-alpha.6** voegt een configureerbaar dashboardpalet toe. Naast het bestaande blauw zijn Warm zand, Rustig salie, Zacht leisteen en Gedempt petrol beschikbaar in system-, light- en dark mode. Zie de [paletrenders](docs/renders/palette-options/README.md) en [testchecklist](docs/releases/testing-v0.8.0-alpha.6.md).
 
 Testrelease **v0.8.0-alpha.2** voegt een bredere Home-weergave en uitklapbare kamerpanelen met vijf soorten chips toe. [Renders en validatie](docs/renders/expandable-rooms/README.md) en de [testchecklist](docs/releases/testing-v0.8.0-alpha.2.md) beschrijven de nieuwe bediening.
 
@@ -102,4 +102,4 @@ scripts/          lokale preview en repositorychecks
 
 ## Status
 
-v0.8.0-alpha.4 staat lokaal klaar voor beoordeling. De fixtures voeren geen live Home Assistant-write uit; publicatie en runtimevalidatie volgen pas na afzonderlijke toestemming.
+v0.8.0-alpha.6 staat lokaal klaar voor beoordeling. De fixtures voeren geen live Home Assistant-write uit.

@@ -31,6 +31,6 @@ Deze alpha is bedoeld om echte informatie, routes en responsive gedrag veilig te
 - De cameracarrousel ondersteunt ieder geconfigureerd aantal camera's, bronvolgorde, muis/touchscroll en toetsenbord, maar toont één beeld per viewport. Privacy-actieve camera's worden niet als beeld getoond en blijven alleen in de compacte statusrail zichtbaar. `hidden` verbergt `unavailable`/`unknown`; `placeholder` en `last_image` gebruiken voorlopig de native camerafout-/snapshotweergave.
 - Kamerbediening en quick actions blijven achter hun actiegate; robot-, tuin- en zwembadcards volgen in hun eigen PR en prerelease. Kia behoudt de eigen bronkaart en haar afzonderlijke actiecontract.
 - Home toont maximaal drie dagen uit de geconfigureerde dagelijkse forecast in een compacte eigen presentatie. De data komt via de officiële read-only forecastsubscription; bij ontbrekende forecast blijft de actuele weerstatus zichtbaar.
-- `theme_mode` en `mobile_disclosure` blijven in schema v1 bewaard; deze shell-alpha erft het actieve HA-thema en gebruikt de native responsive Sections-layout.
+- `theme_mode`, `palette` en `mobile_disclosure` blijven in schema v1 bewaard. System mode erft de HA-oppervlakken; het gekozen palet bepaalt de merk- en statusaccenten van de eigen dashboardkaarten.
 - `language: en` bewaart de configuratiekeuze, maar de gegenereerde shelllabels zijn in deze eerste testrelease nog Nederlands.
 - Relatieve interne navigatie wordt expliciet getest op Home Assistant 2026.8.2 voordat detailroutes worden uitgebreid.

@@ -44,6 +44,7 @@ export function validateConfig(config: HomeDashboardConfigV1): ValidationIssue[]
     validateEnum("general.time_format", config.general.time_format, ["system", "12", "24"]),
     validateEnum("general.start_view", config.general.start_view, VIEW_PATHS),
     validateEnum("general.theme_mode", config.general.theme_mode, ["system", "light", "dark"]),
+    validateEnum("general.palette", config.general.palette, ["ocean_blue", "warm_stone", "quiet_sage", "soft_slate", "muted_petrol"]),
     validateEnum("general.density", config.general.density, ["comfortable", "compact"]),
     validateEnum("energy.default_period", config.energy.default_period, ["day", "week", "month", "year"]),
     validateEnum("layout.mobile_disclosure", config.layout.mobile_disclosure, ["progressive", "expanded"]),

@@ -21,6 +21,16 @@ export function roomControlSources(room: RoomConfig, kind: Kind): string[] {
   return [...new Set(kind === "light" ? room.light_entities : kind === "media" ? room.media_entities : kind === "cover" ? room.cover_entities.filter(entity => entity !== room.control_awning_entity) : [])];
 }
 function known(state?: State): boolean { return Boolean(state?.state && !["unknown", "unavailable"].includes(state.state)); }
+function shortName(room: RoomConfig, state: State | undefined, kind: Kind): string {
+  let name = String(state?.attributes?.friendly_name ?? labels[kind]).trim();
+  const words = name.split(/\s+/); const half = words.length / 2;
+  if (Number.isInteger(half) && words.slice(0, half).join(" ").toLowerCase() === words.slice(half).join(" ").toLowerCase()) name = words.slice(0, half).join(" ");
+  const roomName = room.name.trim().toLowerCase(); const lower = name.toLowerCase();
+  if (roomName && lower.startsWith(`${roomName} `)) name = name.slice(room.name.trim().length).trim();
+  else if (roomName && lower.endsWith(` ${roomName}`)) name = name.slice(0, -(room.name.trim().length + 1)).trim();
+  if (name) name = `${name.charAt(0).toUpperCase()}${name.slice(1)}`;
+  return name || labels[kind];
+}
 function kindForEntity(room: RoomConfig, hass: Hass | undefined, entity: string): Kind | undefined {
   const domain = entity.split(".")[0];
   if (domain === "light") return "light";
@@ -33,7 +43,7 @@ function roomQuickControlEntities(room: RoomConfig): string[] | undefined {
   return room.control_entities === undefined ? undefined : [...new Set(room.control_entities.filter(Boolean))];
 }
 function isActive(kind: Kind, state?: State): boolean {
-  return kind === "light" ? state?.state === "on" : kind === "media" ? state?.state === "playing" : kind === "climate" ? ["heating", "cooling"].includes(String(state?.attributes?.hvac_action)) : ["opening", "closing"].includes(state?.state ?? "");
+  return kind === "light" ? state?.state === "on" : kind === "media" ? state?.state === "playing" : kind === "climate" ? !["off", "idle", "unknown", "unavailable", undefined].includes(state?.state) || ["heating", "cooling"].includes(String(state?.attributes?.hvac_action)) : ["open", "opening", "closing"].includes(state?.state ?? "");
 }
 
 /** An explicit single target and a fixed service allowlist; no area/device expansion. */
@@ -187,10 +197,11 @@ export class HomeDashboardRoomControls extends Base {
     });
     this.orderedControls.forEach(control => {
       const state = this.currentHass?.states?.[control.entity];
-      const name = String(state?.attributes?.friendly_name ?? labels[control.kind]);
+      const name = shortName(room, state, control.kind);
       control.button.querySelector("strong")!.textContent = name;
       control.button.querySelector("small")!.textContent = control.kind === "awning" && state?.state === "closed" ? "In" : control.kind === "awning" && state?.state === "open" ? "Uit" : control.kind === "climate" && known(state) ? [stateLabel(state), typeof state?.attributes?.temperature === "number" ? `Doel ${state.attributes.temperature}°` : ""].filter(Boolean).join(" · ") : stateLabel(state);
       control.button.classList.toggle("active", isActive(control.kind, state));
+      control.button.setAttribute("aria-pressed", String(isActive(control.kind, state)));
       control.button.disabled = this.pending.has(control.key);
       const detailOnly = control.kind === "climate" || !this.config?.room.controls_enabled || !this.currentHass?.callService || !known(state) || (control.kind === "light" || control.kind === "media") && !planEntityControl(room, this.currentHass, control.entity, control.kind);
       control.button.setAttribute("aria-label", `${room.name} · ${name}: ${stateLabel(state)}. ${detailOnly ? "Open details" : control.kind === "light" ? state?.state === "on" ? "Uitschakelen" : "Inschakelen" : control.kind === "media" ? state?.state === "playing" ? "Pauzeren" : "Hervatten" : "Toon bediening"}`);
@@ -208,8 +219,8 @@ export class HomeDashboardRoomControls extends Base {
     style.textContent = `
       :host{display:block;min-width:0;color:var(--hd-text,var(--primary-text-color,#17212b))}*{box-sizing:border-box}
       article{height:100%;padding:14px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:18px;background:var(--hd-surface,var(--ha-card-background,var(--card-background-color,#fff)));box-shadow:var(--hd-shadow,0 2px 5px #00000009)}
-      .room-toggle{display:flex;width:100%;border:0;background:transparent;font:inherit;text-align:left;cursor:pointer}.room-toggle{gap:12px;align-items:center;color:inherit;min-height:54px;padding:2px}.room-toggle>ha-icon:first-child{width:38px;height:38px;padding:8px;border-radius:12px;background:color-mix(in srgb,var(--primary-color,#0088cc) 11%,transparent);color:var(--primary-color,#0088cc)}.copy{display:grid;gap:4px;flex:1;min-width:0}strong{font-size:14px}small{font-size:12px;color:var(--hd-muted,var(--secondary-text-color,#596777));overflow-wrap:anywhere}.warning{color:var(--error-color,#b3261e)}
-      [hidden]{display:none!important}.panel{margin-top:10px;padding-top:12px;border-top:1px solid var(--hd-border,var(--divider-color,#dce2e8))}.room-toggle[aria-expanded="true"]>.expand-icon{transform:rotate(180deg)}.expand-icon{transition:transform .16s ease}.full-room{display:inline-flex;align-items:center;width:max-content;min-height:44px;margin-top:8px;padding:8px 4px;color:var(--primary-color,#0088cc);font-size:12px;font-weight:650;text-decoration:none}.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:8px}.control{display:flex;align-items:center;gap:9px;min-height:58px;text-align:left;padding:10px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:14px;background:var(--hd-surface-raised,var(--secondary-background-color,#f5f7f9));color:inherit;cursor:pointer}.control span{display:grid;gap:3px;min-width:0}.control strong{font-size:12px}.control small{line-height:1.25}.control:hover{border-color:color-mix(in srgb,var(--primary-color,#0088cc) 45%,var(--hd-border,var(--divider-color,#dce2e8)))}.active{background:color-mix(in srgb,var(--primary-color,#0088cc) 12%,var(--hd-surface,var(--card-background-color,#fff)));border-color:color-mix(in srgb,var(--primary-color,#0088cc) 45%,transparent)}.active ha-icon{color:var(--primary-color,#0088cc)}ha-icon{width:23px;height:23px;flex-shrink:0}
+      .room-toggle{display:flex;width:100%;border:0;background:transparent;font:inherit;text-align:left;cursor:pointer}.room-toggle{gap:12px;align-items:center;color:inherit;min-height:54px;padding:2px}.room-toggle>ha-icon:first-child{width:38px;height:38px;padding:8px;border-radius:12px;background:color-mix(in srgb,var(--primary-color,#0784c1) 11%,transparent);color:var(--primary-color,#0784c1)}.copy{display:grid;gap:4px;flex:1;min-width:0}strong{font-size:14px}small{font-size:12px;color:var(--hd-muted,var(--secondary-text-color,#596777));overflow-wrap:anywhere}.warning{color:var(--error-color,#c53b32)}
+      [hidden]{display:none!important}.panel{margin-top:10px;padding-top:12px;border-top:1px solid var(--hd-border,var(--divider-color,#dce2e8))}.room-toggle[aria-expanded="true"]>.expand-icon{transform:rotate(180deg)}.expand-icon{transition:transform .16s ease}.full-room{display:inline-flex;align-items:center;width:max-content;min-height:44px;margin-top:8px;padding:8px 4px;color:var(--primary-color,#0784c1);font-size:12px;font-weight:650;text-decoration:none}.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:8px}.control{--control-accent:var(--primary-color,#0784c1);display:flex;align-items:center;gap:9px;min-height:62px;text-align:left;padding:9px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:14px;background:var(--hd-surface-raised,var(--secondary-background-color,#f5f7f9));color:inherit;cursor:pointer}.control.kind-light{--control-accent:var(--state-light-active-color,#b66b00)}.control.kind-climate{--control-accent:var(--state-climate-heat-color,#c95832)}.control.kind-media{--control-accent:var(--state-media-player-active-color,#7155a8)}.control.kind-cover,.control.kind-awning{--control-accent:var(--state-cover-active-color,#087da8)}.control span{display:grid;gap:3px;min-width:0}.control strong{font-size:12px}.control small{line-height:1.25}.control:hover{border-color:var(--control-accent)}.control>ha-icon{width:31px;height:31px;padding:5px;border-radius:9px;background:color-mix(in srgb,var(--control-accent) 13%,transparent);color:var(--control-accent)}.control.active{background:color-mix(in srgb,var(--control-accent) 22%,var(--hd-surface,var(--card-background-color,#fff)));border:2px solid var(--control-accent);box-shadow:inset 4px 0 var(--control-accent)}.control.active small{font-weight:750;color:var(--hd-text,var(--primary-text-color,#17212b))}.control.active>ha-icon{background:var(--control-accent);color:#fff}ha-icon{width:23px;height:23px;flex-shrink:0}
       button{font:inherit}button:disabled{opacity:.5;cursor:default}button:focus-visible,a:focus-visible{outline:2px solid var(--primary-color,#0088cc);outline-offset:2px}.strip{margin-top:10px;padding:11px;border:1px solid color-mix(in srgb,var(--primary-color,#0088cc) 25%,var(--hd-border,var(--divider-color,#dce2e8)));border-radius:14px;background:color-mix(in srgb,var(--primary-color,#0088cc) 5%,var(--hd-surface,var(--card-background-color,#fff)))}.strip-label{font-size:12px;display:block;margin-bottom:8px}.commands{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px}.commands button{min-height:44px;min-width:0;padding:8px 10px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:10px;background:var(--hd-surface,var(--card-background-color,#fff));color:inherit;cursor:pointer;font-size:12px}.commands button:hover{border-color:var(--primary-color,#0088cc)}.notice{display:block;font-size:12px;line-height:1.4;margin-top:6px}.notice:empty{display:none}@media(max-width:450px){article{padding:12px}.controls{grid-template-columns:repeat(2,minmax(0,1fr))}.commands{grid-template-columns:1fr}}
     `;
     const article = document.createElement("article");
@@ -230,14 +241,14 @@ export class HomeDashboardRoomControls extends Base {
       const kind = kindForEntity(room, this.currentHass, entity);
       if (!kind) return;
       const key = `${index}:${entity}`;
-      const button = document.createElement("button"); button.type = "button"; button.className = "control";
+      const button = document.createElement("button"); button.type = "button"; button.className = `control kind-${kind}`;
       const text = document.createElement("span"); text.append(document.createElement("strong"), document.createElement("small"));
-      button.append(icon(icons[kind]), text); controls.append(button);
+      button.append(icon(String(this.currentHass?.states?.[entity]?.attributes?.icon ?? icons[kind])), text); controls.append(button);
       const strip = document.createElement("div"); strip.className = "strip"; strip.hidden = true; strip.id = `control-${index}`;
       const notice = document.createElement("span"); notice.className = "notice"; notice.setAttribute("role", "status");
       const control: OrderedControl = { key, entity, kind, button, notice };
       if (kind === "cover" || kind === "awning") {
-        const controlName = String(this.currentHass?.states?.[entity]?.attributes?.friendly_name ?? labels[kind]);
+        const controlName = shortName(room, this.currentHass?.states?.[entity], kind);
         control.strip = strip;
         button.setAttribute("aria-expanded", "false"); button.setAttribute("aria-controls", strip.id);
         const label = document.createElement("strong"); label.className = "strip-label";
@@ -261,7 +272,7 @@ export class HomeDashboardRoomControls extends Base {
       this.orderedControls.push(control); panel.append(strip, notice);
     });
     else if (this.config.show_controls !== false) kinds.filter(kind => roomControlSources(room, kind).length).forEach(kind => {
-      const button = document.createElement("button"); button.type = "button"; button.className = "control";
+      const button = document.createElement("button"); button.type = "button"; button.className = `control kind-${kind}`;
       const text = document.createElement("span"); const title = document.createElement("strong"); title.textContent = labels[kind];
       text.append(title, document.createElement("small")); button.append(icon(icons[kind]), text);
       this.buttons.set(kind, button); controls.append(button);

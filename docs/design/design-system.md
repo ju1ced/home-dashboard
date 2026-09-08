@@ -17,20 +17,20 @@
 
 | Token | Waarde | Gebruik |
 |---|---|---|
-| `--hd-bg` | `#F3F6F4` | pagina-achtergrond |
+| `--hd-bg` | `#EDF3F7` | pagina-achtergrond |
 | `--hd-surface` | `#FFFFFF` | kaarten |
-| `--hd-surface-raised` | `#F9FBFA` | verhoogde controls |
-| `--hd-surface-muted` | `#E8EEEA` | rustige statusvlakken |
-| `--hd-text` | `#18231F` | primaire tekst |
-| `--hd-text-muted` | `#66736D` | secundaire tekst |
-| `--hd-border` | `#D8E1DC` | randen en dividers |
-| `--hd-brand` | `#276B5B` | primaire navigatie/actie |
-| `--hd-brand-soft` | `#DCEFE8` | geselecteerde achtergrond |
-| `--hd-active` | `#1F6F8B` | actieve maar normale toestand |
-| `--hd-active-soft` | `#DDEFF6` | actieve achtergrond |
+| `--hd-surface-raised` | `#F7FAFC` | verhoogde controls |
+| `--hd-surface-muted` | `#E5EDF3` | rustige statusvlakken |
+| `--hd-text` | `#17212B` | primaire tekst |
+| `--hd-text-muted` | `#596978` | secundaire tekst |
+| `--hd-border` | `#D3DEE7` | randen en dividers |
+| `--hd-brand` | `#087FB9` | primaire navigatie/actie |
+| `--hd-brand-soft` | `#DCEFF8` | geselecteerde achtergrond |
+| `--hd-active` | `#087DA8` | actieve maar normale toestand |
+| `--hd-active-soft` | `#DCEFF8` | actieve achtergrond |
 | `--hd-warning` | `#995400` | waarschuwingstekst/icoon |
 | `--hd-warning-soft` | `#FFF0D6` | waarschuwingachtergrond |
-| `--hd-critical` | `#B3261E` | kritieke toestand |
+| `--hd-critical` | `#C53B32` | kritieke toestand |
 | `--hd-critical-soft` | `#FCE8E6` | kritieke achtergrond |
 | `--hd-unavailable` | `#686D78` | offline/onbekend |
 | `--hd-unavailable-soft` | `#ECEEF2` | offline achtergrond |
@@ -39,17 +39,17 @@
 
 | Token | Waarde |
 |---|---|
-| `--hd-bg` | `#101713` |
-| `--hd-surface` | `#18211D` |
-| `--hd-surface-raised` | `#202B26` |
-| `--hd-surface-muted` | `#26332D` |
-| `--hd-text` | `#EDF4F0` |
-| `--hd-text-muted` | `#A8B7AF` |
-| `--hd-border` | `#34433C` |
-| `--hd-brand` | `#72C9AF` |
-| `--hd-brand-soft` | `#173C32` |
-| `--hd-active` | `#7BC6E1` |
-| `--hd-active-soft` | `#183B48` |
+| `--hd-bg` | `#101820` |
+| `--hd-surface` | `#17232D` |
+| `--hd-surface-raised` | `#1D2C37` |
+| `--hd-surface-muted` | `#243743` |
+| `--hd-text` | `#EEF6FB` |
+| `--hd-text-muted` | `#A8BAC7` |
+| `--hd-border` | `#344B5A` |
+| `--hd-brand` | `#63C7EF` |
+| `--hd-brand-soft` | `#123D50` |
+| `--hd-active` | `#63C7EF` |
+| `--hd-active-soft` | `#123D50` |
 | `--hd-warning` | `#FFC56E` |
 | `--hd-warning-soft` | `#4A3216` |
 | `--hd-critical` | `#FFB4AB` |
@@ -58,6 +58,12 @@
 | `--hd-unavailable-soft` | `#30323A` |
 
 ### Oppervlak en effect
+
+Actieve quick actions gebruiken naast statustekst een functioneel accent: licht `#B66B00`, klimaat `#C95832`, media `#7155A8` en cover/luifel `#087DA8`. De kaart gebruikt eerst de overeenkomstige Home Assistant-statekleur wanneer het actieve thema die aanbiedt. Een gekleurde 2 px rand, linkerbalk en gevulde icoontegel maken het verschil ook op een groot scherm direct zichtbaar.
+
+### Configureerbare paletten
+
+`general.palette` kiest de merk- en oppervlaktetokens voor alle eigen dashboardkaarten. `ocean_blue` blijft de migratiestandaard; `warm_stone`, `quiet_sage`, `soft_slate` en `muted_petrol` zijn de vier rustige alternatieven. Ieder palet heeft een afzonderlijke light- en dark-reeks. In system mode blijven HA-oppervlak, tekst en rand leidend en verandert alleen de kleuridentiteit. De vergelijkende waarden en renders staan in [Rustige kleurpaletten](../renders/palette-options/README.md).
 
 - Border: 1 px; scheid eerst met oppervlak, pas daarna met lijn.
 - Shadow small: `0 1px 2px rgb(20 35 28 / 0.06)`.

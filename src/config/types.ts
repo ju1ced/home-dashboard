@@ -16,6 +16,7 @@ export type ViewPath = (typeof VIEW_PATHS)[number];
 export type RoomCapability = (typeof ROOM_CAPABILITIES)[number];
 export type EntityReference = string;
 export type LogicalKey = string;
+export type DashboardPalette = "ocean_blue" | "warm_stone" | "quiet_sage" | "soft_slate" | "muted_petrol";
 
 export interface GeneralConfig {
   title: string;
@@ -23,6 +24,7 @@ export interface GeneralConfig {
   time_format: "system" | "12" | "24";
   start_view: ViewPath;
   theme_mode: "system" | "light" | "dark";
+  palette: DashboardPalette;
   density: "comfortable" | "compact";
 }
 

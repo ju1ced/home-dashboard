@@ -10,13 +10,14 @@
     "schema_version": { "const": 1, "x-editor": "system" },
     "general": {
       "type": "object", "additionalProperties": false,
-      "required": ["title", "language", "time_format", "start_view", "theme_mode", "density"],
+      "required": ["title", "language", "time_format", "start_view", "theme_mode", "palette", "density"],
       "properties": {
         "title": { "type": "string", "minLength": 1, "x-editor": "general" },
         "language": { "enum": ["nl", "en"], "x-editor": "general" },
         "time_format": { "enum": ["system", "12", "24"], "x-editor": "general" },
         "start_view": { "$ref": "#/$defs/viewPath", "x-editor": "general" },
         "theme_mode": { "enum": ["system", "light", "dark"], "x-editor": "general" },
+        "palette": { "enum": ["ocean_blue", "warm_stone", "quiet_sage", "soft_slate", "muted_petrol"], "x-editor": "general" },
         "density": { "enum": ["comfortable", "compact"], "x-editor": "general" }
       }
     },

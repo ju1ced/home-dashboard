@@ -108,9 +108,9 @@ try {
   assert.equal(await multipleLights.evaluate(el=>el.classList.contains('active')),false);
   // An explicit list renders one chip per entity and preserves mixed, repeated types in the chosen order.
   await open();
-  await page.evaluate(()=>{const f=roomFixture;const room=f.config.rooms[0];const secondLight=['light','second_fixture'].join('.');const secondCover=['cover','second_fixture'].join('.');f.hass.states[secondLight]={state:'on',attributes:{friendly_name:'Leeslamp'}};f.hass.states[secondCover]={state:'closed',attributes:{friendly_name:'Rolluik terras',supported_features:11,device_class:'shutter'}};room.control_entities=[room.control_cover_entity,secondLight,room.control_light_entity,secondCover,room.control_awning_entity,room.control_media_entity,room.hvac.entity];f.home.setConfig({...f.config,type:'custom:home-dashboard-home-overview'});f.home.hass=f.hass;});
+  await page.evaluate(()=>{const f=roomFixture;const room=f.config.rooms[0];const secondLight=['light','second_fixture'].join('.');const secondCover=['cover','second_fixture'].join('.');f.hass.states[secondLight]={state:'on',attributes:{friendly_name:'Leeslamp',icon:'mdi:floor-lamp'}};f.hass.states[secondCover]={state:'closed',attributes:{friendly_name:'Rolluik terras',supported_features:11,device_class:'shutter',icon:'mdi:blinds-horizontal'}};room.control_entities=[room.control_cover_entity,secondLight,room.control_light_entity,secondCover,room.control_awning_entity,room.control_media_entity,room.hvac.entity];f.home.setConfig({...f.config,type:'custom:home-dashboard-home-overview'});f.home.hass=f.hass;});
   const orderedNames=await page.locator('home-dashboard-room-controls').first().locator('.controls .control strong').allTextContents();
-  assert.deepEqual(orderedNames.slice(0,4),['Woonkamer rolluik','Leeslamp','Woonkamer lichten','Rolluik terras']);
+  assert.deepEqual(orderedNames.slice(0,4),['Rolluik','Leeslamp','Lichten','Rolluik terras']);
   assert.equal(await page.evaluate(()=>roomFixture.calls.length),0);
   const orderedCover=page.getByRole('button',{name:/Woonkamer · Rolluik terras:.*Toon bediening/});
   await orderedCover.click();
@@ -131,9 +131,14 @@ try {
   await page.screenshot({path:`${directory}/room-detail.png`,fullPage:true});
   // Real editor events, including selector change bubbling, preserve the new fields.
   await page.goto('http://127.0.0.1:4173/editor.html');
+  await page.evaluate(()=>document.querySelector('home-dashboard-strategy-editor').addEventListener('config-changed',event=>window.savedRoomConfig=event.detail.config));
+  const palette=page.locator('select[data-path="general.palette"]');
+  assert.deepEqual(await palette.locator('option').allTextContents(),['Huidig blauw','Warm zand','Rustig salie','Zacht leisteen','Gedempt petrol']);
+  await palette.selectOption('quiet_sage');
+  assert.equal(await page.evaluate(()=>savedRoomConfig.general.palette),'quiet_sage');
+  await page.screenshot({path:`${directory}/palette-selector.png`,fullPage:true});
   await page.locator('[data-section-nav="rooms"]').click();
   await page.locator('details[data-item-token]').first().locator('summary').click();
-  await page.evaluate(()=>document.querySelector('home-dashboard-strategy-editor').addEventListener('config-changed',event=>window.savedRoomConfig=event.detail.config));
   await page.locator('input[data-field="home_favorite"]').check();
   await page.locator('input[data-field="controls_enabled"]').check();
   const selector=page.locator('ha-selector[data-field="control_entities"] input');
@@ -141,11 +146,12 @@ try {
   await selector.fill([first,second,third].join(', '));await selector.dispatchEvent('change');
   let saved=await page.evaluate(()=>savedRoomConfig.rooms[0]);
   assert.equal(saved.home_favorite,true);assert.equal(saved.controls_enabled,true);assert.deepEqual(saved.control_entities,[first,second,third]);
-  await page.getByRole('button',{name:'Verplaats quick action 1 omlaag',exact:true}).click();
+  await page.locator('select[data-room-control-position]').first().selectOption({value:'1'});
   saved=await page.evaluate(()=>savedRoomConfig.rooms[0]);
   assert.deepEqual(saved.control_entities,[second,first,third]);
+  await page.screenshot({path:`${directory}/editor-ordering.png`,fullPage:true});
   await page.locator('ha-selector[data-field="control_entities"] input').fill('');await page.locator('ha-selector[data-field="control_entities"] input').dispatchEvent('change');
   saved=await page.evaluate(()=>savedRoomConfig.rooms[0]);assert.deepEqual(saved.control_entities,[]);
   assert.deepEqual(errors,[]);
-  console.log(`Browserchecks geslaagd: 10 renders, uitlijning, brede kamerdetailpagina, native Home-terugpad, geordende optionele kameracties, afval, focus, touchdoelen en GUI. 100 irrelevante updates: ${performance.ms.toFixed(1)} ms, geen vervanging van kamer-DOM.`);
+  console.log(`Browserchecks geslaagd: 12 renders, uitlijning, brede kamerdetailpagina, native Home-terugpad, directe positievolgorde, geordende optionele kameracties, afval, focus, touchdoelen en GUI. 100 irrelevante updates: ${performance.ms.toFixed(1)} ms, geen vervanging van kamer-DOM.`);
 } finally {await browser.close();}

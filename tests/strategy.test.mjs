@@ -96,6 +96,7 @@ test("iedere viewstrategy levert native Sections zonder serviceactie", async () 
     "tile"
   ]);
   for (const view of dashboard.views) {
+    assert.equal(view.strategy.palette, dashboard.views[0].strategy.palette);
     const expanded = await HomeDashboardViewStrategy.generate(view.strategy);
     assert.equal(expanded.type, "sections");
     assert.equal(expanded.dense_section_placement, view.path === "home" || view.strategy.view === "room");
@@ -123,6 +124,7 @@ test("Home levert één samenhangende compositie met volledige context en zes ca
   const overview = expanded.sections[0].cards[0];
   assert.equal(overview.type, "custom:home-dashboard-home-overview");
   assert.equal(overview.theme_mode, config.general.theme_mode);
+  assert.equal(overview.palette, config.general.palette);
   assert.equal(overview.security.cameras.length, 6);
   assert.deepEqual(overview.security.cameras.map((camera) => camera.key), config.security.cameras.map((camera) => camera.key));
   assert.deepEqual(overview.today.energy_context_entities, ["power_primary"]);
