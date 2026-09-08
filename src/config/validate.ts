@@ -75,6 +75,11 @@ export function validateConfig(config: HomeDashboardConfigV1): ValidationIssue[]
   const actionKeys = new Set(config.actions.map((action) => action.key));
   if (config.rooms.filter(room => room.home_favorite).length > 4) issues.push(issue("rooms", "favorite_limit", "Kies maximaal vier favoriete kamers."));
   config.rooms.forEach((room, index) => {
+    room.control_entities?.forEach((reference, controlIndex) => {
+      if (!reference) return;
+      const domain = reference.split(".")[0] ?? "";
+      if (!["light", "cover", "media_player", "climate"].includes(domain)) issues.push(issue(`rooms[${index}].control_entities[${controlIndex}]`, "control_domain", "Dit type is geen kamerbediening."));
+    });
     for (const [field, domain] of [["control_light_entity", "light"], ["control_cover_entity", "cover"], ["control_awning_entity", "cover"], ["control_media_entity", "media_player"]] as const) {
       const reference = room[field];
       if (reference?.includes(".") && reference.split(".")[0] !== domain) issues.push(issue(`rooms[${index}].${field}`, "control_domain", "Het actiedoel heeft niet het passende domein."));

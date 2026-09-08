@@ -66,7 +66,7 @@ export const EDITOR_COVERAGE = Object.freeze({
   collection_fields: [
     "persons[].key", "persons[].entity", "persons[].label", "persons[].show_location", "persons[].zone_entities", "persons[].freshness_minutes", "persons[].battery_entities",
     "security.cameras[].key", "security.cameras[].name", "security.cameras[].camera_entity", "security.cameras[].privacy_entity", "security.cameras[].privacy_action_key", "security.cameras[].fallback", "security.cameras[].confirm_privacy_disable",
-    "rooms[].key", "rooms[].name", "rooms[].icon", "rooms[].floor_id", "rooms[].area_id", "rooms[].device_ids", "rooms[].capabilities", "rooms[].quick_actions", "rooms[].home_favorite", "rooms[].controls_enabled", "rooms[].control_light_entity", "rooms[].control_cover_entity", "rooms[].control_awning_entity", "rooms[].control_media_entity",
+    "rooms[].key", "rooms[].name", "rooms[].icon", "rooms[].floor_id", "rooms[].area_id", "rooms[].device_ids", "rooms[].capabilities", "rooms[].quick_actions", "rooms[].control_entities", "rooms[].home_favorite", "rooms[].controls_enabled", "rooms[].control_light_entity", "rooms[].control_cover_entity", "rooms[].control_awning_entity", "rooms[].control_media_entity",
     "rooms[].light_entities", "rooms[].cover_entities", "rooms[].media_entities", "rooms[].safety_entities", "rooms[].camera_entities", "rooms[].power_entities", "rooms[].history_entities",
     "rooms[].hvac.entity", "rooms[].hvac.comfort_entities", "rooms[].hvac.history_entities", "rooms[].hvac.modes", "rooms[].hvac.presets", "rooms[].hvac.fan_modes", "rooms[].hvac.swing_modes",
     "actions[].key", "actions[].label", "actions[].sequence", "actions[].risk", "actions[].confirmation_text", "actions[].hold_required", "actions[].verification_entity"

@@ -5,6 +5,7 @@ type Hass = { states?: Record<string, State>; callService?: (domain: string, ser
 type Kind = "light" | "cover" | "awning" | "media" | "climate";
 type Command = "toggle" | "open" | "stop" | "close";
 type Plan = { entity: string; domain: string; service: string; confirmation: boolean };
+type OrderedControl = { key: string; entity: string; kind: Kind; button: HTMLButtonElement; strip?: HTMLElement; notice: HTMLElement };
 const kinds: Kind[] = ["light", "media", "cover", "awning", "climate"];
 const labels: Record<Kind, string> = { light: "Lichten", cover: "Rolluiken", awning: "Luifel", media: "Radio", climate: "Airco / verwarming" };
 const icons: Record<Kind, string> = { light: "mdi:lightbulb-outline", cover: "mdi:window-shutter", awning: "mdi:awning-outline", media: "mdi:radio", climate: "mdi:thermostat" };
@@ -20,14 +21,28 @@ export function roomControlSources(room: RoomConfig, kind: Kind): string[] {
   return [...new Set(kind === "light" ? room.light_entities : kind === "media" ? room.media_entities : kind === "cover" ? room.cover_entities.filter(entity => entity !== room.control_awning_entity) : [])];
 }
 function known(state?: State): boolean { return Boolean(state?.state && !["unknown", "unavailable"].includes(state.state)); }
+function kindForEntity(room: RoomConfig, hass: Hass | undefined, entity: string): Kind | undefined {
+  const domain = entity.split(".")[0];
+  if (domain === "light") return "light";
+  if (domain === "media_player") return "media";
+  if (domain === "climate") return "climate";
+  if (domain === "cover") return entity === room.control_awning_entity || hass?.states?.[entity]?.attributes?.device_class === "awning" ? "awning" : "cover";
+  return undefined;
+}
+function roomQuickControlEntities(room: RoomConfig): string[] | undefined {
+  return room.control_entities === undefined ? undefined : [...new Set(room.control_entities.filter(Boolean))];
+}
 function isActive(kind: Kind, state?: State): boolean {
   return kind === "light" ? state?.state === "on" : kind === "media" ? state?.state === "playing" : kind === "climate" ? ["heating", "cooling"].includes(String(state?.attributes?.hvac_action)) : ["opening", "closing"].includes(state?.state ?? "");
 }
 
 /** An explicit single target and a fixed service allowlist; no area/device expansion. */
 export function planRoomControl(room: RoomConfig, hass: Hass | undefined, kind: Kind, command: Command = "toggle"): Plan | undefined {
+  return planEntityControl(room, hass, target(room, kind), kind, command);
+}
+
+function planEntityControl(room: RoomConfig, hass: Hass | undefined, entity: string, kind: Kind, command: Command = "toggle"): Plan | undefined {
   if (!room.controls_enabled || !kinds.includes(kind)) return undefined;
-  const entity = target(room, kind);
   const state = hass?.states?.[entity];
   if (!entity || !known(state)) return undefined;
   const domain = kind === "media" ? "media_player" : kind === "awning" ? "cover" : kind;
@@ -74,7 +89,7 @@ export class HomeDashboardRoomControls extends Base {
   private buttons = new Map<Kind, HTMLButtonElement>();
   private strips = new Map<Kind, HTMLElement>();
   private pending = new Set<string>();
-  private notices = new Map<Kind, HTMLElement>();
+  private orderedControls: OrderedControl[] = [];
   private meta?: HTMLElement;
   private signature = "";
   private generation = 0;
@@ -89,9 +104,11 @@ export class HomeDashboardRoomControls extends Base {
     this.config = config; this.generation++; this.pending.clear(); this.signature = ""; this.render();
   }
   public set hass(value: Hass) {
+    const firstHass = !this.currentHass;
     this.currentHass = value;
     const room = this.config?.room;
-    const entities = room ? [...kinds.flatMap(kind => roomControlSources(room, kind)), ...room.hvac.comfort_entities, ...room.safety_entities] : [];
+    if (firstHass && room?.control_entities !== undefined) { this.render(); return; }
+    const entities = room ? [...(room.control_entities ?? []), ...kinds.flatMap(kind => roomControlSources(room, kind)), ...room.hvac.comfort_entities, ...room.safety_entities] : [];
     const signature = JSON.stringify(entities.map(entity => value.states?.[entity]));
     if (signature !== this.signature) { this.signature = signature; this.update(); }
   }
@@ -99,39 +116,36 @@ export class HomeDashboardRoomControls extends Base {
   private moreInfo(entity: string): void {
     this.dispatchEvent(new CustomEvent("hass-more-info", { detail: { entityId: entity }, bubbles: true, composed: true }));
   }
-  private async perform(kind: Kind, command: Command): Promise<void> {
+  private async perform(kind: Kind, entity: string, key: string, notice: HTMLElement, command: Command): Promise<void> {
     const room = this.config?.room;
-    if (!room || !this.currentHass || (this.pending.has(kind) && command !== "stop") || this.pending.has(`${kind}:stop`)) return;
-    const plan = planRoomControl(room, this.currentHass, kind, command);
+    if (!room || !this.currentHass || (this.pending.has(key) && command !== "stop") || this.pending.has(`${key}:stop`)) return;
+    const plan = planEntityControl(room, this.currentHass, entity, kind, command);
     if (!plan) return;
     const name = String(this.currentHass.states?.[plan.entity]?.attributes?.friendly_name ?? labels[kind]);
     if (plan.confirmation && !window.confirm(`${room.name} · ${name}: luifel ${command === "open" ? "uitschuiven" : "inschuiven"}?`)) return;
-    const pendingKey = command === "stop" ? `${kind}:stop` : kind;
+    const pendingKey = command === "stop" ? `${key}:stop` : key;
     this.pending.add(pendingKey); this.update();
-    const notice = this.notices.get(kind);
-    if (notice) notice.textContent = "Verzoek versturen…";
+    notice.textContent = "Verzoek versturen…";
     const generation = this.generation;
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       await Promise.race([
-        executeRoomControl(room, this.currentHass, kind, command, true),
+        this.currentHass.callService!(plan.domain, plan.service, { entity_id: plan.entity }),
         new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error("timeout")), 10000); })
       ]);
-      if (notice && generation === this.generation) notice.textContent = "Verzoek ontvangen. Controleer de actuele status.";
+      if (generation === this.generation) notice.textContent = "Verzoek ontvangen. Controleer de actuele status.";
     } catch {
       // Do not expose backend error payloads or identifiers in the UI/logs.
-      if (notice && generation === this.generation) notice.textContent = "Niet bevestigd. Controleer status en rechten via Details voordat je opnieuw probeert.";
+      if (generation === this.generation) notice.textContent = "Niet bevestigd. Controleer status en rechten via Details voordat je opnieuw probeert.";
     } finally {
       if (timer) clearTimeout(timer);
       if (generation === this.generation) { this.pending.delete(pendingKey); this.update(); }
     }
   }
-  private toggleStrip(kind: Kind, strip: HTMLElement, button: HTMLButtonElement): void {
+  private toggleStrip(strip: HTMLElement, button: HTMLButtonElement): void {
     const willOpen = strip.hidden;
-    this.strips.forEach((candidate, candidateKind) => {
-      candidate.hidden = true;
-      this.buttons.get(candidateKind)?.setAttribute("aria-expanded", "false");
-    });
+    this.shadowRoot?.querySelectorAll<HTMLElement>(".strip").forEach(candidate => { candidate.hidden = true; });
+    this.shadowRoot?.querySelectorAll<HTMLButtonElement>(".control[aria-expanded]").forEach(candidate => candidate.setAttribute("aria-expanded", "false"));
     strip.hidden = !willOpen;
     button.setAttribute("aria-expanded", String(willOpen));
     if (willOpen) this.update();
@@ -171,10 +185,24 @@ export class HomeDashboardRoomControls extends Base {
         control.disabled = (control.dataset.command === "stop" ? this.pending.has(`${kind}:stop`) : this.pending.has(kind)) || !this.currentHass?.callService || !planRoomControl(room, this.currentHass, kind, control.dataset.command as Command);
       });
     });
+    this.orderedControls.forEach(control => {
+      const state = this.currentHass?.states?.[control.entity];
+      const name = String(state?.attributes?.friendly_name ?? labels[control.kind]);
+      control.button.querySelector("strong")!.textContent = name;
+      control.button.querySelector("small")!.textContent = control.kind === "awning" && state?.state === "closed" ? "In" : control.kind === "awning" && state?.state === "open" ? "Uit" : control.kind === "climate" && known(state) ? [stateLabel(state), typeof state?.attributes?.temperature === "number" ? `Doel ${state.attributes.temperature}°` : ""].filter(Boolean).join(" · ") : stateLabel(state);
+      control.button.classList.toggle("active", isActive(control.kind, state));
+      control.button.disabled = this.pending.has(control.key);
+      const detailOnly = control.kind === "climate" || !this.config?.room.controls_enabled || !this.currentHass?.callService || !known(state) || (control.kind === "light" || control.kind === "media") && !planEntityControl(room, this.currentHass, control.entity, control.kind);
+      control.button.setAttribute("aria-label", `${room.name} · ${name}: ${stateLabel(state)}. ${detailOnly ? "Open details" : control.kind === "light" ? state?.state === "on" ? "Uitschakelen" : "Inschakelen" : control.kind === "media" ? state?.state === "playing" ? "Pauzeren" : "Hervatten" : "Toon bediening"}`);
+      control.strip?.querySelectorAll<HTMLButtonElement>("button[data-command]").forEach(button => {
+        const command = button.dataset.command as Command;
+        button.disabled = (command === "stop" ? this.pending.has(`${control.key}:stop`) : this.pending.has(control.key)) || !this.currentHass?.callService || !planEntityControl(room, this.currentHass, control.entity, control.kind, command);
+      });
+    });
   }
   private render(): void {
     if (!this.shadowRoot || !this.config) return;
-    this.buttons.clear(); this.strips.clear(); this.notices.clear();
+    this.buttons.clear(); this.strips.clear(); this.orderedControls = [];
     const room = this.config.room;
     const style = document.createElement("style");
     style.textContent = `
@@ -182,7 +210,7 @@ export class HomeDashboardRoomControls extends Base {
       article{height:100%;padding:14px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:18px;background:var(--hd-surface,var(--ha-card-background,var(--card-background-color,#fff)));box-shadow:var(--hd-shadow,0 2px 5px #00000009)}
       .room-toggle{display:flex;width:100%;border:0;background:transparent;font:inherit;text-align:left;cursor:pointer}.room-toggle{gap:12px;align-items:center;color:inherit;min-height:54px;padding:2px}.room-toggle>ha-icon:first-child{width:38px;height:38px;padding:8px;border-radius:12px;background:color-mix(in srgb,var(--primary-color,#0088cc) 11%,transparent);color:var(--primary-color,#0088cc)}.copy{display:grid;gap:4px;flex:1;min-width:0}strong{font-size:14px}small{font-size:12px;color:var(--hd-muted,var(--secondary-text-color,#596777));overflow-wrap:anywhere}.warning{color:var(--error-color,#b3261e)}
       [hidden]{display:none!important}.panel{margin-top:10px;padding-top:12px;border-top:1px solid var(--hd-border,var(--divider-color,#dce2e8))}.room-toggle[aria-expanded="true"]>.expand-icon{transform:rotate(180deg)}.expand-icon{transition:transform .16s ease}.full-room{display:inline-flex;align-items:center;width:max-content;min-height:44px;margin-top:8px;padding:8px 4px;color:var(--primary-color,#0088cc);font-size:12px;font-weight:650;text-decoration:none}.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:8px}.control{display:flex;align-items:center;gap:9px;min-height:58px;text-align:left;padding:10px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:14px;background:var(--hd-surface-raised,var(--secondary-background-color,#f5f7f9));color:inherit;cursor:pointer}.control span{display:grid;gap:3px;min-width:0}.control strong{font-size:12px}.control small{line-height:1.25}.control:hover{border-color:color-mix(in srgb,var(--primary-color,#0088cc) 45%,var(--hd-border,var(--divider-color,#dce2e8)))}.active{background:color-mix(in srgb,var(--primary-color,#0088cc) 12%,var(--hd-surface,var(--card-background-color,#fff)));border-color:color-mix(in srgb,var(--primary-color,#0088cc) 45%,transparent)}.active ha-icon{color:var(--primary-color,#0088cc)}ha-icon{width:23px;height:23px;flex-shrink:0}
-      button{font:inherit}button:disabled{opacity:.5;cursor:default}button:focus-visible,a:focus-visible{outline:2px solid var(--primary-color,#0088cc);outline-offset:2px}.strip{margin-top:10px;padding:11px;border:1px solid color-mix(in srgb,var(--primary-color,#0088cc) 25%,var(--hd-border,var(--divider-color,#dce2e8)));border-radius:14px;background:color-mix(in srgb,var(--primary-color,#0088cc) 5%,var(--hd-surface,var(--card-background-color,#fff)))}.strip[hidden]{display:none}.strip-label{font-size:12px;display:block;margin-bottom:8px}.commands{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px}.commands button{min-height:44px;min-width:0;padding:8px 10px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:10px;background:var(--hd-surface,var(--card-background-color,#fff));color:inherit;cursor:pointer;font-size:12px}.commands button:hover{border-color:var(--primary-color,#0088cc)}.notice{display:block;font-size:12px;line-height:1.4;margin-top:6px}.notice:empty{display:none}@media(max-width:450px){article{padding:12px}.controls{grid-template-columns:repeat(2,minmax(0,1fr))}.commands{grid-template-columns:1fr}}
+      button{font:inherit}button:disabled{opacity:.5;cursor:default}button:focus-visible,a:focus-visible{outline:2px solid var(--primary-color,#0088cc);outline-offset:2px}.strip{margin-top:10px;padding:11px;border:1px solid color-mix(in srgb,var(--primary-color,#0088cc) 25%,var(--hd-border,var(--divider-color,#dce2e8)));border-radius:14px;background:color-mix(in srgb,var(--primary-color,#0088cc) 5%,var(--hd-surface,var(--card-background-color,#fff)))}.strip-label{font-size:12px;display:block;margin-bottom:8px}.commands{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px}.commands button{min-height:44px;min-width:0;padding:8px 10px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:10px;background:var(--hd-surface,var(--card-background-color,#fff));color:inherit;cursor:pointer;font-size:12px}.commands button:hover{border-color:var(--primary-color,#0088cc)}.notice{display:block;font-size:12px;line-height:1.4;margin-top:6px}.notice:empty{display:none}@media(max-width:450px){article{padding:12px}.controls{grid-template-columns:repeat(2,minmax(0,1fr))}.commands{grid-template-columns:1fr}}
     `;
     const article = document.createElement("article");
     const link = document.createElement("button"); link.type = "button"; link.className = "room-toggle";
@@ -197,7 +225,42 @@ export class HomeDashboardRoomControls extends Base {
     const chevron = icon("mdi:chevron-down"); chevron.className = "expand-icon";
     link.append(icon(room.icon || "mdi:sofa-outline"), copy, chevron); article.append(link);
     const controls = document.createElement("div"); controls.className = "controls";
-    if (this.config.show_controls !== false) kinds.filter(kind => roomControlSources(room, kind).length).forEach(kind => {
+    const orderedEntities = roomQuickControlEntities(room);
+    if (this.config.show_controls !== false && orderedEntities !== undefined) orderedEntities.forEach((entity, index) => {
+      const kind = kindForEntity(room, this.currentHass, entity);
+      if (!kind) return;
+      const key = `${index}:${entity}`;
+      const button = document.createElement("button"); button.type = "button"; button.className = "control";
+      const text = document.createElement("span"); text.append(document.createElement("strong"), document.createElement("small"));
+      button.append(icon(icons[kind]), text); controls.append(button);
+      const strip = document.createElement("div"); strip.className = "strip"; strip.hidden = true; strip.id = `control-${index}`;
+      const notice = document.createElement("span"); notice.className = "notice"; notice.setAttribute("role", "status");
+      const control: OrderedControl = { key, entity, kind, button, notice };
+      if (kind === "cover" || kind === "awning") {
+        const controlName = String(this.currentHass?.states?.[entity]?.attributes?.friendly_name ?? labels[kind]);
+        control.strip = strip;
+        button.setAttribute("aria-expanded", "false"); button.setAttribute("aria-controls", strip.id);
+        const label = document.createElement("strong"); label.className = "strip-label";
+        label.textContent = `${room.name} · ${controlName}`; strip.append(label);
+        const commands = document.createElement("div"); commands.className = "commands";
+        for (const [command, commandLabel] of [["open",kind === "awning" ? "Uit" : "Open"],["stop","Stop"],["close",kind === "awning" ? "In" : "Dicht"]] as const) {
+          const commandButton = document.createElement("button"); commandButton.type = "button"; commandButton.textContent = commandLabel; commandButton.dataset.command = command;
+          commandButton.setAttribute("aria-label", `${room.name} · ${controlName} ${commandLabel}`);
+          commandButton.addEventListener("click", () => { void this.perform(kind, entity, key, notice, command); }); commands.append(commandButton);
+        }
+        const details = document.createElement("button"); details.type = "button"; details.textContent = "Details";
+        details.addEventListener("click", () => this.moreInfo(entity)); commands.append(details); strip.append(commands);
+      }
+      button.addEventListener("click", () => {
+        const state = this.currentHass?.states?.[entity];
+        if (kind === "climate" || !room.controls_enabled || !this.currentHass?.callService || !known(state)) { this.moreInfo(entity); return; }
+        if (kind === "cover" || kind === "awning") { this.toggleStrip(strip, button); return; }
+        if (planEntityControl(room, this.currentHass, entity, kind)) void this.perform(kind, entity, key, notice, "toggle");
+        else this.moreInfo(entity);
+      });
+      this.orderedControls.push(control); panel.append(strip, notice);
+    });
+    else if (this.config.show_controls !== false) kinds.filter(kind => roomControlSources(room, kind).length).forEach(kind => {
       const button = document.createElement("button"); button.type = "button"; button.className = "control";
       const text = document.createElement("span"); const title = document.createElement("strong"); title.textContent = labels[kind];
       text.append(title, document.createElement("small")); button.append(icon(icons[kind]), text);
@@ -220,24 +283,24 @@ export class HomeDashboardRoomControls extends Base {
         for (const [command, label] of [["open",kind === "awning" ? "Uit" : "Open"],["stop","Stop"],["close",kind === "awning" ? "In" : "Dicht"]] as const) {
           const control = document.createElement("button"); control.type = "button"; control.textContent = label; control.dataset.command = command;
           control.setAttribute("aria-label", `${room.name} · ${labels[kind]} ${label}`);
-          control.addEventListener("click", () => { void this.perform(kind, command); }); commands.append(control);
+          control.addEventListener("click", () => { void this.perform(kind, target(room, kind), kind, notice, command); }); commands.append(control);
         }
         const details = document.createElement("button"); details.type = "button"; details.textContent = "Details";
         details.addEventListener("click", () => this.moreInfo(target(room, kind))); commands.append(details); strip.append(commands);
         this.strips.set(kind, strip);
       }
       button.addEventListener("click", () => {
-        if (sources.length > 1) { this.toggleStrip(kind, strip, button); return; }
+        if (sources.length > 1) { this.toggleStrip(strip, button); return; }
         if (kind === "climate" || !target(room, kind)) { this.moreInfo(sources[0]!); return; }
         const state = this.currentHass?.states?.[target(room, kind)];
         if (!room.controls_enabled || !this.currentHass?.callService || !known(state)) { this.moreInfo(target(room, kind)); return; }
         if (kind === "cover" || kind === "awning") {
-          this.toggleStrip(kind, strip, button);
-        } else if (planRoomControl(room, this.currentHass, kind)) { void this.perform(kind, "toggle"); }
+          this.toggleStrip(strip, button);
+        } else if (planRoomControl(room, this.currentHass, kind)) { void this.perform(kind, target(room, kind), kind, notice, "toggle"); }
         else this.moreInfo(target(room, kind));
       });
       const notice = document.createElement("span"); notice.className = "notice"; notice.setAttribute("role", "status");
-      this.notices.set(kind, notice); panel.append(strip, notice);
+      panel.append(strip, notice);
     });
     panel.prepend(controls);
     if (!controls.childElementCount) { const empty = document.createElement("small"); empty.textContent = "Nog geen functies ingesteld voor deze kamer."; panel.append(empty); }

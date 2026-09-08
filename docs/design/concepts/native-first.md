@@ -33,7 +33,7 @@ Vier views zijn zichtbaar in de primaire navigatie:
 
 Semantische subviews verzorgen progressive disclosure:
 
-- `room-<room-key>` met `back_path` naar `rooms`;
+- `room-<room-key>` met `back_path` naar `home`;
 - `domain-security`, `domain-climate`, `domain-water`, `domain-pool` en vergelijkbare details
   met `back_path` naar `more` of `energy`;
 - `mobility-kia`, `cleaning-robot` en `outside-garden` voor de volledige specialistische cards;

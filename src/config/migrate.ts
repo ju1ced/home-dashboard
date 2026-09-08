@@ -86,6 +86,7 @@ export function migrateConfig(input: unknown): MigrationResult {
     battery_entities: []
   }), warnings, "persons");
   merged.security.cameras = normalizeItems(merged.security.cameras, createCameraConfig, warnings, "security.cameras");
+  const roomInputs = [...merged.rooms] as unknown[];
   merged.rooms = normalizeItems<RoomConfig>(merged.rooms, (index) => ({
     key: `room_${index + 1}`,
     name: "",
@@ -114,6 +115,12 @@ export function migrateConfig(input: unknown): MigrationResult {
       swing_modes: []
     }
   }), warnings, "rooms");
+  merged.rooms.forEach((room, index) => {
+    const inputRoom = roomInputs[index];
+    if (isObject(inputRoom) && Array.isArray(inputRoom.control_entities)) {
+      room.control_entities = structuredClone(inputRoom.control_entities) as string[];
+    }
+  });
   merged.actions = normalizeItems<ActionConfig>(merged.actions, (index) => ({
     key: `action_${index + 1}`,
     label: "",

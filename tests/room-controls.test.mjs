@@ -96,6 +96,24 @@ test('bestaande kamerbronnen worden detailchips zonder automatische actiedoelen'
   assert.deepEqual(roomControlSources(room,'climate'),['climate_primary']);
   assert.equal(planRoomControl(room,hass,'climate'),undefined);
 });
+test('geordende quick actions zijn optioneel en ondersteunen herhaalde types', () => {
+  const {room,hass}=setup();
+  const secondLight=ref('light','second_fixture');
+  const secondCover=ref('cover','second_fixture');
+  hass.states[secondLight]={state:'on'};
+  hass.states[secondCover]={state:'closed',attributes:{supported_features:11,device_class:'shutter'}};
+  room.control_entities=[room.control_cover_entity,secondLight,room.control_light_entity,secondCover];
+  const migrated=migrateConfig({rooms:[room]}).config.rooms[0];
+  assert.deepEqual(migrated.control_entities,room.control_entities);
+  room.control_entities=[];
+  assert.deepEqual(migrateConfig({rooms:[room]}).config.rooms[0].control_entities,[]);
+});
+test('migratie onderscheidt oningestelde legacybediening van een bewust lege actierij', () => {
+  const legacy=migrateConfig({rooms:[{key:'legacy',name:'Legacy',area_id:'EXAMPLE_AREA'}]}).config.rooms[0];
+  const empty=migrateConfig({rooms:[{key:'empty',name:'Empty',area_id:'EXAMPLE_AREA',control_entities:[]}]}).config.rooms[0];
+  assert.equal(legacy.control_entities,undefined);
+  assert.deepEqual(empty.control_entities,[]);
+});
 test('schema accepteert optionele velden en validator weigert verkeerde of dubbele coverdoelen', () => {
   const {room}=setup();const config=migrateConfig({rooms:[room]}).config;
   assert.deepEqual(validateConfigSchema(config),[]);
@@ -103,4 +121,6 @@ test('schema accepteert optionele velden en validator weigert verkeerde of dubbe
   config.rooms[0].control_awning_entity=room.control_cover_entity;
   const codes=validateConfig(config).map(x=>x.code);
   assert.ok(codes.includes('control_domain'));assert.ok(codes.includes('duplicate_control'));
+  config.rooms[0].control_entities=[ref('switch','fixture')];
+  assert.ok(validateConfig(config).some(x=>x.path==='rooms[0].control_entities[0]'&&x.code==='control_domain'));
 });

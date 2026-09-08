@@ -127,8 +127,19 @@ function renderCameras(config: HomeDashboardConfigV1, expandedItems: Set<string>
   </div></details>`).join("");
 }
 
+function visibleRoomControls(room: RoomConfig): string[] {
+  if (room.control_entities !== undefined) return room.control_entities;
+  const light = room.control_light_entity ? [room.control_light_entity] : room.light_entities;
+  const media = room.control_media_entity ? [room.control_media_entity] : room.media_entities;
+  const cover = room.control_cover_entity ? [room.control_cover_entity] : room.cover_entities.filter(entity => entity !== room.control_awning_entity);
+  return [...new Set([...light, ...media, ...cover, room.control_awning_entity ?? "", room.hvac.entity].filter(Boolean))];
+}
+
 function renderRooms(config: HomeDashboardConfigV1, expandedItems: Set<string>): string {
-  return config.rooms.map((roomConfig, index) => `<details class="item" data-item-token="${escapeHtml(getEditorItemToken("rooms", roomConfig, index))}" ${expandedItems.has(getEditorItemToken("rooms", roomConfig, index)) ? "open" : ""}>
+  return config.rooms.map((roomConfig, index) => {
+    const controls = visibleRoomControls(roomConfig);
+    const controlOrder = controls.length ? `<div class="order" aria-label="Volgorde quick actions">${controls.map((entity, controlIndex) => `<div><code>${escapeHtml(entity)}</code><span><button type="button" aria-label="Verplaats quick action ${controlIndex + 1} omhoog" data-room-control-move="up" data-room-index="${index}" data-control-index="${controlIndex}" ${controlIndex === 0 ? "disabled" : ""}>↑</button><button type="button" aria-label="Verplaats quick action ${controlIndex + 1} omlaag" data-room-control-move="down" data-room-index="${index}" data-control-index="${controlIndex}" ${controlIndex === controls.length - 1 ? "disabled" : ""}>↓</button></span></div>`).join("")}</div>` : `<small>Geen quick actions gekozen.</small>`;
+    return `<details class="item" data-item-token="${escapeHtml(getEditorItemToken("rooms", roomConfig, index))}" ${expandedItems.has(getEditorItemToken("rooms", roomConfig, index)) ? "open" : ""}>
     <summary>${escapeHtml(roomConfig.name || roomConfig.key || `Kamer ${index + 1}`)}</summary><div class="item-body">
     <div class="item-toolbar"><span class="item-actions"><button type="button" aria-label="Verplaats ${escapeHtml(roomConfig.name || roomConfig.key || `kamer ${index + 1}`)} omhoog" data-room-move="up" data-index="${index}" ${index === 0 ? "disabled" : ""}>↑</button><button type="button" aria-label="Verplaats ${escapeHtml(roomConfig.name || roomConfig.key || `kamer ${index + 1}`)} omlaag" data-room-move="down" data-index="${index}" ${index === config.rooms.length - 1 ? "disabled" : ""}>↓</button><button type="button" aria-label="Verwijder kamer ${escapeHtml(roomConfig.name || roomConfig.key || index + 1)}" data-remove="rooms" data-index="${index}">Verwijder</button></span></div>
     <label>Logische sleutel<input data-collection="rooms" data-index="${index}" data-field="key" value="${escapeHtml(roomConfig.key)}"></label>
@@ -139,12 +150,12 @@ function renderRooms(config: HomeDashboardConfigV1, expandedItems: Set<string>):
     <label>Extra devices${renderSelector("rooms", index, "device_ids", roomConfig.device_ids, { device: { multiple: true } })}</label>
     <label>Functies<select multiple data-collection="rooms" data-index="${index}" data-field="capabilities">${ROOM_CAPABILITIES.map((value) => `<option value="${value}" ${roomConfig.capabilities.includes(value) ? "selected" : ""}>${value}</option>`).join("")}</select></label>
     <label><input type="checkbox" data-collection="rooms" data-index="${index}" data-field="home_favorite" ${roomConfig.home_favorite ? "checked" : ""}>Favoriet op Home (maximaal vier, volgorde via pijlen)</label>
-    <label><input type="checkbox" data-collection="rooms" data-index="${index}" data-field="controls_enabled" ${roomConfig.controls_enabled ? "checked" : ""}>Directe bediening toestaan voor onderstaande doelen</label>
-    <p>Kies één lamp/groep, rolluik, luifel en speler. De knop bedient precies dat doel. Luifelbeveiliging hoort in Home Assistant. Zonder toestemming openen knoppen alleen details.</p>
-    <label>Lichten actiedoel${renderSelector("rooms", index, "control_light_entity", roomConfig.control_light_entity || "", { entity: { domain: "light" } })}</label>
-    <label>Rolluik actiedoel${renderSelector("rooms", index, "control_cover_entity", roomConfig.control_cover_entity || "", { entity: { domain: "cover" } })}</label>
-    <label>Luifel actiedoel${renderSelector("rooms", index, "control_awning_entity", roomConfig.control_awning_entity || "", { entity: { domain: "cover" } })}</label>
-    <label>Radio actiedoel${renderSelector("rooms", index, "control_media_entity", roomConfig.control_media_entity || "", { entity: { domain: "media_player" } })}</label>
+    <h4>Quick actions</h4>
+    <label>Knoppen op Home${renderSelector("rooms", index, "control_entities", controls, { entity: { domain: ["light", "cover", "media_player", "climate"], multiple: true } })}</label>
+    <small>Kies nul tot zestien; orden met de pijlen.</small>
+    ${controlOrder}
+    <label><input type="checkbox" data-collection="rooms" data-index="${index}" data-field="controls_enabled" ${roomConfig.controls_enabled ? "checked" : ""}>Directe bediening toestaan voor gekozen licht-, cover- en mediaknoppen</label>
+    <p>Zonder toestemming openen de knoppen alleen Home Assistant-details. Klimaat opent altijd het native detailvenster. Luifelbeveiliging blijft in Home Assistant.</p>
     <label>Scripts (bewaard, max. 2)<select multiple data-collection="rooms" data-index="${index}" data-field="quick_actions">${config.actions.map((action) => `<option value="${escapeHtml(action.key)}" ${roomConfig.quick_actions.includes(action.key) ? "selected" : ""}>${escapeHtml(action.label || action.key)}</option>`).join("")}</select></label>
     <h4>Bronmappings</h4>
     <label>Verlichting${renderSelector("rooms", index, "light_entities", roomConfig.light_entities, { entity: { domain: "light", multiple: true } })}</label>
@@ -162,7 +173,8 @@ function renderRooms(config: HomeDashboardConfigV1, expandedItems: Set<string>):
     <label>Presets<input data-collection="rooms" data-index="${index}" data-field="hvac.presets" value="${escapeHtml(roomConfig.hvac.presets.join(", "))}"></label>
     <label>Fan modes<input data-collection="rooms" data-index="${index}" data-field="hvac.fan_modes" value="${escapeHtml(roomConfig.hvac.fan_modes.join(", "))}"></label>
     <label>Swing modes<input data-collection="rooms" data-index="${index}" data-field="hvac.swing_modes" value="${escapeHtml(roomConfig.hvac.swing_modes.join(", "))}"></label>
-  </div></details>`).join("");
+  </div></details>`;
+  }).join("");
 }
 
 function renderActions(config: HomeDashboardConfigV1, expandedItems: Set<string>): string {
@@ -286,6 +298,7 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
     } else if (collection === "rooms") {
       const room: RoomConfig = {
         key: `room_${this._config.rooms.length + 1}`, name: "", icon: "mdi:sofa", floor_id: "", area_id: "", device_ids: [], capabilities: [], quick_actions: [],
+        control_entities: [],
         light_entities: [], cover_entities: [], media_entities: [], safety_entities: [], camera_entities: [], power_entities: [], history_entities: [],
         hvac: { entity: "", comfort_entities: [], history_entities: [], modes: [], presets: [], fan_modes: [], swing_modes: [] }
       };
@@ -365,6 +378,12 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
     this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-add]").forEach((controlButton) => controlButton.addEventListener("click", () => this.addItem(controlButton.dataset.add ?? "")));
     this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-remove]").forEach((controlButton) => controlButton.addEventListener("click", () => this.removeItem(controlButton.dataset.remove ?? "", Number(controlButton.dataset.index))));
     this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-room-move]").forEach((controlButton) => controlButton.addEventListener("click", () => this.moveItem(this._config.rooms, Number(controlButton.dataset.index), controlButton.dataset.roomMove as "up" | "down")));
+    this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-room-control-move]").forEach((controlButton) => controlButton.addEventListener("click", () => {
+      const room = this._config.rooms[Number(controlButton.dataset.roomIndex)];
+      if (!room) return;
+      room.control_entities ??= visibleRoomControls(room);
+      this.moveItem(room.control_entities, Number(controlButton.dataset.controlIndex), controlButton.dataset.roomControlMove as "up" | "down");
+    }));
     this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-view-move]").forEach((controlButton) => controlButton.addEventListener("click", () => this.moveItem(this._config.layout.view_order, Number(controlButton.dataset.index), controlButton.dataset.viewMove as "up" | "down")));
     this.shadowRoot.querySelectorAll<HTMLDetailsElement>("details[data-item-token]").forEach((details) => {
       const token = details.dataset.itemToken;

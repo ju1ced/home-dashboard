@@ -64,7 +64,7 @@ test("dashboardstrategy genereert vijf hoofdviews en stabiele kamer-subviews", a
   assert.deepEqual(generated.views.map((view) => view.path), ["energy", "home", "rooms", "domains", "more", "room-living-room"]);
   assert.equal(new Set(generated.views.map((view) => view.path)).size, 6);
   assert.ok(generated.views.slice(0, 5).every((view) => view.subview === false && view.strategy.type === "custom:home-dashboard-view"));
-  assert.ok(generated.views.slice(5).every((view) => view.subview === true && view.back_path === "rooms" && view.strategy.view === "room"));
+  assert.ok(generated.views.slice(5).every((view) => view.subview === true && view.back_path === "home" && view.strategy.view === "room"));
   assert.equal(roomPath(config.rooms[0]), "room-living-room");
   assert.doesNotThrow(() => JSON.stringify(generated));
   assert.deepEqual(generated, await HomeDashboardStrategy.generate(config));

@@ -253,3 +253,10 @@
 - **Status:** uitwerking en publicatie als testrelease gevraagd door de eigenaar op 8 september 2026; v0.8.0-alpha.3.
 - **Besluit:** Vandaag en camera delen op desktop één uitgelijnde rij. Bron- en actiestroken binnen een kamer gedragen zich als sub-accordion. Kamerdetails gebruiken de beschikbare breedte.
 - **Navigatie:** de native terugpijl behoudt de hiërarchische route naar Kamers. Een expliciete Home-knop in de kamerheader biedt de rechtstreekse route naar Home, ongeacht vanwaar de kamer werd geopend.
+
+## D-043 — Geordende quick actions en één native terugroute
+
+- **Status:** uitwerking gevraagd door de eigenaar op 8 september 2026; lokale candidate `v0.8.0-alpha.4`.
+- **Besluit:** een optionele `control_entities`-lijst bepaalt per kamer exact welke nul tot zestien quick-actionchips zichtbaar zijn en in welke volgorde. Licht, cover, mediaspeler en klimaat mogen elk meermaals voorkomen. Iedere directe servicecall blijft beperkt tot de gekozen entiteit en bestaande capability- en confirmationregels.
+- **Migratie:** zolang het nieuwe veld ontbreekt, blijft de gepubliceerde bediening uit alpha.3 zichtbaar. Een opgeslagen lege lijst is een bewuste keuze voor geen quick actions.
+- **Navigatie:** de extra Home-knop verdwijnt uit de kamerhero. De native terugpijl krijgt `back_path: home`, zodat Home op hetzelfde niveau als de pijl bereikbaar is.
