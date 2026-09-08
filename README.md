@@ -1,5 +1,7 @@
 # Home Dashboard — ontwerpvoorstel
 
+Testrelease **v0.8.0-alpha.3** lijnt Vandaag en camera uit, verfijnt de uitklapbare kamerbediening en maakt kamerdetails breder met een aparte Home-route. Zie de [renders](docs/renders/expandable-rooms/README.md) en [testchecklist](docs/releases/testing-v0.8.0-alpha.3.md).
+
 Testrelease **v0.8.0-alpha.2** voegt een bredere Home-weergave en uitklapbare kamerpanelen met vijf soorten chips toe. [Renders en validatie](docs/renders/expandable-rooms/README.md) en de [testchecklist](docs/releases/testing-v0.8.0-alpha.2.md) beschrijven de nieuwe bediening.
 
 > Actuele ontwerprichting (7 september 2026): [vaste kamerbediening, rustige dataversheid en behoud van afvalophaling](docs/design/room-controls-direction.md). Dit besluit heeft voor deze onderwerpen voorrang op de eerdere ontwerpbaseline hieronder; implementatie volgt afzonderlijk.

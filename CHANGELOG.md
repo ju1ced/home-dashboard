@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.0-alpha.3 — 2026-09-08
+
+- Vandaag en de compacte camerakaart delen op desktop dezelfde boven- en onderlijn.
+- Kamerchips en bronkeuzes krijgen meer visuele hiërarchie; per kamer blijft maximaal één bron-/actiestrook open.
+- Kamerdetails gebruiken de beschikbare dashboardbreedte en bieden naast de terugpijl naar Kamers een expliciete Home-knop.
+
 ## 0.8.0-alpha.2 — 2026-09-07
 
 - Home gebruikt de beschikbare breedte, zonder interne limiet van 1180 px.

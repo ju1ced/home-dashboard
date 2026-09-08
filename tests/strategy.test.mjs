@@ -388,7 +388,7 @@ test("visuele cards behouden HA-details naast expliciete kameracties", async () 
   assert.match(bundle, /compact-weather/);
   assert.match(bundle, /today-main/);
   assert.match(bundle, /\.today-main\{grid-column:1\/3/);
-  assert.match(bundle, /\.security-panel\{grid-column:3;grid-row:1\}/);
+  assert.match(bundle, /\.security-panel\{grid-column:3;grid-row:1;height:100%\}/);
   assert.match(bundle, /repeat\(auto-fit,minmax\(130px,1fr\)\)/);
   assert.match(bundle, /\.waste\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)\}/);
   assert.match(bundle, /forecast-row/);

@@ -92,6 +92,10 @@ try {
   assert.equal(performance.same,true);assert.equal(performance.html,true);
   await page.evaluate(()=>{const f=roomFixture;const room=f.config.rooms[0];room.light_entities=[room.control_light_entity,'second_light_fixture'];room.control_light_entity='';f.hass.states.second_light_fixture={state:'off',attributes:{friendly_name:'Tweede lamp'}};f.home.setConfig({...f.config,type:'custom:home-dashboard-home-overview'});f.home.hass=f.hass;f.home.addEventListener('hass-more-info',event=>window.lastDetails=event.detail.entityId);});
   await page.getByRole('button',{name:/Woonkamer · Lichten.*Toon apparaten/}).click();
+  await page.getByRole('button',{name:/Woonkamer · Rolluiken.*Toon bediening/}).click();
+  assert.equal(await page.getByRole('button',{name:'Tweede lamp · Uit',exact:true}).isVisible(),false);
+  await page.getByRole('button',{name:/Woonkamer · Lichten.*Toon apparaten/}).click();
+  await page.screenshot({path:`${directory}/source-tray.png`,fullPage:true});
   await page.getByRole('button',{name:'Tweede lamp · Uit',exact:true}).click();
   assert.equal(await page.evaluate(()=>lastDetails),'second_light_fixture');
   assert.equal(await page.evaluate(()=>roomFixture.calls.length),0);
@@ -102,6 +106,15 @@ try {
   await page.evaluate(()=>{const f=roomFixture;f.hass.states.second_light_fixture.state='unavailable';f.home.hass={...f.hass};});
   assert.match(await multipleLights.getAttribute('aria-label'),/2 apparaten · 1 onbekend/);
   assert.equal(await multipleLights.evaluate(el=>el.classList.contains('active')),false);
+  await page.setViewportSize({width:1440,height:1100});await open();
+  const aligned=await page.evaluate(()=>{const root=roomFixture.home.shadowRoot;const today=root.querySelector('.today-main').getBoundingClientRect();const panel=root.querySelector('.security-panel').getBoundingClientRect();const host=root.querySelector('home-dashboard-camera-strip').getBoundingClientRect();const camera=root.querySelector('home-dashboard-camera-strip').shadowRoot.querySelector('ha-card').getBoundingClientRect();return {top:Math.abs(today.top-camera.top),bottom:Math.abs(today.bottom-camera.bottom),today:today.height,panel:panel.height,host:host.height,camera:camera.height};});
+  assert.ok(aligned.top<1&&aligned.bottom<1,`Vandaag/camera niet uitgelijnd: ${JSON.stringify(aligned)}`);
+  await page.evaluate(()=>{const f=roomFixture;document.body.replaceChildren();const detail=document.createElement('home-dashboard-room-detail');detail.setConfig({type:'custom:home-dashboard-room-detail',room:f.config.rooms[0]});detail.hass=f.hass;document.body.append(detail);window.detailFixture=detail;scrollTo(0,0);});
+  await page.getByRole('link',{name:'Ga naar Home',exact:true}).waitFor();
+  assert.equal(await page.getByRole('link',{name:'Ga naar Home',exact:true}).getAttribute('href'),'home');
+  const detailWidth=await page.locator('home-dashboard-room-detail').evaluate(el=>el.shadowRoot.querySelector('.detail').getBoundingClientRect().width);
+  assert.ok(detailWidth>1300);
+  await page.screenshot({path:`${directory}/room-detail.png`,fullPage:true});
   // Real editor events, including selector change bubbling, preserve the new fields.
   await page.goto('http://127.0.0.1:4173/editor.html');
   await page.locator('[data-section-nav="rooms"]').click();
@@ -114,5 +127,5 @@ try {
   const saved=await page.evaluate(()=>savedRoomConfig.rooms[0]);
   assert.equal(saved.home_favorite,true);assert.equal(saved.controls_enabled,true);assert.equal(saved.control_light_entity,'light_fixture');
   assert.deepEqual(errors,[]);
-  console.log(`Browserchecks geslaagd: 7 renders, afval, favorieten, stale, acties, foutfeedback, focus, touchdoelen en GUI. 100 irrelevante updates: ${performance.ms.toFixed(1)} ms, geen vervanging van kamer-DOM.`);
+  console.log(`Browserchecks geslaagd: 9 renders, uitlijning, brede kamerdetailpagina, Home-link, kameraccordion, afval, acties, focus, touchdoelen en GUI. 100 irrelevante updates: ${performance.ms.toFixed(1)} ms, geen vervanging van kamer-DOM.`);
 } finally {await browser.close();}

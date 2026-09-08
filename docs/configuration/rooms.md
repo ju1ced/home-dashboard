@@ -1,5 +1,7 @@
 # Kamers en kamerdetails
 
+Werkversie v0.8.0-alpha.3: een kamer toont maximaal één geopende bron- of actiestrook tegelijk. Kamerdetails hebben geen interne breedtelimiet meer. De Home-knop in de kamerheader vult de bestaande terugpijl naar Kamers aan.
+
 Werkversie v0.8.0-alpha.2: de kamerkop klapt de bediening open/dicht. Verlichting, radio, rolluiken, luifel en airco/verwarming verschijnen als chips waar bronnen zijn ingesteld. De klimaat-chip gebruikt de bestaande Klimaatbron. Voor licht/media/covers zonder direct actiedoel blijven de bestaande bronmappings als detailkeuze bereikbaar, zonder automatische activering van services. Volledige kamer is een afzonderlijke link. Escape sluit het paneel en herstelt focus op de kamerkop.
 
 
