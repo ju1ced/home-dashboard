@@ -126,6 +126,16 @@ export class HomeDashboardRoomControls extends Base {
       if (generation === this.generation) { this.pending.delete(pendingKey); this.update(); }
     }
   }
+  private toggleStrip(kind: Kind, strip: HTMLElement, button: HTMLButtonElement): void {
+    const willOpen = strip.hidden;
+    this.strips.forEach((candidate, candidateKind) => {
+      candidate.hidden = true;
+      this.buttons.get(candidateKind)?.setAttribute("aria-expanded", "false");
+    });
+    strip.hidden = !willOpen;
+    button.setAttribute("aria-expanded", String(willOpen));
+    if (willOpen) this.update();
+  }
   private update(): void {
     const room = this.config?.room;
     if (!room) return;
@@ -169,10 +179,10 @@ export class HomeDashboardRoomControls extends Base {
     const style = document.createElement("style");
     style.textContent = `
       :host{display:block;min-width:0;color:var(--hd-text,var(--primary-text-color,#17212b))}*{box-sizing:border-box}
-      article{height:100%;padding:12px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:18px;background:var(--hd-surface,var(--ha-card-background,var(--card-background-color,#fff)));box-shadow:var(--hd-shadow,0 2px 5px #00000009)}
-      .room-toggle{display:flex;width:100%;border:0;background:transparent;font:inherit;text-align:left;cursor:pointer;}a,.room-toggle{display:flex;gap:12px;align-items:center;color:inherit;text-decoration:none;min-height:52px;padding:2px 4px 10px}a>ha-icon,.room-toggle>ha-icon{color:var(--primary-color,#0088cc)}.copy{display:grid;gap:4px;flex:1;min-width:0}strong{font-size:14px}small{font-size:12px;color:var(--hd-muted,var(--secondary-text-color,#596777));overflow-wrap:anywhere}.warning{color:var(--error-color,#b3261e)}
-      [hidden]{display:none!important}.panel{padding-top:10px;border-top:1px solid var(--hd-border,var(--divider-color,#dce2e8))}.room-toggle[aria-expanded="true"]>.expand-icon{transform:rotate(180deg)}.full-room{font-size:12px;min-height:44px;padding-top:12px;color:var(--primary-color,#0088cc)}.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:8px}.control{display:flex;align-items:center;gap:8px;min-height:48px;text-align:left;padding:8px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:12px;background:transparent;color:inherit;cursor:pointer}.control span{display:grid;gap:3px}.control strong{font-size:12px}.active{background:color-mix(in srgb,#0088cc 10%,transparent);border-color:color-mix(in srgb,#0088cc 35%,transparent)}.active ha-icon{color:var(--info-color,#0088cc)}ha-icon{width:23px;height:23px;flex-shrink:0}
-      button{font:inherit}button:disabled{opacity:.5;cursor:default}button:focus-visible,a:focus-visible{outline:2px solid var(--primary-color,#0088cc);outline-offset:2px}.strip{margin-top:8px;padding:8px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:12px}.strip[hidden]{display:none}.strip-label{font-size:12px;display:block;margin-bottom:6px}.commands{display:flex;gap:8px;flex-wrap:wrap}.commands button{flex:1;min-height:44px;min-width:62px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:8px;background:transparent;color:inherit;cursor:pointer;font-size:12px}.notice{display:block;font-size:12px;line-height:1.4;margin-top:6px}.notice:empty{display:none}@media(max-width:450px){.controls{grid-template-columns:repeat(2,minmax(0,1fr))}}
+      article{height:100%;padding:14px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:18px;background:var(--hd-surface,var(--ha-card-background,var(--card-background-color,#fff)));box-shadow:var(--hd-shadow,0 2px 5px #00000009)}
+      .room-toggle{display:flex;width:100%;border:0;background:transparent;font:inherit;text-align:left;cursor:pointer}.room-toggle{gap:12px;align-items:center;color:inherit;min-height:54px;padding:2px}.room-toggle>ha-icon:first-child{width:38px;height:38px;padding:8px;border-radius:12px;background:color-mix(in srgb,var(--primary-color,#0088cc) 11%,transparent);color:var(--primary-color,#0088cc)}.copy{display:grid;gap:4px;flex:1;min-width:0}strong{font-size:14px}small{font-size:12px;color:var(--hd-muted,var(--secondary-text-color,#596777));overflow-wrap:anywhere}.warning{color:var(--error-color,#b3261e)}
+      [hidden]{display:none!important}.panel{margin-top:10px;padding-top:12px;border-top:1px solid var(--hd-border,var(--divider-color,#dce2e8))}.room-toggle[aria-expanded="true"]>.expand-icon{transform:rotate(180deg)}.expand-icon{transition:transform .16s ease}.full-room{display:inline-flex;align-items:center;width:max-content;min-height:44px;margin-top:8px;padding:8px 4px;color:var(--primary-color,#0088cc);font-size:12px;font-weight:650;text-decoration:none}.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:8px}.control{display:flex;align-items:center;gap:9px;min-height:58px;text-align:left;padding:10px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:14px;background:var(--hd-surface-raised,var(--secondary-background-color,#f5f7f9));color:inherit;cursor:pointer}.control span{display:grid;gap:3px;min-width:0}.control strong{font-size:12px}.control small{line-height:1.25}.control:hover{border-color:color-mix(in srgb,var(--primary-color,#0088cc) 45%,var(--hd-border,var(--divider-color,#dce2e8)))}.active{background:color-mix(in srgb,var(--primary-color,#0088cc) 12%,var(--hd-surface,var(--card-background-color,#fff)));border-color:color-mix(in srgb,var(--primary-color,#0088cc) 45%,transparent)}.active ha-icon{color:var(--primary-color,#0088cc)}ha-icon{width:23px;height:23px;flex-shrink:0}
+      button{font:inherit}button:disabled{opacity:.5;cursor:default}button:focus-visible,a:focus-visible{outline:2px solid var(--primary-color,#0088cc);outline-offset:2px}.strip{margin-top:10px;padding:11px;border:1px solid color-mix(in srgb,var(--primary-color,#0088cc) 25%,var(--hd-border,var(--divider-color,#dce2e8)));border-radius:14px;background:color-mix(in srgb,var(--primary-color,#0088cc) 5%,var(--hd-surface,var(--card-background-color,#fff)))}.strip[hidden]{display:none}.strip-label{font-size:12px;display:block;margin-bottom:8px}.commands{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px}.commands button{min-height:44px;min-width:0;padding:8px 10px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:10px;background:var(--hd-surface,var(--card-background-color,#fff));color:inherit;cursor:pointer;font-size:12px}.commands button:hover{border-color:var(--primary-color,#0088cc)}.notice{display:block;font-size:12px;line-height:1.4;margin-top:6px}.notice:empty{display:none}@media(max-width:450px){article{padding:12px}.controls{grid-template-columns:repeat(2,minmax(0,1fr))}.commands{grid-template-columns:1fr}}
     `;
     const article = document.createElement("article");
     const link = document.createElement("button"); link.type = "button"; link.className = "room-toggle";
@@ -196,6 +206,8 @@ export class HomeDashboardRoomControls extends Base {
       const sources = roomControlSources(room, kind);
       if (sources.length > 1) {
         button.setAttribute("aria-expanded", "false"); button.setAttribute("aria-controls", strip.id);
+        const label = document.createElement("strong"); label.className = "strip-label";
+        label.textContent = `${room.name} · ${labels[kind]}`; strip.append(label);
         const commands = document.createElement("div"); commands.className = "commands";
         sources.forEach(entity => { const control = document.createElement("button"); control.type = "button"; control.dataset.source = entity;
           control.addEventListener("click", () => this.moreInfo(entity)); commands.append(control); });
@@ -215,12 +227,12 @@ export class HomeDashboardRoomControls extends Base {
         this.strips.set(kind, strip);
       }
       button.addEventListener("click", () => {
-        if (sources.length > 1) { strip.hidden = !strip.hidden; button.setAttribute("aria-expanded", String(!strip.hidden)); return; }
+        if (sources.length > 1) { this.toggleStrip(kind, strip, button); return; }
         if (kind === "climate" || !target(room, kind)) { this.moreInfo(sources[0]!); return; }
         const state = this.currentHass?.states?.[target(room, kind)];
         if (!room.controls_enabled || !this.currentHass?.callService || !known(state)) { this.moreInfo(target(room, kind)); return; }
         if (kind === "cover" || kind === "awning") {
-          strip.hidden = !strip.hidden; button.setAttribute("aria-expanded", String(!strip.hidden)); this.update();
+          this.toggleStrip(kind, strip, button);
         } else if (planRoomControl(room, this.currentHass, kind)) { void this.perform(kind, "toggle"); }
         else this.moreInfo(target(room, kind));
       });

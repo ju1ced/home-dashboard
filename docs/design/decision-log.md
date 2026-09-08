@@ -247,3 +247,9 @@
 - **Besluit:** de kamerkop klapt een paneel open met chips voor verlichting, radio, rolluiken, luifel en airco/verwarming. Alleen Volledige kamer navigeert. Klimaat gebruikt de bestaande bron en het native detailvenster; oude apparaatmappings blijven bereikbaar zonder impliciete directe actiedoelen.
 - **Layout:** de interne Home-limiet van 1180 px vervalt; de beschikbare HA-dashboardbreedte bepaalt de buitenmaat. Responsive stapeling en afvalophaling blijven behouden.
 - **Validatie:** 62 tests en zeven fictieve browser-renders; toetsenbord, focus, bronfallback en bestaande actiegates gecontroleerd. Zie [runtime-renders](../renders/expandable-rooms/README.md). Publicatie wijzigt geen Home Assistant-dashboard en voert geen live HA-write uit.
+
+## D-042 — Uitlijning en navigatie van Home en kamerdetail
+
+- **Status:** uitwerking gevraagd door de eigenaar op 8 september 2026; lokale werkversie v0.8.0-alpha.3.
+- **Besluit:** Vandaag en camera delen op desktop één uitgelijnde rij. Bron- en actiestroken binnen een kamer gedragen zich als sub-accordion. Kamerdetails gebruiken de beschikbare breedte.
+- **Navigatie:** de native terugpijl behoudt de hiërarchische route naar Kamers. Een expliciete Home-knop in de kamerheader biedt de rechtstreekse route naar Home, ongeacht vanwaar de kamer werd geopend.

@@ -1,5 +1,7 @@
 # Home
 
+Werkversie v0.8.0-alpha.3: Vandaag en de compacte camera vullen op desktop dezelfde rijhoogte, zodat hun kaartonderkanten uitlijnen. Op smallere schermen blijven ze onder elkaar staan.
+
 Werkversie v0.8.0-alpha.2: Home benut de beschikbare dashboardbreedte. De kamerkop opent een paneel met chips; alleen de afzonderlijke link Volledige kamer navigeert. Airco / verwarming opent het native klimaatvenster op Home. Zie de [nieuwe renders](../renders/expandable-rooms/README.md).
 
 Vanaf v0.8.0-alpha.1 combineert Home rustige context met vaste favoriete kamerbediening.
