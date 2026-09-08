@@ -131,9 +131,14 @@ try {
   await page.screenshot({path:`${directory}/room-detail.png`,fullPage:true});
   // Real editor events, including selector change bubbling, preserve the new fields.
   await page.goto('http://127.0.0.1:4173/editor.html');
+  await page.evaluate(()=>document.querySelector('home-dashboard-strategy-editor').addEventListener('config-changed',event=>window.savedRoomConfig=event.detail.config));
+  const palette=page.locator('select[data-path="general.palette"]');
+  assert.deepEqual(await palette.locator('option').allTextContents(),['Huidig blauw','Warm zand','Rustig salie','Zacht leisteen','Gedempt petrol']);
+  await palette.selectOption('quiet_sage');
+  assert.equal(await page.evaluate(()=>savedRoomConfig.general.palette),'quiet_sage');
+  await page.screenshot({path:`${directory}/palette-selector.png`,fullPage:true});
   await page.locator('[data-section-nav="rooms"]').click();
   await page.locator('details[data-item-token]').first().locator('summary').click();
-  await page.evaluate(()=>document.querySelector('home-dashboard-strategy-editor').addEventListener('config-changed',event=>window.savedRoomConfig=event.detail.config));
   await page.locator('input[data-field="home_favorite"]').check();
   await page.locator('input[data-field="controls_enabled"]').check();
   const selector=page.locator('ha-selector[data-field="control_entities"] input');
@@ -148,5 +153,5 @@ try {
   await page.locator('ha-selector[data-field="control_entities"] input').fill('');await page.locator('ha-selector[data-field="control_entities"] input').dispatchEvent('change');
   saved=await page.evaluate(()=>savedRoomConfig.rooms[0]);assert.deepEqual(saved.control_entities,[]);
   assert.deepEqual(errors,[]);
-  console.log(`Browserchecks geslaagd: 11 renders, uitlijning, brede kamerdetailpagina, native Home-terugpad, directe positievolgorde, geordende optionele kameracties, afval, focus, touchdoelen en GUI. 100 irrelevante updates: ${performance.ms.toFixed(1)} ms, geen vervanging van kamer-DOM.`);
+  console.log(`Browserchecks geslaagd: 12 renders, uitlijning, brede kamerdetailpagina, native Home-terugpad, directe positievolgorde, geordende optionele kameracties, afval, focus, touchdoelen en GUI. 100 irrelevante updates: ${performance.ms.toFixed(1)} ms, geen vervanging van kamer-DOM.`);
 } finally {await browser.close();}

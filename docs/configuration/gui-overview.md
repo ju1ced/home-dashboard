@@ -6,7 +6,7 @@ De editor registreert zich als `home-dashboard-strategy-editor` en beheert schem
 
 De editor heeft tien onderdelen:
 
-1. **Algemeen:** titel, taal, tijdnotatie, startview, thema en informatiedichtheid.
+1. **Algemeen:** titel, taal, tijdnotatie, startview, light/dark-thema, kleurpalet en informatiedichtheid.
 2. **Vandaag:** weer, forecast, afval, thuisbatterij-SoC, afzonderlijk batterij laden en ontladen, zonnepanelenopbrengst, huisverbruik zonder batterijladen, maandelijkse vermogenspiek en optionele extra energiecontext.
 3. **Personen:** personselectie, label, privacyveilige toegestane zones, thuis/zone/andere locatie, freshness en batterijen.
 4. **Security:** alarm en een vrij aantal camera's met privacyinstelling, actie, fallback en bevestiging.

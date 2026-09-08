@@ -6,6 +6,7 @@ import type {
   SpecialistsConfig
 } from "../config/types";
 import { roomPath } from "./home-dashboard-room-cards";
+import { applyDashboardPalette, type DashboardPalette } from "../theme/palettes";
 
 export type LovelaceCardConfig = Record<string, unknown>;
 
@@ -23,6 +24,7 @@ interface EnergyOverviewConfig {
   type: "custom:home-dashboard-energy-overview";
   energy: EnergyConfig;
   theme_mode?: "system" | "light" | "dark";
+  palette?: DashboardPalette;
 }
 
 interface MetricSpec {
@@ -140,6 +142,7 @@ export class HomeDashboardEnergyOverview extends HTMLElementBase {
   public setConfig(config: EnergyOverviewConfig): void {
     if (!config?.energy) throw new Error("Energy-configuratie ontbreekt");
     this.config = config;
+    applyDashboardPalette(this, config.palette, config.theme_mode);
     this.render();
   }
 
@@ -241,14 +244,14 @@ function officialEnergyCards(energy: EnergyConfig): LovelaceCardConfig[] {
   return cards;
 }
 
-export function buildEnergySections(energy: EnergyConfig | undefined, maxColumns: number, themeMode: "system" | "light" | "dark" = "system"): LovelaceCardConfig[] {
+export function buildEnergySections(energy: EnergyConfig | undefined, maxColumns: number, themeMode: "system" | "light" | "dark" = "system", palette?: DashboardPalette): LovelaceCardConfig[] {
   if (!energy?.enabled) {
     return [{ type: "grid", cards: [{ type: "markdown", title: "Energie", content: "Activeer Energie via **Dashboard bewerken → Energie**." }] }];
   }
   const sections: LovelaceCardConfig[] = [{
     type: "grid",
     column_span: maxColumns,
-    cards: [{ type: "custom:home-dashboard-energy-overview", energy, theme_mode: themeMode, grid_options: { columns: "full", rows: "auto" } }]
+    cards: [{ type: "custom:home-dashboard-energy-overview", energy, theme_mode: themeMode, palette, grid_options: { columns: "full", rows: "auto" } }]
   }];
   const liveEntities = unique([
     ...energy.electricity_entities,

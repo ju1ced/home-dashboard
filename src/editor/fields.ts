@@ -7,6 +7,7 @@ export interface FieldDefinition {
   description: string;
   kind: FieldKind;
   options?: readonly string[];
+  optionLabels?: Readonly<Record<string, string>>;
   selector?: Record<string, unknown>;
 }
 
@@ -16,6 +17,7 @@ export const FIELD_DEFINITIONS: readonly FieldDefinition[] = [
   { path: "general.time_format", section: "general", label: "Tijdnotatie", description: "Volg Home Assistant of forceer 12/24 uur.", kind: "select", options: ["system", "12", "24"] },
   { path: "general.start_view", section: "general", label: "Startpagina", description: "Eerste semantische view.", kind: "select", options: ["home", "rooms", "energy", "domains", "more"] },
   { path: "general.theme_mode", section: "general", label: "Thema", description: "Systeem, licht of donker.", kind: "select", options: ["system", "light", "dark"] },
+  { path: "general.palette", section: "general", label: "Kleurpalet", description: "Kies de rustige kleurtaal voor de dashboardkaarten.", kind: "select", options: ["ocean_blue", "warm_stone", "quiet_sage", "soft_slate", "muted_petrol"], optionLabels: { ocean_blue: "Huidig blauw", warm_stone: "Warm zand", quiet_sage: "Rustig salie", soft_slate: "Zacht leisteen", muted_petrol: "Gedempt petrol" } },
   { path: "general.density", section: "general", label: "Dichtheid", description: "Comfortabel of compacter.", kind: "select", options: ["comfortable", "compact"] },
 
   { path: "today.enabled", section: "today", label: "Vandaag tonen", description: "Weer, afval en korte energiecontext.", kind: "checkbox" },

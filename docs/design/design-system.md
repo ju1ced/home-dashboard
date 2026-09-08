@@ -61,6 +61,10 @@
 
 Actieve quick actions gebruiken naast statustekst een functioneel accent: licht `#B66B00`, klimaat `#C95832`, media `#7155A8` en cover/luifel `#087DA8`. De kaart gebruikt eerst de overeenkomstige Home Assistant-statekleur wanneer het actieve thema die aanbiedt. Een gekleurde 2 px rand, linkerbalk en gevulde icoontegel maken het verschil ook op een groot scherm direct zichtbaar.
 
+### Configureerbare paletten
+
+`general.palette` kiest de merk- en oppervlaktetokens voor alle eigen dashboardkaarten. `ocean_blue` blijft de migratiestandaard; `warm_stone`, `quiet_sage`, `soft_slate` en `muted_petrol` zijn de vier rustige alternatieven. Ieder palet heeft een afzonderlijke light- en dark-reeks. In system mode blijven HA-oppervlak, tekst en rand leidend en verandert alleen de kleuridentiteit. De vergelijkende waarden en renders staan in [Rustige kleurpaletten](../renders/palette-options/README.md).
+
 - Border: 1 px; scheid eerst met oppervlak, pas daarna met lijn.
 - Shadow small: `0 1px 2px rgb(20 35 28 / 0.06)`.
 - Shadow raised: `0 10px 30px rgb(20 35 28 / 0.10)`; alleen dialogs of echte overlays.

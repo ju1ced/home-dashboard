@@ -267,3 +267,10 @@
 - **Besluit:** iedere quick action krijgt in de editor een directe positiekeuze. Chips gebruiken het entiteitsicoon, verwijderen een dubbele kamernaam en tonen actieve verlichting, media, covers en klimaat met een eigen contrastrijke accentkleur, rand, linkerbalk en gevulde icoontegel.
 - **Visuele taal:** Home gebruikt een vaste blauwe welkomstbalk zoals de kamerhero's. De expliciete light/dark-paletten verschuiven naar koel blauwgrijs; Home Assistant-themevariabelen blijven in systeemmodus leidend.
 - **Budget:** de harde minified bundlegrens groeit van 180 naar 184 kB voor naamnormalisatie, entiteitsiconen, directe herordening en de semantische actieve-statepresentatie. De limiet blijft een buildgate.
+
+## D-045 — Configureerbare rustige paletten
+
+- **Status:** integratie van alle vier varianten gevraagd door de eigenaar op 8 september 2026; candidate `v0.8.0-alpha.6`.
+- **Besluit:** `general.palette` kiest tussen het compatibele Huidig blauw, Warm zand, Rustig salie, Zacht leisteen en Gedempt petrol. Ieder palet bevat afzonderlijk gecontroleerde light- en dark-tokens; system mode erft de HA-oppervlakken en past merk- en statusaccenten toe.
+- **Scope:** de keuze loopt door naar Home, Kamers, kamerdetail, Energie en de centrale Kia-samenvatting. Native Home Assistant-kaarten en de globale HA-shell blijven hun actieve HA-thema volgen.
+- **Budget:** de harde bundlegrens groeit van 184 naar 190 kB voor vijf complete tokenreeksen, configuratievalidatie en toepassing op alle eigen kaarten. De gemeten candidate blijft onder deze buildgate.

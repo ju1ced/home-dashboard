@@ -2,6 +2,8 @@
 
 Vier visuele varianten op dezelfde fictieve dashboardstate. De informatiedichtheid, componenten en interacties veranderen niet, zodat de vergelijking alleen over het kleurgebruik gaat.
 
+Vanaf `v0.8.0-alpha.6` zijn alle vier beschikbaar onder **Dashboard bewerken → Algemeen → Kleurpalet**. Huidig blauw blijft als vijfde compatibiliteitskeuze bestaan. De instelling geldt voor Home, Kamers, kamerdetails, Energie en de centrale Kia-samenvatting.
+
 | Variant | Basiskarakter | Achtergrond | Hero |
 |---|---|---:|---:|
 | A · Warm zand | zacht taupe met warme accenten | `#F3F0EA` | `#765F52` |

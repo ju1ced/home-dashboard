@@ -27,6 +27,7 @@ export function createDefaultConfig(): HomeDashboardConfigV1 {
       time_format: "system",
       start_view: "home",
       theme_mode: "system",
+      palette: "ocean_blue",
       density: "comfortable"
     },
     today: {

@@ -45,8 +45,18 @@ test("defaults zijn een geldige schema-v1-configuratie", () => {
   const config = createDefaultConfig();
   assert.equal(config.type, "custom:home-dashboard");
   assert.equal(config.schema_version, 1);
+  assert.equal(config.general.palette, "ocean_blue");
   assert.deepEqual(validateConfig(config), []);
   assert.deepEqual(validateConfigSchema(config), []);
+});
+
+test("kleurpalet migreert compatibel en weigert onbekende waarden", () => {
+  assert.equal(migrateConfig({ general: { theme_mode: "dark" } }).config.general.palette, "ocean_blue");
+  const config = createDefaultConfig();
+  config.general.palette = "quiet_sage";
+  assert.deepEqual(validateConfig(config), []);
+  config.general.palette = "neon";
+  assert.ok(validateConfig(config).some((issue) => issue.path === "general.palette" && issue.code === "enum"));
 });
 
 test("Kia behoudt haar zelfstandige cardconfiguratie en corrigeert het cardcontract", () => {

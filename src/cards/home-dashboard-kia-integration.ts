@@ -1,4 +1,5 @@
 import type { DiagnosticsConfig, KiaSpecialistConfig } from "../config/types";
+import { applyDashboardPalette, type DashboardPalette } from "../theme/palettes";
 
 type LovelaceCardConfig = Record<string, unknown>;
 
@@ -19,6 +20,7 @@ interface KiaSummaryCardConfig {
   stale_after_minutes: number;
   navigation_path: string;
   theme_mode?: "system" | "light" | "dark";
+  palette?: DashboardPalette;
 }
 
 export interface KiaPresentation {
@@ -149,6 +151,7 @@ export class HomeDashboardKiaSummary extends HTMLElementBase {
   public setConfig(config: KiaSummaryCardConfig): void {
     if (!config?.kia) throw new Error("Kia-configuratie ontbreekt");
     this.config = config;
+    applyDashboardPalette(this, config.palette, config.theme_mode);
     this.render();
   }
 
@@ -209,7 +212,7 @@ function kiaCardConfig(kia: KiaSpecialistConfig): LovelaceCardConfig {
   return { ...upstream, type: kia.card_type, grid_options: { columns: "full", rows: "auto" } };
 }
 
-export function buildKiaDetailSections(kia: KiaSpecialistConfig | undefined, diagnostics: DiagnosticsConfig | undefined, maxColumns: number, themeMode: "system" | "light" | "dark" = "system"): LovelaceCardConfig[] {
+export function buildKiaDetailSections(kia: KiaSpecialistConfig | undefined, diagnostics: DiagnosticsConfig | undefined, maxColumns: number, themeMode: "system" | "light" | "dark" = "system", palette?: DashboardPalette): LovelaceCardConfig[] {
   if (!kia?.enabled) return [{ type: "grid", column_span: maxColumns, cards: [{ type: "markdown", title: "Kia", content: "De Kia-integratie is niet ingeschakeld via **Dashboard bewerken → Specialisten**." }] }];
   const cards: LovelaceCardConfig[] = [{
     type: "custom:home-dashboard-kia-summary",
@@ -217,6 +220,7 @@ export function buildKiaDetailSections(kia: KiaSpecialistConfig | undefined, dia
     stale_after_minutes: diagnostics?.stale_after_minutes ?? 30,
     navigation_path: "specialist-kia",
     theme_mode: themeMode,
+    palette,
     grid_options: { columns: "full", rows: "auto" }
   }];
   if (!resourceAvailable(kia.card_type)) {

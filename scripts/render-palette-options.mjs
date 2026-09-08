@@ -38,7 +38,7 @@ await page.addInitScript(() => {
 for (const palette of palettes) {
   await page.goto("http://127.0.0.1:4173/room-controls.html");
   await page.waitForFunction(() => window.roomFixture?.home?.shadowRoot?.querySelector("home-dashboard-room-controls"));
-  await page.evaluate(({ colors, label, note }) => {
+  await page.evaluate(({ id, colors, label, note }) => {
     const fixture = window.roomFixture;
     const room = fixture.config.rooms[0];
     const secondLight = ["light", "second_fixture"].join(".");
@@ -46,28 +46,13 @@ for (const palette of palettes) {
     fixture.hass.states[secondLight] = { state: "on", attributes: { friendly_name: "Leeslamp", icon: "mdi:floor-lamp" } };
     fixture.hass.states[secondCover] = { state: "closed", attributes: { friendly_name: "Rolluik terras", supported_features: 11, device_class: "shutter", icon: "mdi:blinds-horizontal" } };
     room.control_entities = [room.control_cover_entity, secondLight, room.control_light_entity, secondCover, room.control_awning_entity, room.control_media_entity, room.hvac.entity];
-    fixture.home.setConfig({ ...fixture.config, type: "custom:home-dashboard-home-overview", theme_mode: "light" });
+    fixture.home.setConfig({ ...fixture.config, type: "custom:home-dashboard-home-overview", theme_mode: "light", palette: id.replaceAll("-", "_") });
     fixture.home.hass = fixture.hass;
-    const vars = {
-      "--primary-background-color": colors.bg, "--secondary-background-color": colors.mutedSurface,
-      "--card-background-color": colors.surface, "--ha-card-background": colors.surface,
-      "--primary-text-color": colors.text, "--secondary-text-color": colors.muted,
-      "--divider-color": colors.border, "--primary-color": colors.brand,
-      "--hd-surface": colors.surface, "--hd-surface-raised": colors.raised,
-      "--hd-surface-muted": colors.mutedSurface, "--hd-text": colors.text,
-      "--hd-muted": colors.muted, "--hd-border": colors.border,
-      "--hd-brand": colors.brand, "--hd-brand-soft": colors.soft, "--hd-hero": colors.hero,
-      "--state-light-active-color": colors.light, "--state-media-player-active-color": colors.media,
-      "--state-cover-active-color": colors.cover, "--state-climate-heat-color": colors.climate
-    };
-    for (const [property, value] of Object.entries(vars)) {
-      document.body.style.setProperty(property, value);
-      fixture.home.style.setProperty(property, value);
-    }
     document.body.style.background = colors.bg;
     document.body.style.color = colors.text;
     document.querySelector("#fixture-note").textContent = `${label} · ${note}`;
   }, palette);
+  if (await page.locator("home-dashboard-home-overview").getAttribute("data-palette") !== palette.id.replaceAll("-", "_")) throw new Error(`Palet ${palette.id} is niet toegepast.`);
   await page.getByRole("button", { name: "Bediening Woonkamer", exact: true }).click();
   await page.screenshot({ path: `${directory}/${palette.id}.png`, fullPage: true });
   await page.locator("home-dashboard-room-controls").first().screenshot({ path: `${directory}/${palette.id}-actions.png` });

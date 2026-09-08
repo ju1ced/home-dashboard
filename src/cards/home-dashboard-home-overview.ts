@@ -9,6 +9,7 @@ import type {
   TodayConfig
 } from "../config/types";
 import { roomPath } from "./home-dashboard-room-cards";
+import { applyDashboardPalette, type DashboardPalette } from "../theme/palettes";
 
 type StateLike = { state?: string; attributes?: Record<string, unknown>; last_changed?: string; last_updated?: string };
 type ForecastLike = { datetime?: string; condition?: string; temperature?: number; templow?: number };
@@ -24,6 +25,7 @@ type LovelaceCardElement = HTMLElement & { hass: HomeAssistantLike | undefined; 
 interface HomeOverviewConfig {
   type: "custom:home-dashboard-home-overview";
   theme_mode?: "system" | "light" | "dark";
+  palette?: DashboardPalette;
   today?: TodayConfig;
   persons?: PersonConfig[];
   security?: SecurityConfig;
@@ -461,6 +463,7 @@ export class HomeDashboardHomeOverview extends HTMLElementBase {
     if (this.config?.today?.weather_entity !== config.today?.weather_entity) this.stopWeatherSubscription();
     this.config = config;
     this.dataset.themeMode = config.theme_mode ?? "system";
+    applyDashboardPalette(this, config.palette, config.theme_mode);
     this.currentStructureSignature = "";
     this.hasRendered = false;
     void this.render();

@@ -20,6 +20,7 @@ export interface HomeDashboardViewConfig {
   view: ViewPath | "room" | "specialist-kia";
   density: HomeDashboardConfigV1["general"]["density"];
   theme_mode?: HomeDashboardConfigV1["general"]["theme_mode"];
+  palette?: HomeDashboardConfigV1["general"]["palette"];
   show_weather?: boolean;
   show_quick_actions?: boolean;
   today?: HomeDashboardConfigV1["today"];
@@ -66,6 +67,7 @@ function homeSections(config: HomeDashboardViewConfig, maxColumns: number): Love
     cards: [{
       type: "custom:home-dashboard-home-overview",
       theme_mode: config.theme_mode,
+      palette: config.palette,
       today: config.today,
       persons: config.persons ?? [],
       security: config.security,
@@ -80,12 +82,12 @@ function homeSections(config: HomeDashboardViewConfig, maxColumns: number): Love
   }];
 }
 
-function roomsSections(rooms: readonly RoomConfig[], maxColumns: number, showControls = true): LovelaceConfig[] {
+function roomsSections(rooms: readonly RoomConfig[], maxColumns: number, showControls = true, palette?: HomeDashboardConfigV1["general"]["palette"], themeMode?: HomeDashboardConfigV1["general"]["theme_mode"]): LovelaceConfig[] {
   if (rooms.length === 0) return [{ type: "grid", cards: [markdown("Voeg kamers toe via **Dashboard bewerken → Kamers**.", "Kamers")] }];
   return [{
     type: "grid",
     column_span: maxColumns,
-    cards: [{ type: "custom:home-dashboard-room-overview", rooms, show_controls: showControls, grid_options: { columns: "full", rows: "auto" } }]
+    cards: [{ type: "custom:home-dashboard-room-overview", rooms, show_controls: showControls, palette, theme_mode: themeMode, grid_options: { columns: "full", rows: "auto" } }]
   }];
 }
 
@@ -93,12 +95,12 @@ function roomDetailSection(title: string, icon: string, cards: LovelaceConfig[],
   return homeSection(title, icon, cards, maxColumns);
 }
 
-function roomDetailSections(room: RoomConfig | undefined, maxColumns: number): LovelaceConfig[] {
+function roomDetailSections(room: RoomConfig | undefined, maxColumns: number, palette?: HomeDashboardConfigV1["general"]["palette"], themeMode?: HomeDashboardConfigV1["general"]["theme_mode"]): LovelaceConfig[] {
   if (!room) return [{ type: "grid", cards: [markdown("Deze kamerconfiguratie ontbreekt.", "Kamer")] }];
   const sections: Array<LovelaceConfig | undefined> = [{
     type: "grid",
     column_span: maxColumns,
-    cards: [{ type: "custom:home-dashboard-room-detail", room, grid_options: { columns: "full", rows: "auto" } }]
+    cards: [{ type: "custom:home-dashboard-room-detail", room, palette, theme_mode: themeMode, grid_options: { columns: "full", rows: "auto" } }]
   }];
 
   const historyEntities = uniqueEntities([...room.history_entities, ...room.hvac.history_entities]);
@@ -136,10 +138,10 @@ export function buildView(config: HomeDashboardViewConfig): LovelaceConfig {
   }
   const maxColumns = config.density === "compact" ? 4 : 3;
   const sections = config.view === "home" ? homeSections(config, maxColumns)
-    : config.view === "rooms" ? roomsSections(config.rooms ?? [], maxColumns, config.show_quick_actions !== false)
-      : config.view === "room" ? roomDetailSections(config.room, maxColumns)
-      : config.view === "specialist-kia" ? buildKiaDetailSections(config.kia, config.diagnostics, maxColumns, config.theme_mode)
-      : config.view === "energy" ? buildEnergySections(config.energy, maxColumns, config.theme_mode)
+    : config.view === "rooms" ? roomsSections(config.rooms ?? [], maxColumns, config.show_quick_actions !== false, config.palette, config.theme_mode)
+      : config.view === "room" ? roomDetailSections(config.room, maxColumns, config.palette, config.theme_mode)
+      : config.view === "specialist-kia" ? buildKiaDetailSections(config.kia, config.diagnostics, maxColumns, config.theme_mode, config.palette)
+      : config.view === "energy" ? buildEnergySections(config.energy, maxColumns, config.theme_mode, config.palette)
         : config.view === "domains" ? buildDomainSections({ rooms: config.rooms, energy: config.energy, security: config.security, specialists: config.specialists, diagnostics: config.diagnostics }, maxColumns)
           : moreSections(config);
   return {

@@ -87,7 +87,7 @@ function renderField(field: FieldDefinition, config: HomeDashboardConfigV1): str
   } else if (field.kind === "checkbox") {
     control = `<input data-path="${escapeHtml(field.path)}" type="checkbox" ${value ? "checked" : ""}>`;
   } else if (field.kind === "select") {
-    control = `<select data-path="${escapeHtml(field.path)}">${(field.options ?? []).map((option) => `<option value="${escapeHtml(option)}" ${option === value ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}</select>`;
+    control = `<select data-path="${escapeHtml(field.path)}">${(field.options ?? []).map((option) => `<option value="${escapeHtml(option)}" ${option === value ? "selected" : ""}>${escapeHtml(field.optionLabels?.[option] ?? option)}</option>`).join("")}</select>`;
   } else {
     control = `<input data-path="${escapeHtml(field.path)}" type="${field.kind}" value="${escapeHtml(value)}">`;
   }

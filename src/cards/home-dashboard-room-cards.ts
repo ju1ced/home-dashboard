@@ -1,5 +1,6 @@
 import { HomeDashboardRoomControls } from "./home-dashboard-room-controls";
 import type { RoomConfig } from "../config/types";
+import { applyDashboardPalette, type DashboardPalette, type ThemeMode } from "../theme/palettes";
 
 type StateLike = { state?: string; attributes?: Record<string, unknown> };
 type HomeAssistantLike = {
@@ -12,11 +13,15 @@ interface RoomOverviewConfig {
   type: "custom:home-dashboard-room-overview";
   rooms: RoomConfig[];
   show_controls?: boolean;
+  palette?: DashboardPalette;
+  theme_mode?: ThemeMode;
 }
 
 interface RoomDetailConfig {
   type: "custom:home-dashboard-room-detail";
   room: RoomConfig;
+  palette?: DashboardPalette;
+  theme_mode?: ThemeMode;
 }
 
 interface CustomCardMetadata {
@@ -253,6 +258,7 @@ export class HomeDashboardRoomOverview extends RoomCardBase<RoomOverviewConfig> 
   public setConfig(config: RoomOverviewConfig): void {
     if (!Array.isArray(config.rooms)) throw new Error("Kamers ontbreken.");
     this.config = { ...config, rooms: config.rooms.filter((room) => room.key && room.name) };
+    applyDashboardPalette(this, config.palette, config.theme_mode);
     this.signature = "";
     this.render();
   }
@@ -270,7 +276,7 @@ export class HomeDashboardRoomOverview extends RoomCardBase<RoomOverviewConfig> 
     if (!this.shadowRoot || !this.config) return;
     const style = document.createElement("style");
     style.textContent = `
-      :host{display:block;min-width:0}.overview{display:grid;gap:20px}.hero{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:24px;border-radius:22px;background:var(--primary-color,#245c4d);color:var(--text-primary-color,#fff)}
+      :host{display:block;min-width:0}.overview{display:grid;gap:20px}.hero{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:24px;border-radius:22px;background:var(--hd-hero,var(--primary-color,#245c4d));color:var(--hd-hero-text,#fff)}
       .hero-copy{display:grid;gap:4px}.eyebrow{font-size:.74rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.8}.hero h2{margin:0;font-size:1.7rem}.hero p{margin:0;opacity:.78}.count{display:grid;text-align:right}.count strong{font-size:2rem}.count span{font-size:.78rem;opacity:.8}
       .floor{display:grid;gap:10px}.floor-heading{display:grid;gap:2px;padding-inline:2px}.floor-heading h3{margin:0;font-size:1.25rem}.floor-heading span{font-size:.82rem;color:var(--secondary-text-color)}.room-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
       @media(max-width:700px){.hero{padding:18px}.hero h2{font-size:1.45rem}.hero p{display:none}.room-grid{grid-template-columns:1fr}.room-main{grid-template-columns:40px minmax(0,1fr) auto 20px}.metric{max-width:110px;overflow:hidden;text-overflow:ellipsis}}
@@ -329,6 +335,7 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
   public setConfig(config: RoomDetailConfig): void {
     if (!config.room?.key) throw new Error("Kamer ontbreekt.");
     this.config = config;
+    applyDashboardPalette(this, config.palette, config.theme_mode);
     this.signature = "";
     this.render();
   }
@@ -404,7 +411,7 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     };
     const style = document.createElement("style");
     style.textContent = `
-      :host{display:block;min-width:0}.detail{display:grid;gap:22px;width:100%;margin:0 auto}.hero{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:24px;border-radius:22px;background:var(--primary-color,#245c4d);color:var(--text-primary-color,#fff)}.hero-copy{display:grid;gap:4px}.eyebrow{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.75}.hero h1{margin:0;font-size:1.85rem}.hero p{margin:0;opacity:.75}.hero-pills{display:flex;justify-content:flex-end;gap:7px;flex-wrap:wrap}.hero-pill{padding:7px 10px;border:1px solid color-mix(in srgb,currentColor 28%,transparent);border-radius:999px;font-size:.78rem;font-weight:650}
+      :host{display:block;min-width:0}.detail{display:grid;gap:22px;width:100%;margin:0 auto}.hero{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:24px;border-radius:22px;background:var(--hd-hero,var(--primary-color,#245c4d));color:var(--hd-hero-text,#fff)}.hero-copy{display:grid;gap:4px}.eyebrow{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.75}.hero h1{margin:0;font-size:1.85rem}.hero p{margin:0;opacity:.75}.hero-pills{display:flex;justify-content:flex-end;gap:7px;flex-wrap:wrap}.hero-pill{padding:7px 10px;border:1px solid color-mix(in srgb,currentColor 28%,transparent);border-radius:999px;font-size:.78rem;font-weight:650}
       .group{display:grid;gap:10px}.group-heading{display:grid;grid-template-columns:34px minmax(0,1fr);align-items:center;gap:9px;min-height:44px}.group-icon{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:color-mix(in srgb,var(--primary-color) 10%,transparent);color:var(--primary-color)}.group-heading-copy{display:grid}.group-heading-copy>strong{font-size:1.05rem}.group-heading-copy>small{color:var(--secondary-text-color)}.disclosure{border:0}.disclosure>summary{cursor:pointer;list-style:none}.disclosure>summary::-webkit-details-marker{display:none}.disclosure>summary::after{content:"›";justify-self:end;grid-column:3;transform:rotate(90deg);font-size:1.35rem;color:var(--secondary-text-color)}.disclosure:not([open])>summary::after{transform:rotate(0)}.disclosure>summary:focus-visible{outline:2px solid var(--primary-color);outline-offset:3px;border-radius:10px}.disclosure[open]>.entity-grid,.disclosure[open]>.entity-list{margin-top:10px}.status-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}.status{display:grid;gap:5px;min-height:72px;padding:12px;border:1px solid var(--divider-color);border-radius:14px;background:var(--ha-card-background,var(--card-background-color));color:var(--primary-text-color);text-align:left;cursor:pointer}.status ha-icon{width:22px;height:22px;color:var(--primary-color)}.status small{color:var(--secondary-text-color);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.status strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.status.warning{border-color:color-mix(in srgb,var(--error-color,#b3261e) 45%,var(--divider-color));background:color-mix(in srgb,var(--error-color,#b3261e) 7%,var(--card-background-color))}.status.unavailable{opacity:.75}.status:focus-visible{outline:2px solid var(--primary-color);outline-offset:2px}
       .columns{display:grid;grid-template-columns:minmax(0,2fr) minmax(250px,1fr);gap:20px;align-items:start}.columns.side-only{grid-template-columns:1fr}.main,.side{display:grid;gap:20px}.entity-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.entity-list{display:grid;gap:8px}.entity{display:grid;grid-template-columns:42px minmax(0,1fr) 22px;align-items:center;gap:10px;min-height:74px;padding:12px;border:1px solid var(--divider-color);border-radius:15px;background:var(--ha-card-background,var(--card-background-color));color:var(--primary-text-color);cursor:pointer;text-align:left}.entity:hover{border-color:var(--primary-color)}.entity:focus-visible{outline:2px solid var(--primary-color);outline-offset:2px}.entity.warning{border-color:color-mix(in srgb,var(--error-color,#b3261e) 45%,var(--divider-color));background:color-mix(in srgb,var(--error-color,#b3261e) 7%,var(--card-background-color))}.entity.unavailable{opacity:.72}.entity.compact{min-height:60px}.entity-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:color-mix(in srgb,var(--primary-color) 12%,transparent);color:var(--primary-color)}.entity.warning .entity-icon{color:var(--error-color,#b3261e);background:color-mix(in srgb,var(--error-color,#b3261e) 12%,transparent)}.entity-copy{display:grid;min-width:0}.entity-copy strong,.entity-copy small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.entity-copy small{color:var(--secondary-text-color)}.entity-chevron{color:var(--secondary-text-color)}
       .climate{display:grid;grid-template-columns:minmax(210px,.8fr) minmax(0,2fr);gap:12px;padding:16px;border:1px solid var(--divider-color);border-radius:16px;background:var(--ha-card-background,var(--card-background-color))}.climate-main{display:grid;align-content:center;gap:5px}.climate-main span{color:var(--secondary-text-color);font-size:.78rem}.climate-main strong{font-size:2rem}.climate-main button{justify-self:start;min-height:44px;border:0;background:none;color:var(--primary-color);padding:8px 0;cursor:pointer;font:inherit;font-weight:700}.climate-main button:focus-visible{outline:2px solid var(--primary-color);outline-offset:2px;border-radius:6px}.climate-sensors{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.history-note{padding:12px;border-radius:12px;background:var(--secondary-background-color);color:var(--secondary-text-color);font-size:.82rem}
