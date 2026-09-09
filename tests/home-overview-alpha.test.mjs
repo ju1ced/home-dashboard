@@ -37,7 +37,7 @@ test("Home behoudt aandacht en expliciete kamerbediening zonder dubbele activite
   const bundle = await readFile(new URL("../dist/home-dashboard.js", import.meta.url), "utf8");
   for (const contract of [
     "Kamers & bediening", "Alle kamers", "Bron ontbreekt", "Controleer bron",
-    "priority-critical", "metric-meta", "today-navigation", "Andere locatie", "Batterij "
+    "priority-critical", "metric-meta", "today-navigation", "specialist-link", "nav-copy", "Schoonmaak", "Andere locatie", "Batterij "
   ]) assert.match(bundle, new RegExp(contract));
   assert.doesNotMatch(bundle, /Nu actief|activity-card/);
   assert.match(bundle, /callService\(/);
