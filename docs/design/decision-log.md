@@ -282,3 +282,11 @@
 - **Ordening:** pijlen wijzigen de quick-actionvolgorde uitsluitend lokaal. **Volgorde toepassen** veroorzaakt daarna één configuratieopslag en één dashboardherbouw.
 - **Kiosk:** `layout.navigation_mode` ondersteunt native, geïntegreerd en kiosk. Geïntegreerd toont interne hoofdnavigatie met behoud van de HA-balk. Kiosk voegt `kiosk_mode.hide_header` toe; de optionele frontendresource of Companion App voert het verbergen uit. Dit is presentatie en geen autorisatiegrens.
 - **Budget:** de harde bundlegrens groeit van 190 naar 195 kB voor de gedeelde interne navigatie en configuratiecontracten.
+
+## D-047 — Zichtbare interne navigatie en specialistlinks
+
+- **Status:** gevraagd door de eigenaar op 9 september 2026; candidate `v0.8.0-alpha.8`.
+- **Navigatie:** geïntegreerde navigatie wordt de standaard en staat in dezelfde gekleurde balk als de begroeting. Home, Kamers, Energie, Domeinen en Meer behouden op alle pagina's dezelfde volgorde en een contrastrijke actieve toestand. Op mobiel blijft het label van de actieve route zichtbaar.
+- **Kiosk:** kiosk gebruikt exact dezelfde interne routes en levert daarnaast `kiosk_mode.hide_header`. Het effectief verbergen van de Home Assistant-bovenbalk blijft afhankelijk van de optionele kiosk-mode-resource of een kioskfunctie van de Companion App.
+- **Snel naar:** specialistische routes vullen samen de beschikbare rij en tonen een gevulde icoontegel, korte context en richtingspijl. Hierdoor zijn ze duidelijk als navigatie herkenbaar.
+- **Budget:** de harde minified bundlegrens groeit van 195 naar 198 kB voor de aanvullende navigatiesemantiek en styling.

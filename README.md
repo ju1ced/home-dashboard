@@ -1,6 +1,6 @@
 # Home Dashboard — ontwerpvoorstel
 
-Werkcandidate **v0.8.0-alpha.7** gebruikt de beschikbare schermbreedte beter, plaatst specialistische snelkoppelingen onder de afvalophaling en verwijdert de dubbele sectie Nu actief. Quick actions worden lokaal geordend en pas na één druk op **Volgorde toepassen** opgeslagen. De layouteditor biedt daarnaast native, geïntegreerde en kiosk-navigatie. Zie de [actuele renders](docs/renders/expandable-rooms/README.md) en [testchecklist](docs/releases/testing-v0.8.0-alpha.7.md).
+Werkcandidate **v0.8.0-alpha.8** maakt de interne navigatie standaard zichtbaar in de gekleurde balk. Kiosk gebruikt dezelfde vijf routes en kan met de optionele kiosk-mode-resource de HA-bovenbalk verbergen. De specialistische snelkoppelingen onder de afvalophaling zijn grotere kaarten met icoontegel, context en pijl. Zie de [actuele renders](docs/renders/expandable-rooms/README.md) en [testchecklist](docs/releases/testing-v0.8.0-alpha.8.md).
 
 Testrelease **v0.8.0-alpha.2** voegt een bredere Home-weergave en uitklapbare kamerpanelen met vijf soorten chips toe. [Renders en validatie](docs/renders/expandable-rooms/README.md) en de [testchecklist](docs/releases/testing-v0.8.0-alpha.2.md) beschrijven de nieuwe bediening.
 
@@ -102,4 +102,4 @@ scripts/          lokale preview en repositorychecks
 
 ## Status
 
-v0.8.0-alpha.7 staat lokaal klaar voor beoordeling. De fixtures voeren geen live Home Assistant-write uit.
+v0.8.0-alpha.8 staat lokaal klaar voor beoordeling. De fixtures voeren geen live Home Assistant-write uit.

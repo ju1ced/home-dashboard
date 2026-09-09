@@ -22,6 +22,10 @@ try {
     assert.equal(await page.getByText('Geen recente context',{exact:false}).count(),0);
     assert.equal(await page.locator('home-dashboard-room-controls').count(),4);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+    if(name==='kiosk-navigation') {
+      assert.equal(await page.locator('.hero-nav a').count(),5);
+      assert.equal(await page.getByRole('link',{name:'Home',exact:true}).getAttribute('aria-current'),'page');
+    }
     if(name==='warning') assert.equal(await page.getByText('Aandacht nodig',{exact:true}).count(),1);
     if(name==='desktop') await page.getByRole('button',{name:/Woonkamer · Rolluiken.*Toon bediening/}).click();
     await page.screenshot({path:`${directory}/${name}.png`,fullPage:true});
@@ -156,5 +160,5 @@ try {
   await page.locator('ha-selector[data-field="control_entities"] input').fill('');await page.locator('ha-selector[data-field="control_entities"] input').dispatchEvent('change');
   saved=await page.evaluate(()=>savedRoomConfig.rooms[0]);assert.deepEqual(saved.control_entities,[]);
   assert.deepEqual(errors,[]);
-  console.log(`Browserchecks geslaagd: 13 renders, uitlijning, brede kamerdetailpagina, native Home-terugpad, lokale quick-actionvolgorde, kiosknavigatie, geordende optionele kameracties, afval, focus, touchdoelen en GUI. 100 irrelevante updates: ${performance.ms.toFixed(1)} ms, geen vervanging van kamer-DOM.`);
+  console.log(`Browserchecks geslaagd: 13 renders, uitlijning, brede kamerdetailpagina, native Home-terugpad, lokale quick-actionvolgorde, vijf kioskroutes, duidelijke specialistlinks, geordende optionele kameracties, afval, focus, touchdoelen en GUI. 100 irrelevante updates: ${performance.ms.toFixed(1)} ms, geen vervanging van kamer-DOM.`);
 } finally {await browser.close();}

@@ -85,12 +85,26 @@ test("brede layout en kioskmodus leveren vier kolommen, interne navigatie en hea
   assert.equal(homeExpanded.sections[0].cards[0].navigation_mode, "kiosk");
 });
 
+test("geïntegreerde navigatie markeert op iedere vervolgpagina de juiste hoofdroute", async () => {
+  const config = await normalConfig();
+  assert.equal(config.layout.navigation_mode, "integrated");
+  const dashboard = await HomeDashboardStrategy.generate(config);
+  assert.equal(Object.hasOwn(dashboard, "kiosk_mode"), false);
+  for (const view of dashboard.views.filter((item) => item.path !== "home")) {
+    const expanded = await HomeDashboardViewStrategy.generate(view.strategy);
+    const navigation = expanded.sections[0].cards[0];
+    assert.equal(navigation.type, "custom:home-dashboard-navigation");
+    assert.equal(navigation.active, view.strategy.view);
+  }
+});
+
 test("iedere viewstrategy levert native Sections zonder serviceactie", async () => {
   const dashboard = await HomeDashboardStrategy.generate(await normalConfig());
   const allowedCards = new Set([
     "button",
     "custom:home-dashboard-energy-overview",
     "custom:home-dashboard-home-overview",
+    "custom:home-dashboard-navigation",
     "custom:home-dashboard-room-detail",
     "custom:home-dashboard-room-overview",
     "energy-carbon-consumed-gauge",
@@ -189,7 +203,7 @@ test("Kamers gebruikt een overzichtskaart en een semantisch gegroepeerde detail-
   const dashboard = await HomeDashboardStrategy.generate(config);
   const overviewView = dashboard.views.find((view) => view.path === "rooms");
   const overview = await HomeDashboardViewStrategy.generate(overviewView.strategy);
-  const overviewCard = overview.sections[0].cards[0];
+  const overviewCard = overview.sections.flatMap((section) => section.cards).find((card) => card.type === "custom:home-dashboard-room-overview");
   assert.equal(overviewCard.type, "custom:home-dashboard-room-overview");
   assert.deepEqual(overviewCard.rooms.map((room) => room.key), ["living_room"]);
 
@@ -200,7 +214,7 @@ test("Kamers gebruikt een overzichtskaart en een semantisch gegroepeerde detail-
     if (typeof value?.entity === "string") entities.push(value.entity);
     if (value?.type === "history-graph" && Array.isArray(value.entities)) entities.push(...value.entities);
   });
-  const detailCard = detail.sections[0].cards[0];
+  const detailCard = detail.sections.flatMap((section) => section.cards).find((card) => card.type === "custom:home-dashboard-room-detail");
   assert.equal(detailCard.type, "custom:home-dashboard-room-detail");
   for (const entity of ["living_lights", "living_hvac", "living_temperature", "living_humidity", "living_media", "living_power", "living_air_quality"]) {
     assert.ok(JSON.stringify(detailCard.room).includes(entity) || entities.includes(entity), `${entity} ontbreekt`);
@@ -339,15 +353,16 @@ test("Kia krijgt een stabiele specialistroute, stale fallback en een zelfstandig
   assert.equal(stale.battery, "Niet beschikbaar");
 
   const unavailableResource = await HomeDashboardViewStrategy.generate(specialist.strategy);
-  const fallbackTypes = unavailableResource.sections[0].cards.map((card) => card.type);
+  const specialistSection = unavailableResource.sections.find((section) => section.cards.some((card) => card.type === "custom:home-dashboard-kia-summary"));
+  const fallbackTypes = specialistSection.cards.map((card) => card.type);
   assert.deepEqual(fallbackTypes, ["custom:home-dashboard-kia-summary", "markdown"]);
-  assert.match(unavailableResource.sections[0].cards[1].content, /Kia-card niet gevonden|Installeer of update/);
+  assert.match(specialistSection.cards[1].content, /Kia-card niet gevonden|Installeer of update/);
 
   const originalCustomElements = globalThis.customElements;
   globalThis.customElements = { get: (tag) => tag === "kia-dashboard-card" ? class KiaDashboardCard {} : undefined };
   try {
     const availableResource = await HomeDashboardViewStrategy.generate(specialist.strategy);
-    const card = availableResource.sections[0].cards.at(-1);
+    const card = availableResource.sections.flatMap((section) => section.cards).find((candidate) => candidate.type === "custom:kia-dashboard-card");
     assert.equal(card.type, "custom:kia-dashboard-card");
     assert.equal(card.title, "Auto");
     assert.equal(card.grid_options.columns, "full");
