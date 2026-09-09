@@ -53,5 +53,5 @@ const hass={states,connection:{subscribeMessage:async callback=>{queueMicrotask(
   callService:async(domain,service,data)=>{calls.push({domain,service,data});if(window.fixtureReject)throw Error('fixture refusal');}
 };
 const home=document.querySelector('home-dashboard-home-overview');
-home.setConfig({type:'custom:home-dashboard-home-overview',...config,theme_mode:'system'});home.hass=hass;
+home.setConfig({type:'custom:home-dashboard-home-overview',...config,theme_mode:'system',navigation_mode:params.get('navigation')==='kiosk'?'kiosk':'native'});home.hass=hass;
 window.roomFixture={home,hass,config,calls,ref};

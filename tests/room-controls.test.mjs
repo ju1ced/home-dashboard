@@ -79,14 +79,14 @@ test('verkeerd domein, ongekende actie en backendweigering worden niet omzeild',
   hass.callService=async()=>{throw new Error('permission denied');};
   await assert.rejects(executeRoomControl(room,hass,'cover','stop'),/permission denied/);
 });
-test('HVAC in de klimaat-chip wordt niet gedupliceerd; verborgen chips behouden activiteit', () => {
+test('HVAC en verlichting veroorzaken zonder Nu actief geen dubbele Home-sectie', () => {
   const {room,hass}=setup();room.hvac.entity='climate_primary';room.light_entities=[room.control_light_entity];
   const config={rooms:[room]};const before=getHomeStructureSignature(hass,config);
   hass.states[room.control_light_entity].state='on';
   assert.equal(before,getHomeStructureSignature(hass,config));
   hass.states.climate_primary={state:'heat',attributes:{hvac_action:'heating'}};
   assert.equal(before,getHomeStructureSignature(hass,config));
-  assert.notEqual(before,getHomeStructureSignature(hass,{...config,show_quick_actions:false}));
+  assert.equal(before,getHomeStructureSignature(hass,{...config,show_quick_actions:false}));
 });
 test('bestaande kamerbronnen worden detailchips zonder automatische actiedoelen', () => {
   const {room,hass}=setup();room.control_light_entity='';room.light_entities=['light_first','light_second'];

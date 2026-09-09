@@ -15,7 +15,7 @@ async function open(query='') {
   await page.getByRole('button',{name:'Bediening Woonkamer',exact:true}).click();
 }
 try {
-  for(const [name,width,height,query] of [ ['desktop',1440,1100,''],['tablet',1024,1100,''],['mobile',390,844,''],['dark',1440,1100,'?theme=dark'],['warning',1440,1100,'?fixture=warning'],['missing',390,844,'?fixture=missing'],['unavailable',390,844,'?fixture=unavailable'] ]) {
+  for(const [name,width,height,query] of [ ['desktop',1440,1100,''],['tablet',1024,1100,''],['mobile',390,844,''],['dark',1440,1100,'?theme=dark'],['warning',1440,1100,'?fixture=warning'],['missing',390,844,'?fixture=missing'],['unavailable',390,844,'?fixture=unavailable'],['kiosk-navigation',1440,1100,'?navigation=kiosk'] ]) {
     await page.setViewportSize({width,height});await open(query);
     assert.equal(await page.getByText('Afvalophaling',{exact:true}).count(),1);
     assert.equal(await page.getByText('Niet recent',{exact:false}).count(),0);
@@ -146,12 +146,15 @@ try {
   await selector.fill([first,second,third].join(', '));await selector.dispatchEvent('change');
   let saved=await page.evaluate(()=>savedRoomConfig.rooms[0]);
   assert.equal(saved.home_favorite,true);assert.equal(saved.controls_enabled,true);assert.deepEqual(saved.control_entities,[first,second,third]);
-  await page.locator('select[data-room-control-position]').first().selectOption({value:'1'});
+  await page.locator('[data-room-control-move="down"]').first().click();
+  saved=await page.evaluate(()=>savedRoomConfig.rooms[0]);
+  assert.deepEqual(saved.control_entities,[first,second,third]);
+  await page.locator('[data-room-control-apply]').click();
   saved=await page.evaluate(()=>savedRoomConfig.rooms[0]);
   assert.deepEqual(saved.control_entities,[second,first,third]);
   await page.screenshot({path:`${directory}/editor-ordering.png`,fullPage:true});
   await page.locator('ha-selector[data-field="control_entities"] input').fill('');await page.locator('ha-selector[data-field="control_entities"] input').dispatchEvent('change');
   saved=await page.evaluate(()=>savedRoomConfig.rooms[0]);assert.deepEqual(saved.control_entities,[]);
   assert.deepEqual(errors,[]);
-  console.log(`Browserchecks geslaagd: 12 renders, uitlijning, brede kamerdetailpagina, native Home-terugpad, directe positievolgorde, geordende optionele kameracties, afval, focus, touchdoelen en GUI. 100 irrelevante updates: ${performance.ms.toFixed(1)} ms, geen vervanging van kamer-DOM.`);
+  console.log(`Browserchecks geslaagd: 13 renders, uitlijning, brede kamerdetailpagina, native Home-terugpad, lokale quick-actionvolgorde, kiosknavigatie, geordende optionele kameracties, afval, focus, touchdoelen en GUI. 100 irrelevante updates: ${performance.ms.toFixed(1)} ms, geen vervanging van kamer-DOM.`);
 } finally {await browser.close();}

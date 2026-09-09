@@ -54,6 +54,7 @@ test("kameracties gebruiken korte namen, entiteitsiconen en duidelijke actieve t
   assert.match(controls, /attributes\?\.icon/);
   assert.match(controls, /kind-\$\{kind\}/);
   assert.match(controls, /box-shadow:inset 4px 0 var\(--control-accent\)/);
-  assert.match(editor, /data-room-control-position/);
-  assert.match(editor, /moveItemTo/);
+  assert.match(editor, /data-room-control-move/);
+  assert.match(editor, /data-room-control-apply/);
+  assert.match(editor, /moveRoomControlDraft/);
 });

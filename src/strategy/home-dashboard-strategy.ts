@@ -66,6 +66,7 @@ export class HomeDashboardStrategy extends HTMLElementBase {
     const orderedPaths = [config.general.start_view, ...config.layout.view_order.filter((path) => path !== config.general.start_view)];
     return {
       title: config.general.title,
+      ...(config.layout.navigation_mode === "kiosk" ? { kiosk_mode: { hide_header: true } } : {}),
       views: [
         ...orderedPaths.map((path) => createView(path, config)),
         ...config.rooms.map((room) => createRoomView(room, config)),
@@ -84,7 +85,7 @@ const viewMetadata: Record<ViewPath, { title: string; icon: string }> = {
 };
 
 function createViewStrategy(path: ViewPath, config: HomeDashboardConfigV1): HomeDashboardViewConfig {
-  const base: HomeDashboardViewConfig = { type: "custom:home-dashboard-view", view: path, density: config.general.density, theme_mode: config.general.theme_mode, palette: config.general.palette, show_quick_actions: config.layout.show_quick_actions };
+  const base: HomeDashboardViewConfig = { type: "custom:home-dashboard-view", view: path, density: config.general.density, content_width: config.layout.content_width, navigation_mode: config.layout.navigation_mode, theme_mode: config.general.theme_mode, palette: config.general.palette, show_quick_actions: config.layout.show_quick_actions };
   if (path === "home") return { ...base, today: config.today, show_weather: config.layout.show_weather, persons: config.layout.show_persons ? config.persons : [], security: config.layout.show_security ? config.security : { ...config.security, enabled: false }, rooms: config.rooms, specialists: config.specialists, diagnostics: config.diagnostics, energy: config.energy };
   if (path === "rooms") return { ...base, rooms: config.rooms };
   if (path === "domains") {
@@ -123,6 +124,8 @@ function createRoomView(room: HomeDashboardConfigV1["rooms"][number], config: Ho
       type: "custom:home-dashboard-view",
       view: "room",
       density: config.general.density,
+      content_width: config.layout.content_width,
+      navigation_mode: config.layout.navigation_mode,
       theme_mode: config.general.theme_mode,
       palette: config.general.palette,
       room
@@ -141,6 +144,8 @@ function createKiaView(config: HomeDashboardConfigV1): Record<string, unknown> {
       type: "custom:home-dashboard-view",
       view: "specialist-kia",
       density: config.general.density,
+      content_width: config.layout.content_width,
+      navigation_mode: config.layout.navigation_mode,
       theme_mode: config.general.theme_mode,
       palette: config.general.palette,
       kia: config.specialists.kia,

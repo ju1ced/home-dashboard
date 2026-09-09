@@ -95,6 +95,8 @@ export function createDefaultConfig(): HomeDashboardConfigV1 {
     },
     layout: {
       view_order: [...VIEW_PATHS],
+      content_width: "wide",
+      navigation_mode: "native",
       mobile_disclosure: "progressive",
       show_weather: true,
       show_persons: true,

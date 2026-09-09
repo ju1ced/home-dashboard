@@ -156,6 +156,8 @@ export interface SpecialistsConfig {
 
 export interface LayoutConfig {
   view_order: ViewPath[];
+  content_width: "standard" | "wide";
+  navigation_mode: "native" | "integrated" | "kiosk";
   mobile_disclosure: "progressive" | "expanded";
   show_weather: boolean;
   show_persons: boolean;

@@ -181,9 +181,11 @@
     },
     "layout": {
       "type": "object", "additionalProperties": false,
-      "required": ["view_order", "mobile_disclosure", "show_weather", "show_persons", "show_security", "show_quick_actions"],
+      "required": ["view_order", "content_width", "navigation_mode", "mobile_disclosure", "show_weather", "show_persons", "show_security", "show_quick_actions"],
       "properties": {
         "view_order": { "type": "array", "minItems": 5, "maxItems": 5, "uniqueItems": true, "items": { "$ref": "#/$defs/viewPath" }, "x-editor": "layout" },
+        "content_width": { "enum": ["standard", "wide"], "x-editor": "layout" },
+        "navigation_mode": { "enum": ["native", "integrated", "kiosk"], "x-editor": "layout" },
         "mobile_disclosure": { "enum": ["progressive", "expanded"], "x-editor": "layout" },
         "show_weather": { "type": "boolean", "x-editor": "layout" },
         "show_persons": { "type": "boolean", "x-editor": "layout" },

@@ -135,10 +135,14 @@ function visibleRoomControls(room: RoomConfig): string[] {
   return [...new Set([...light, ...media, ...cover, room.control_awning_entity ?? "", room.hvac.entity].filter(Boolean))];
 }
 
+function renderControlOrderRows(controls: readonly string[], roomIndex: number): string {
+  return controls.map((entity, controlIndex) => `<div data-control-order-row><span class="order-index">${controlIndex + 1}</span><code>${escapeHtml(entity)}</code><span class="order-actions"><button type="button" data-room-control-move="up" data-room-index="${roomIndex}" data-control-index="${controlIndex}" aria-label="Verplaats quick action ${controlIndex + 1} omhoog" ${controlIndex === 0 ? "disabled" : ""}>↑</button><button type="button" data-room-control-move="down" data-room-index="${roomIndex}" data-control-index="${controlIndex}" aria-label="Verplaats quick action ${controlIndex + 1} omlaag" ${controlIndex === controls.length - 1 ? "disabled" : ""}>↓</button></span></div>`).join("");
+}
+
 function renderRooms(config: HomeDashboardConfigV1, expandedItems: Set<string>): string {
   return config.rooms.map((roomConfig, index) => {
     const controls = visibleRoomControls(roomConfig);
-    const controlOrder = controls.length ? `<div class="order" aria-label="Volgorde quick actions">${controls.map((entity, controlIndex) => `<div><span class="order-index">${controlIndex + 1}</span><code>${escapeHtml(entity)}</code><label>Positie<select data-room-control-position data-room-index="${index}" data-control-index="${controlIndex}" aria-label="Positie van quick action ${controlIndex + 1}">${controls.map((_, position) => `<option value="${position}" ${position === controlIndex ? "selected" : ""}>${position + 1}</option>`).join("")}</select></label></div>`).join("")}</div>` : `<small>Geen quick actions gekozen.</small>`;
+    const controlOrder = controls.length ? `<div class="order" data-control-order="${index}" aria-label="Volgorde quick actions">${renderControlOrderRows(controls, index)}</div><div class="order-save"><small>De pijlen reageren direct. Pas de volgorde één keer toe wanneer ze goed staat.</small><button type="button" data-room-control-apply="${index}">Volgorde toepassen</button></div>` : `<small>Geen quick actions gekozen.</small>`;
     return `<details class="item" data-item-token="${escapeHtml(getEditorItemToken("rooms", roomConfig, index))}" ${expandedItems.has(getEditorItemToken("rooms", roomConfig, index)) ? "open" : ""}>
     <summary>${escapeHtml(roomConfig.name || roomConfig.key || `Kamer ${index + 1}`)}</summary><div class="item-body">
     <div class="item-toolbar"><span class="item-actions"><button type="button" aria-label="Verplaats ${escapeHtml(roomConfig.name || roomConfig.key || `kamer ${index + 1}`)} omhoog" data-room-move="up" data-index="${index}" ${index === 0 ? "disabled" : ""}>↑</button><button type="button" aria-label="Verplaats ${escapeHtml(roomConfig.name || roomConfig.key || `kamer ${index + 1}`)} omlaag" data-room-move="down" data-index="${index}" ${index === config.rooms.length - 1 ? "disabled" : ""}>↓</button><button type="button" aria-label="Verwijder kamer ${escapeHtml(roomConfig.name || roomConfig.key || index + 1)}" data-remove="rooms" data-index="${index}">Verwijder</button></span></div>
@@ -152,7 +156,7 @@ function renderRooms(config: HomeDashboardConfigV1, expandedItems: Set<string>):
     <label><input type="checkbox" data-collection="rooms" data-index="${index}" data-field="home_favorite" ${roomConfig.home_favorite ? "checked" : ""}>Favoriet op Home (maximaal vier, volgorde via pijlen)</label>
     <h4>Quick actions</h4>
     <label>Knoppen op Home${renderSelector("rooms", index, "control_entities", controls, { entity: { domain: ["light", "cover", "media_player", "climate"], multiple: true } })}</label>
-    <small>Kies nul tot zestien; orden met de pijlen.</small>
+    <small>Kies nul tot zestien; orden zonder telkens het dashboard opnieuw te laden.</small>
     ${controlOrder}
     <label><input type="checkbox" data-collection="rooms" data-index="${index}" data-field="controls_enabled" ${roomConfig.controls_enabled ? "checked" : ""}>Directe bediening toestaan voor gekozen licht-, cover- en mediaknoppen</label>
     <p>Zonder toestemming openen de knoppen alleen Home Assistant-details. Klimaat opent altijd het native detailvenster. Luifelbeveiliging blijft in Home Assistant.</p>
@@ -326,11 +330,26 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
     this.commit();
   }
 
-  private moveItemTo(items: unknown[], index: number, target: number): void {
-    if (index === target || index < 0 || target < 0 || index >= items.length || target >= items.length) return;
-    const [item] = items.splice(index, 1);
-    items.splice(target, 0, item);
-    this.commit();
+  private moveRoomControlDraft(roomIndex: number, index: number, direction: "up" | "down"): void {
+    const room = this._config.rooms[roomIndex];
+    if (!room) return;
+    room.control_entities ??= visibleRoomControls(room);
+    const target = direction === "up" ? index - 1 : index + 1;
+    if (target < 0 || target >= room.control_entities.length) return;
+    const current = room.control_entities[index]!;
+    room.control_entities[index] = room.control_entities[target]!;
+    room.control_entities[target] = current;
+    const container = this.shadowRoot?.querySelector<HTMLElement>(`[data-control-order="${roomIndex}"]`);
+    if (!container) return;
+    container.innerHTML = renderControlOrderRows(room.control_entities, roomIndex);
+    this.bindControlOrderEvents(container);
+    const save = this.shadowRoot?.querySelector<HTMLButtonElement>(`[data-room-control-apply="${roomIndex}"]`);
+    save?.classList.add("pending");
+    if (save) save.textContent = "Volgorde opslaan";
+  }
+
+  private bindControlOrderEvents(root: ParentNode): void {
+    root.querySelectorAll<HTMLButtonElement>("[data-room-control-move]").forEach((controlButton) => controlButton.addEventListener("click", () => this.moveRoomControlDraft(Number(controlButton.dataset.roomIndex), Number(controlButton.dataset.controlIndex), controlButton.dataset.roomControlMove as "up" | "down")));
   }
 
   private configureSelectors(): void {
@@ -385,12 +404,8 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
     this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-add]").forEach((controlButton) => controlButton.addEventListener("click", () => this.addItem(controlButton.dataset.add ?? "")));
     this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-remove]").forEach((controlButton) => controlButton.addEventListener("click", () => this.removeItem(controlButton.dataset.remove ?? "", Number(controlButton.dataset.index))));
     this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-room-move]").forEach((controlButton) => controlButton.addEventListener("click", () => this.moveItem(this._config.rooms, Number(controlButton.dataset.index), controlButton.dataset.roomMove as "up" | "down")));
-    this.shadowRoot.querySelectorAll<HTMLSelectElement>("[data-room-control-position]").forEach((control) => control.addEventListener("change", () => {
-      const room = this._config.rooms[Number(control.dataset.roomIndex)];
-      if (!room) return;
-      room.control_entities ??= visibleRoomControls(room);
-      this.moveItemTo(room.control_entities, Number(control.dataset.controlIndex), control.selectedIndex);
-    }));
+    this.bindControlOrderEvents(this.shadowRoot);
+    this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-room-control-apply]").forEach((controlButton) => controlButton.addEventListener("click", () => this.commit()));
     this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-view-move]").forEach((controlButton) => controlButton.addEventListener("click", () => this.moveItem(this._config.layout.view_order, Number(controlButton.dataset.index), controlButton.dataset.viewMove as "up" | "down")));
     this.shadowRoot.querySelectorAll<HTMLDetailsElement>("details[data-item-token]").forEach((details) => {
       const token = details.dataset.itemToken;
@@ -526,8 +541,8 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
       .section-panel{min-width:0;border:1px solid var(--divider-color);border-radius:14px;background:var(--card-background-color);overflow:hidden}.section-heading{padding:16px;border-bottom:1px solid var(--divider-color)}.section-heading h3{margin:0;font-size:1.25rem}.section{display:grid;gap:12px;padding:14px}
       .field,label{display:grid;gap:5px}.field{grid-template-columns:minmax(180px,1fr) minmax(220px,1fr);align-items:center;padding:9px 0;border-top:1px solid var(--divider-color)}small{display:block;color:var(--secondary-text-color);margin-top:3px}
       input,select,textarea{width:100%;padding:10px;border:1px solid var(--divider-color);border-radius:8px;background:var(--secondary-background-color);color:inherit}textarea{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;resize:vertical}input[type=checkbox]{width:22px;height:22px}.check{display:flex;align-items:center;gap:8px}
-      .items{display:grid;gap:10px}.item{margin:0;border:1px solid var(--divider-color);border-radius:12px;background:var(--secondary-background-color);overflow:hidden}.item summary{padding:12px;font-weight:700;cursor:pointer}.item-body{display:grid;gap:10px;padding:0 12px 12px}.item-toolbar{display:flex;justify-content:flex-end}.item-actions{display:flex;gap:4px}.item button{color:var(--error-color);background:transparent;border:0;min-width:40px;min-height:40px;cursor:pointer}.item button[disabled]{opacity:.35;cursor:not-allowed}code{display:block;overflow-wrap:anywhere;color:var(--secondary-text-color)}
-      fieldset.config{border:0;margin:0;padding:0;min-width:0}.config[disabled]{pointer-events:none;opacity:.72}.order{display:grid;gap:6px}.order>div{display:grid;grid-template-columns:30px minmax(0,1fr) auto;align-items:center;gap:9px;padding:7px 9px;border:1px solid var(--divider-color);border-radius:9px;background:var(--card-background-color)}.order-index{display:grid;place-items:center;width:28px;height:28px;border-radius:8px;background:color-mix(in srgb,var(--accent) 13%,var(--card-background-color));color:var(--accent);font-weight:750}.order code{min-width:0}.order label{display:flex;align-items:center;gap:6px;font-size:.78rem}.order select{width:66px;min-height:40px;padding:6px 8px}.fatal{color:var(--error-color);font-weight:700}
+      .items{display:grid;gap:10px}.item{margin:0;border:1px solid var(--divider-color);border-radius:12px;background:var(--secondary-background-color);overflow:hidden}.item summary{padding:12px;font-weight:700;cursor:pointer}.item-body{display:grid;gap:10px;padding:0 12px 12px}.item-toolbar{display:flex;justify-content:flex-end}.item-actions,.order-actions{display:flex;gap:4px}.item button{color:var(--error-color);background:transparent;border:0;min-width:40px;min-height:40px;cursor:pointer}.item button[disabled]{opacity:.35;cursor:not-allowed}.order-actions button{border:1px solid var(--divider-color);border-radius:8px;background:var(--secondary-background-color);color:inherit}.order-actions button:hover:not([disabled]){border-color:var(--accent);color:var(--accent)}code{display:block;overflow-wrap:anywhere;color:var(--secondary-text-color)}
+      fieldset.config{border:0;margin:0;padding:0;min-width:0}.config[disabled]{pointer-events:none;opacity:.72}.order{display:grid;gap:6px}.order>div{display:grid;grid-template-columns:30px minmax(0,1fr) auto;align-items:center;gap:9px;padding:7px 9px;border:1px solid var(--divider-color);border-radius:9px;background:var(--card-background-color)}.order-index{display:grid;place-items:center;width:28px;height:28px;border-radius:8px;background:color-mix(in srgb,var(--accent) 13%,var(--card-background-color));color:var(--accent);font-weight:750}.order code{min-width:0}.order-save{display:flex;align-items:center;justify-content:space-between;gap:10px}.order-save button{min-height:42px;padding:8px 12px;border:1px solid var(--divider-color);border-radius:9px;background:var(--card-background-color);color:inherit}.order-save button.pending{border-color:var(--accent);background:var(--accent);color:#fff;font-weight:700}.fatal{color:var(--error-color);font-weight:700}
       .add{justify-self:start;padding:9px 12px;border:0;border-radius:9px;background:var(--accent);color:var(--text-primary-color,#fff);cursor:pointer}.guidance{display:grid;gap:8px;padding:12px;border:1px solid color-mix(in srgb,var(--accent) 35%,var(--divider-color));border-radius:12px;background:color-mix(in srgb,var(--accent) 8%,var(--card-background-color))}.guidance button{justify-self:start;min-height:42px;padding:8px 12px;border:1px solid var(--accent);border-radius:9px;background:var(--card-background-color);color:var(--accent);font-weight:700;cursor:pointer}.issues{margin:0;padding-left:20px}.error{color:var(--error-color)}.warning{color:var(--warning-color,#b26a00)}.section-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;border-top:1px solid var(--divider-color)}.section-footer button{min-height:42px;padding:8px 14px;border:1px solid var(--divider-color);border-radius:9px;background:var(--secondary-background-color);color:inherit}.section-footer button[disabled]{opacity:.45}
       @media(max-width:800px){.editor-layout{grid-template-columns:1fr}.section-nav{display:flex;overflow-x:auto;position:sticky;top:0;z-index:2;padding:6px;background:var(--primary-background-color);scrollbar-width:thin}.section-tab{flex:0 0 auto;width:auto}.field{grid-template-columns:1fr}.section{padding-inline:10px}header{padding:12px}.toolbar{align-items:stretch}.toolbar>*{flex:1 1 180px}}
     </style>

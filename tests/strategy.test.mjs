@@ -70,6 +70,21 @@ test("dashboardstrategy genereert vijf hoofdviews en stabiele kamer-subviews", a
   assert.deepEqual(generated, await HomeDashboardStrategy.generate(config));
 });
 
+test("brede layout en kioskmodus leveren vier kolommen, interne navigatie en headerconfiguratie", async () => {
+  const config = await normalConfig();
+  config.layout.navigation_mode = "kiosk";
+  const dashboard = await HomeDashboardStrategy.generate(config);
+  assert.deepEqual(dashboard.kiosk_mode, { hide_header: true });
+  const rooms = dashboard.views.find((view) => view.path === "rooms");
+  const expanded = await HomeDashboardViewStrategy.generate(rooms.strategy);
+  assert.equal(expanded.max_columns, 4);
+  assert.equal(expanded.sections[0].cards[0].type, "custom:home-dashboard-navigation");
+  assert.equal(expanded.sections[0].cards[0].active, "rooms");
+  const home = dashboard.views.find((view) => view.path === "home");
+  const homeExpanded = await HomeDashboardViewStrategy.generate(home.strategy);
+  assert.equal(homeExpanded.sections[0].cards[0].navigation_mode, "kiosk");
+});
+
 test("iedere viewstrategy levert native Sections zonder serviceactie", async () => {
   const dashboard = await HomeDashboardStrategy.generate(await normalConfig());
   const allowedCards = new Set([

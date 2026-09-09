@@ -26,6 +26,7 @@ interface HomeOverviewConfig {
   type: "custom:home-dashboard-home-overview";
   theme_mode?: "system" | "light" | "dark";
   palette?: DashboardPalette;
+  navigation_mode?: "native" | "integrated" | "kiosk";
   today?: TodayConfig;
   persons?: PersonConfig[];
   security?: SecurityConfig;
@@ -58,7 +59,6 @@ function unique(values: Array<string | undefined>): string[] {
 
 type AttentionPriority = "critical" | "warning" | "offline";
 interface AttentionItem { entity: string; priority: AttentionPriority; state: string; label: string }
-interface ActivityItem { entity: string; room?: RoomConfig; label: string; detail: string; icon: string; signature: string }
 
 const priorityOrder: Record<AttentionPriority, number> = { critical: 0, warning: 1, offline: 2 };
 
@@ -89,53 +89,11 @@ function numericState(state: StateLike | undefined): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-function activeItems(hass: HomeAssistantLike | undefined, config: HomeOverviewConfig): ActivityItem[] {
-  const items: ActivityItem[] = [];
-  const add = (entity: string, room: RoomConfig | undefined, label: string, detail: string, icon: string, signature: string): void => {
-    if (!items.some((item) => item.entity === entity)) items.push({ entity, ...(room ? { room } : {}), label, detail, icon, signature });
-  };
-  for (const room of config.rooms ?? []) {
-    for (const entity of room.media_entities) {
-      const state = hass?.states?.[entity];
-      if (state?.state === "playing") add(entity, room, friendlyName(state, "Media"), `${room.name} · Speelt`, "mdi:play-circle-outline", "playing");
-    }
-    const hvacState = hass?.states?.[room.hvac.entity];
-    const hvacAction = typeof hvacState?.attributes?.hvac_action === "string" ? hvacState.attributes.hvac_action : "";
-    if (room.hvac.entity && ["heating", "cooling", "drying", "fan"].includes(hvacAction)) {
-      const detail = hvacAction === "heating" ? "Verwarmt" : hvacAction === "cooling" ? "Koelt" : hvacAction === "drying" ? "Ontvochtigt" : "Ventileert";
-      add(room.hvac.entity, room, room.name, detail, "mdi:thermostat", `hvac:${hvacAction}`);
-    }
-    for (const entity of room.cover_entities) {
-      const state = hass?.states?.[entity];
-      if (["opening", "closing"].includes(state?.state ?? "")) add(entity, room, friendlyName(state, "Cover"), `${room.name} · ${formatState(state)}`, "mdi:window-shutter", state!.state!);
-    }
-    for (const entity of room.light_entities) {
-      const state = hass?.states?.[entity];
-      if (state?.state === "on") add(entity, room, friendlyName(state, "Verlichting"), `${room.name} · Aan`, "mdi:lightbulb-on-outline", "on");
-    }
-  }
-  const evEntity = config.energy?.ev_power_entity;
-  if (evEntity) {
-    const state = hass?.states?.[evEntity];
-    const power = numericState(state);
-    if (typeof power === "number" && power > 50) add(evEntity, undefined, "Auto laden", formatState(state), "mdi:car-electric", "charging");
-  }
-  return items;
-}
-
 export function getHomeStructureSignature(hass: HomeAssistantLike | undefined, config: HomeOverviewConfig): string {
   const attention = attentionItems(hass, config).map((item) => `${item.entity}:${item.priority}:${item.state}`);
   const favorites = new Set(favoriteRooms(config.rooms ?? []).map(room => room.key));
-  const activity = remainingActivities(hass, config).map((item) => `${item.entity}:${item.signature}`);
   const rooms = [...favorites];
-  return [...attention, "activities", ...activity, "rooms", ...rooms].join("|");
-}
-
-function remainingActivities(hass: HomeAssistantLike | undefined, config: HomeOverviewConfig): ActivityItem[] {
-  const visibleTargets = new Set(config.show_quick_actions === false ? [] : favoriteRooms(config.rooms ?? []).flatMap(room => room.control_entities !== undefined
-    ? room.control_entities
-    : [room.control_light_entity, room.control_cover_entity, room.control_awning_entity, room.control_media_entity, room.hvac.entity]).filter(Boolean));
-  return activeItems(hass, config).filter(item => !visibleTargets.has(item.entity)).slice(0, 4);
+  return [...attention, "rooms", ...rooms].join("|");
 }
 
 function formatState(state: StateLike | undefined): string {
@@ -395,25 +353,6 @@ function metricButton(host: HTMLElement, hass: HomeAssistantLike | undefined, en
   return button;
 }
 
-function activityButton(host: HTMLElement, hass: HomeAssistantLike | undefined, item: ActivityItem): HTMLButtonElement {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "activity-card";
-  button.dataset.entity = item.entity;
-  button.setAttribute("aria-label", `${item.label}: ${item.detail}. Open meer informatie.`);
-  const icon = document.createElement("ha-icon") as HTMLElement & { icon?: string };
-  icon.icon = item.icon;
-  const copy = document.createElement("span");
-  const label = document.createElement("strong");
-  label.textContent = item.label;
-  const detail = document.createElement("small");
-  detail.textContent = item.detail;
-  copy.append(label, detail);
-  button.append(icon, copy);
-  button.addEventListener("click", () => showMoreInfo(host, item.entity));
-  return button;
-}
-
 function wasteButton(host: HTMLElement, hass: HomeAssistantLike | undefined, entity: string): HTMLButtonElement {
   const presentation = getWastePresentation(hass?.states?.[entity], entity);
   const button = document.createElement("button");
@@ -580,16 +519,6 @@ export class HomeDashboardHomeOverview extends HTMLElementBase {
     const attentionPill = this.shadowRoot.querySelector<HTMLElement>("[data-live='attention']");
     const attentionCount = attentionItems(hass, this.config).length;
     if (attentionPill) attentionPill.textContent = `${attentionCount} aandachtspunt${attentionCount === 1 ? "" : "en"}`;
-    const currentActivities = new Map(activeItems(hass, this.config).map((item) => [item.entity, item]));
-    this.shadowRoot.querySelectorAll<HTMLButtonElement>(".activity-card[data-entity]").forEach((button) => {
-      const item = currentActivities.get(button.dataset.entity ?? "");
-      if (!item) return;
-      const label = button.querySelector<HTMLElement>("strong");
-      const detail = button.querySelector<HTMLElement>("small");
-      if (label) label.textContent = item.label;
-      if (detail) detail.textContent = item.detail;
-      button.setAttribute("aria-label", `${item.label}: ${item.detail}. Open meer informatie.`);
-    });
     this.shadowRoot.querySelectorAll<HTMLButtonElement>(".person[data-person-index]").forEach((button) => {
       const person = this.config?.persons?.[Number(button.dataset.personIndex)];
       if (!person) return;
@@ -614,15 +543,15 @@ export class HomeDashboardHomeOverview extends HTMLElementBase {
     const style = document.createElement("style");
     style.textContent = `
       .rooms-section{grid-template-columns:1fr auto;align-items:center}.rooms-section>.nav-card{background:transparent;box-shadow:none;border:0}.favorite-grid{grid-column:1/-1;display:grid;align-items:start;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}@media(max-width:700px){.favorite-grid{grid-template-columns:1fr}}
-      :host{display:block;min-width:0;--hd-surface:var(--ha-card-background,var(--card-background-color,#fff));--hd-surface-raised:color-mix(in srgb,var(--hd-surface) 96%,var(--hd-brand));--hd-surface-muted:var(--secondary-background-color,#e5edf3);--hd-text:var(--primary-text-color,#17212b);--hd-muted:var(--secondary-text-color,#596978);--hd-border:var(--divider-color,#d3dee7);--hd-brand:var(--primary-color,#087fb9);--hd-brand-soft:color-mix(in srgb,var(--hd-brand) 13%,var(--hd-surface));--hd-hero:#087fb9;--hd-radius:16px;--hd-shadow:0 1px 2px rgb(20 35 28/.06),0 7px 24px rgb(20 35 28/.035);color:var(--hd-text)}:host([data-theme-mode="light"]){--primary-background-color:#edf3f7;--secondary-background-color:#e5edf3;--card-background-color:#fff;--ha-card-background:#fff;--primary-text-color:#17212b;--secondary-text-color:#596978;--divider-color:#d3dee7;--primary-color:#087fb9;--hd-surface:#fff;--hd-surface-raised:#f7fafc;--hd-surface-muted:#e5edf3;--hd-text:#17212b;--hd-muted:#596978;--hd-border:#d3dee7;--hd-brand:#087fb9;--hd-brand-soft:#dceff8;--hd-hero:#087fb9}:host([data-theme-mode="dark"]){--primary-background-color:#101820;--secondary-background-color:#243743;--card-background-color:#17232d;--ha-card-background:#17232d;--primary-text-color:#eef6fb;--secondary-text-color:#a8bac7;--divider-color:#344b5a;--primary-color:#63c7ef;--hd-surface:#17232d;--hd-surface-raised:#1d2c37;--hd-surface-muted:#243743;--hd-text:#eef6fb;--hd-muted:#a8bac7;--hd-border:#344b5a;--hd-brand:#63c7ef;--hd-brand-soft:#123d50;--hd-hero:#086f9f;--hd-shadow:0 1px 2px rgb(0 0 0/.16),0 8px 28px rgb(0 0 0/.13)}*{box-sizing:border-box}.home{display:grid;gap:22px;width:100%;margin:0 auto}.top{display:flex;justify-content:space-between;align-items:end;gap:16px;padding:18px 20px;border-radius:20px;background:var(--hd-hero);color:#fff;box-shadow:var(--hd-shadow)}.date{font-size:.7rem;font-weight:750;letter-spacing:.09em;text-transform:uppercase;color:inherit;opacity:.78}h1{margin:3px 0 0;font-size:2rem;letter-spacing:-.035em}.pills{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.pill{padding:6px 10px;border:1px solid rgb(255 255 255/.38);border-radius:999px;background:rgb(255 255 255/.14);color:#fff;font-size:.76rem;font-weight:650}.pill.attention{border-color:#ffd278;background:#ffe4aa;color:#573500}
+      :host{display:block;min-width:0;--hd-surface:var(--ha-card-background,var(--card-background-color,#fff));--hd-surface-raised:color-mix(in srgb,var(--hd-surface) 96%,var(--hd-brand));--hd-surface-muted:var(--secondary-background-color,#e5edf3);--hd-text:var(--primary-text-color,#17212b);--hd-muted:var(--secondary-text-color,#596978);--hd-border:var(--divider-color,#d3dee7);--hd-brand:var(--primary-color,#087fb9);--hd-brand-soft:color-mix(in srgb,var(--hd-brand) 13%,var(--hd-surface));--hd-hero:#087fb9;--hd-radius:16px;--hd-shadow:0 1px 2px rgb(20 35 28/.06),0 7px 24px rgb(20 35 28/.035);color:var(--hd-text)}:host([data-theme-mode="light"]){--primary-background-color:#edf3f7;--secondary-background-color:#e5edf3;--card-background-color:#fff;--ha-card-background:#fff;--primary-text-color:#17212b;--secondary-text-color:#596978;--divider-color:#d3dee7;--primary-color:#087fb9;--hd-surface:#fff;--hd-surface-raised:#f7fafc;--hd-surface-muted:#e5edf3;--hd-text:#17212b;--hd-muted:#596978;--hd-border:#d3dee7;--hd-brand:#087fb9;--hd-brand-soft:#dceff8;--hd-hero:#087fb9}:host([data-theme-mode="dark"]){--primary-background-color:#101820;--secondary-background-color:#243743;--card-background-color:#17232d;--ha-card-background:#17232d;--primary-text-color:#eef6fb;--secondary-text-color:#a8bac7;--divider-color:#344b5a;--primary-color:#63c7ef;--hd-surface:#17232d;--hd-surface-raised:#1d2c37;--hd-surface-muted:#243743;--hd-text:#eef6fb;--hd-muted:#a8bac7;--hd-border:#344b5a;--hd-brand:#63c7ef;--hd-brand-soft:#123d50;--hd-hero:#086f9f;--hd-shadow:0 1px 2px rgb(0 0 0/.16),0 8px 28px rgb(0 0 0/.13)}*{box-sizing:border-box}.home{display:grid;gap:22px;width:100%;margin:0 auto}.top{display:flex;justify-content:space-between;align-items:end;gap:16px;padding:18px 20px;border-radius:20px;background:var(--hd-hero);color:#fff;box-shadow:var(--hd-shadow)}.date{font-size:.7rem;font-weight:750;letter-spacing:.09em;text-transform:uppercase;color:inherit;opacity:.78}h1{margin:3px 0 0;font-size:2rem;letter-spacing:-.035em}.hero-nav{display:flex;align-items:center;gap:5px;margin-inline:auto}.hero-nav a{display:flex;align-items:center;gap:6px;min-height:40px;padding:7px 10px;border:1px solid transparent;border-radius:11px;color:#fff;text-decoration:none;font-size:.78rem;font-weight:700}.hero-nav a:hover,.hero-nav a:focus-visible{border-color:rgb(255 255 255/.35);background:rgb(255 255 255/.14);outline:0}.hero-nav a[aria-current=page]{background:#fff;color:var(--hd-hero)}.hero-nav ha-icon{width:18px;height:18px}.pills{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.pill{padding:6px 10px;border:1px solid rgb(255 255 255/.38);border-radius:999px;background:rgb(255 255 255/.14);color:#fff;font-size:.76rem;font-weight:650}.pill.attention{border-color:#ffd278;background:#ffe4aa;color:#573500}
       .attention-banner{display:grid;grid-template-columns:42px minmax(0,1fr);align-items:start;gap:12px;padding:14px 16px;border:1px solid color-mix(in srgb,var(--warning-color,#f0a000) 40%,var(--hd-border));border-radius:18px;background:color-mix(in srgb,var(--warning-color,#f0a000) 14%,var(--hd-surface))}.attention-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:var(--hd-surface);color:var(--warning-color,#f0a000)}.attention-body{display:grid;gap:8px;min-width:0}.attention-copy{display:grid}.attention-copy span{font-size:.76rem;color:var(--hd-muted)}.attention-list{display:flex;flex-wrap:wrap;gap:6px}.attention-item{display:flex;align-items:center;gap:6px;min-height:44px;padding:7px 10px;border:1px solid var(--hd-border);border-radius:12px;background:var(--hd-surface);color:var(--hd-text);cursor:pointer;text-align:left}.attention-item:hover,.attention-item:focus-visible{border-color:var(--hd-brand)}.attention-item ha-icon{width:18px;height:18px}.attention-item span{display:grid;min-width:0}.attention-item strong,.attention-item small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.attention-item strong{font-size:.78rem}.attention-item small{font-size:.68rem;color:var(--hd-muted)}.attention-item.priority-critical ha-icon{color:var(--error-color,#d64c4c)}.attention-item.priority-warning ha-icon{color:var(--warning-color,#d88a00)}.attention-item.priority-offline ha-icon{color:var(--hd-muted)}.attention-extra{align-self:center;font-size:.72rem;color:var(--hd-muted)}
       section{display:grid;gap:9px}.section-header span{display:grid}.section-header strong{font-size:1rem;letter-spacing:-.01em}.section-header small{color:var(--hd-muted);font-size:.75rem}.today-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:stretch}.today-grid.with-security{grid-template-columns:minmax(250px,.84fr) minmax(300px,1.12fr) minmax(270px,.94fr)}.today-main{grid-column:1/3;display:grid;height:100%;overflow:hidden;border:1px solid var(--hd-border);border-radius:var(--hd-radius);background:var(--hd-surface);box-shadow:var(--hd-shadow)}.today-side,.security-panel{display:grid;align-content:start}.security-panel{grid-column:3;grid-row:1;height:100%}.security-panel>.security,.security-panel .camera{height:100%}.compact-weather{display:grid;gap:10px;min-width:0;min-height:164px;padding:14px;border:0;border-radius:0;background:transparent;box-shadow:none;color:var(--hd-text);cursor:pointer;text-align:left}.compact-weather:hover,.compact-weather:focus-visible{background:var(--hd-surface-raised)}.weather-now{display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:10px}.weather-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:13px;background:var(--hd-brand-soft);color:var(--hd-brand)}.weather-icon ha-icon{width:25px;height:25px}.weather-copy{display:grid}.weather-copy strong{font-size:1rem}.weather-copy small{font-size:.72rem;color:var(--hd-muted)}.weather-temperature{font-size:1.65rem;letter-spacing:-.04em;font-variant-numeric:tabular-nums}.forecast-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding-top:9px;border-top:1px solid var(--hd-border)}.forecast-day{display:grid;grid-template-columns:1fr auto;align-items:center;gap:3px}.forecast-day small{font-size:.68rem;color:var(--hd-muted)}.forecast-day ha-icon{grid-row:span 2;width:19px;height:19px;color:var(--hd-brand)}.forecast-day strong{font-size:.7rem;font-variant-numeric:tabular-nums}.forecast-missing{grid-column:1/-1;display:grid;place-items:center;min-height:43px;color:var(--hd-muted);font-size:.72rem}.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;overflow:hidden;border:0;border-top:1px solid var(--hd-border);border-radius:0;background:var(--hd-border);box-shadow:none}.metric-card{display:grid;grid-template-columns:29px minmax(0,1fr);align-items:center;gap:7px;min-height:64px;padding:8px 10px;border:0;background:var(--hd-surface);color:var(--hd-text);cursor:pointer;text-align:left}.metric-card:hover,.metric-card:focus-visible{background:var(--hd-brand-soft)}.metric-card ha-icon{width:24px;height:24px;color:var(--hd-brand)}.metric-copy{display:grid;gap:1px;min-width:0}.metric-value,.metric-meta,.metric-status{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.metric-value{font-size:.9rem;font-variant-numeric:tabular-nums}.metric-meta{font-size:.63rem;color:var(--hd-muted)}.metric-status{font-size:.61rem;font-weight:700;color:var(--warning-color,#d88a00)}.metric-card.is-unavailable{background:var(--hd-surface-muted)}.metric-card.is-unavailable ha-icon{color:var(--hd-muted)}.metric-card.is-unavailable .metric-status{color:var(--hd-muted)}.state-card{display:grid;text-align:left;gap:3px;padding:11px;border:1px solid var(--hd-border);border-radius:var(--hd-radius);background:var(--hd-surface);box-shadow:var(--hd-shadow);color:var(--hd-text);cursor:pointer}.state-card:hover{border-color:var(--hd-brand)}.state-copy{display:grid;gap:3px;min-width:0}.state-copy strong,.state-copy span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.state-copy span{font-size:.76rem;color:var(--hd-muted)}.today-main>.empty{border:0;border-radius:0}.waste-group{display:grid;gap:8px;padding:12px 14px 14px;border-top:1px solid var(--hd-border)}.waste-heading{display:grid}.waste-heading strong{font-size:.92rem}.waste-heading small{color:var(--hd-muted);font-size:.72rem}.waste{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1px;overflow:hidden;border:1px solid var(--hd-border);border-radius:12px;background:var(--hd-border)}.waste-card{display:grid;grid-template-columns:34px minmax(0,1fr);align-items:center;gap:8px;min-height:62px;padding:9px 10px;border:0;border-radius:0;background:var(--hd-surface);box-shadow:none;color:var(--hd-text);cursor:pointer;text-align:left}.waste-card:hover,.waste-card:focus-visible{background:var(--hd-brand-soft)}.waste-card ha-icon{width:22px;height:22px;padding:6px;border-radius:11px;background:var(--hd-brand-soft)}.waste-card.tone-green ha-icon{color:var(--success-color,#3a8f57)}.waste-card.tone-blue ha-icon{color:var(--info-color,#287db8)}.waste-card.tone-yellow ha-icon{color:var(--warning-color,#d88a00)}.waste-card.tone-neutral ha-icon{color:var(--hd-muted)}.waste-copy{display:grid;gap:2px;min-width:0}.waste-label{font-size:.8rem}.waste-meta{display:flex;gap:5px;flex-wrap:wrap;font-size:.69rem;color:var(--hd-muted)}.waste-relative{font-weight:700;color:var(--hd-brand)}
       .people{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.person{display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:10px;min-height:62px;padding:9px 11px;border:1px solid var(--hd-border);border-radius:var(--hd-radius);background:var(--hd-surface);box-shadow:var(--hd-shadow);color:var(--hd-text);cursor:pointer;text-align:left}.person:hover,.person:focus-visible{border-color:var(--hd-brand)}.avatar{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;overflow:hidden;background:var(--hd-brand);color:#fff;font-weight:700}.avatar img{width:100%;height:100%;object-fit:cover}.person-copy{display:grid}.person-copy strong{font-size:.85rem}.person-copy small{color:var(--hd-muted);font-size:.72rem}.person-state{padding:5px 9px;border-radius:999px;background:var(--hd-brand-soft);color:var(--hd-brand);font-size:.72rem;font-weight:700}
-      .activity-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.activity-card{display:flex;align-items:center;gap:10px;padding:12px;min-height:58px;border:1px solid var(--hd-border);border-radius:16px;background:var(--hd-surface);color:var(--hd-text);text-align:left;cursor:pointer}.activity-card span{display:grid}.activity-card small{color:var(--hd-muted)}.activity-card ha-icon{width:22px;height:22px;flex-shrink:0;color:var(--hd-brand)}.activity-card:focus-visible{outline:2px solid var(--hd-brand)}.nav-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.nav-card{display:flex;align-items:center;gap:9px;min-height:50px;padding:10px 12px;border:1px solid var(--hd-border);border-radius:var(--hd-radius);background:var(--hd-surface);box-shadow:var(--hd-shadow);color:var(--hd-text);text-decoration:none;font-size:.86rem;font-weight:650}.nav-card:hover,.nav-card:focus-visible{border-color:var(--hd-brand);background:var(--hd-surface-raised)}.nav-card ha-icon{width:22px;height:22px;color:var(--hd-brand)}.security{display:grid;gap:8px;align-items:start}.security.has-camera{grid-template-rows:minmax(0,1fr) auto;align-content:stretch;align-items:stretch}.security-panel>.security{display:flex;flex-direction:column;align-items:stretch}.security-panel .camera{flex:1;height:auto}.empty{padding:16px;border:1px dashed var(--hd-border);border-radius:var(--hd-radius);color:var(--hd-muted)}
+      .nav-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.nav-card{display:flex;align-items:center;gap:9px;min-height:50px;padding:10px 12px;border:1px solid var(--hd-border);border-radius:var(--hd-radius);background:var(--hd-surface);box-shadow:var(--hd-shadow);color:var(--hd-text);text-decoration:none;font-size:.86rem;font-weight:650}.nav-card:hover,.nav-card:focus-visible{border-color:var(--hd-brand);background:var(--hd-surface-raised)}.nav-card ha-icon{width:22px;height:22px;color:var(--hd-brand)}.today-navigation{display:grid;gap:8px;padding:12px 14px 14px;border-top:1px solid var(--hd-border)}.today-navigation .nav-label{font-size:.75rem;font-weight:700;color:var(--hd-muted)}.today-navigation .nav-card{min-height:46px;box-shadow:none}.security{display:grid;gap:8px;align-items:start}.security.has-camera{grid-template-rows:minmax(0,1fr) auto;align-content:stretch;align-items:stretch}.security-panel>.security{display:flex;flex-direction:column;align-items:stretch}.security-panel .camera{flex:1;height:auto}.empty{padding:16px;border:1px dashed var(--hd-border);border-radius:var(--hd-radius);color:var(--hd-muted)}
       .security-panel{display:flex;align-items:stretch}.security-panel>.security{flex:1;height:auto}
-      @media(max-width:1050px){.today-grid.with-security{grid-template-columns:repeat(2,minmax(0,1fr))}.today-main,.security-panel{grid-column:1/-1}.security-panel{grid-row:auto}}
+      @media(max-width:1180px){.hero-nav{order:3;width:100%;margin:0;overflow-x:auto}.top{flex-wrap:wrap}.today-grid.with-security{grid-template-columns:repeat(2,minmax(0,1fr))}.today-main,.security-panel{grid-column:1/-1}.security-panel{grid-row:auto}}
       @media(max-width:800px){.home{gap:20px}.top{align-items:flex-start;flex-direction:column;padding:16px}.pills{justify-content:flex-start}.today-grid,.today-grid.with-security{grid-template-columns:1fr}.today-main,.security-panel{grid-column:auto}.security-panel{grid-row:auto}.nav-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-      @media(max-width:560px){h1{font-size:1.65rem}.people{grid-template-columns:1fr}.waste{grid-template-columns:repeat(2,minmax(0,1fr))}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.attention-banner{grid-template-columns:38px minmax(0,1fr)}.attention-list{display:grid;grid-template-columns:1fr}.attention-item{width:100%}.activity-list{grid-template-columns:1fr}.person{grid-template-columns:42px minmax(0,1fr) auto}.person-state{max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+      @media(max-width:560px){h1{font-size:1.65rem}.people{grid-template-columns:1fr}.waste{grid-template-columns:repeat(2,minmax(0,1fr))}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.attention-banner{grid-template-columns:38px minmax(0,1fr)}.attention-list{display:grid;grid-template-columns:1fr}.attention-item{width:100%}.person{grid-template-columns:42px minmax(0,1fr) auto}.person-state{max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
     `;
     const root = document.createElement("main");
     root.className = "home";
@@ -651,7 +580,20 @@ export class HomeDashboardHomeOverview extends HTMLElementBase {
       pill.textContent = text;
       pills.append(pill);
     }
-    top.append(intro, pills);
+    top.append(intro);
+    if (config.navigation_mode && config.navigation_mode !== "native") {
+      const heroNav = document.createElement("nav");
+      heroNav.className = "hero-nav";
+      heroNav.setAttribute("aria-label", "Dashboardnavigatie");
+      for (const [path, label, iconName] of [["home", "Home", "mdi:home-outline"], ["rooms", "Kamers", "mdi:floor-plan"], ["energy", "Energie", "mdi:lightning-bolt-outline"], ["domains", "Domeinen", "mdi:view-grid-outline"], ["more", "Meer", "mdi:dots-horizontal-circle-outline"]] as const) {
+        const link = navigationLink(label, iconName, path);
+        link.className = "";
+        if (path === "home") link.setAttribute("aria-current", "page");
+        heroNav.append(link);
+      }
+      top.append(heroNav);
+    }
+    top.append(pills);
     root.append(top);
 
     if (currentAttentionItems.length > 0) {
@@ -728,6 +670,26 @@ export class HomeDashboardHomeOverview extends HTMLElementBase {
       return panel;
     };
 
+    const buildSpecialistNavigation = (compact = false): HTMLElement | undefined => {
+      const specialistNames: Record<keyof SpecialistsConfig, [string, string, string]> = {
+        kia: ["Auto", "mdi:car-electric", "specialist-kia"], robot: ["Robot", "mdi:robot-vacuum", "more"], garden: ["Tuin", "mdi:flower", "more"], pool: ["Zwembad", "mdi:pool", "more"]
+      };
+      const navGrid = document.createElement("div");
+      navGrid.className = "nav-grid";
+      (Object.entries(config.specialists ?? {}) as Array<[keyof SpecialistsConfig, SpecialistsConfig[keyof SpecialistsConfig]]>)
+        .filter(([, specialist]) => specialist.enabled)
+        .forEach(([key]) => navGrid.append(navigationLink(specialistNames[key][0], specialistNames[key][1], specialistNames[key][2])));
+      if (!navGrid.childElementCount) return undefined;
+      if (!compact) return navGrid;
+      const wrapper = document.createElement("div");
+      wrapper.className = "today-navigation";
+      const label = document.createElement("span");
+      label.className = "nav-label";
+      label.textContent = "Snel naar";
+      wrapper.append(label, navGrid);
+      return wrapper;
+    };
+
     if (config.today?.enabled) {
       const today = document.createElement("section");
       today.append(sectionHeader("Vandaag", "Weer, ophaling en energiecontext in één compacte zone"));
@@ -790,6 +752,8 @@ export class HomeDashboardHomeOverview extends HTMLElementBase {
         wasteGroup.append(wasteHeading, waste);
         side.append(wasteGroup);
       }
+      const compactNavigation = buildSpecialistNavigation(true);
+      if (compactNavigation) side.append(compactNavigation);
       if (!side.childElementCount) {
         const empty = document.createElement("div");
         empty.className = "empty";
@@ -848,14 +812,6 @@ export class HomeDashboardHomeOverview extends HTMLElementBase {
     }
 
     const favorites = favoriteRooms(config.rooms ?? []);
-    const currentActivities = remainingActivities(hass, config);
-    if (currentActivities.length) {
-      const active = document.createElement("section");
-      active.append(sectionHeader("Nu actief", "Overige woningactiviteit"));
-      const list = document.createElement("div"); list.className = "activity-list";
-      currentActivities.forEach(item => list.append(activityButton(this, hass, item)));
-      active.append(list); root.append(active);
-    }
     const roomsSection = document.createElement("section");
     roomsSection.className = "rooms-section";
     roomsSection.append(sectionHeader("Kamers & bediening", "Je vaste kamers, direct bij de hand"));
@@ -873,19 +829,13 @@ export class HomeDashboardHomeOverview extends HTMLElementBase {
     }
     roomsSection.append(roomGrid); root.append(roomsSection);
 
-    const navigation = document.createElement("section");
-    navigation.append(sectionHeader("Snel naar", "Volledige specialistische dashboards"));
-    const navGrid = document.createElement("div");
-    navGrid.className = "nav-grid";
-    const specialistNames: Record<keyof SpecialistsConfig, [string, string, string]> = {
-      kia: ["Auto", "mdi:car-electric", "specialist-kia"], robot: ["Robot", "mdi:robot-vacuum", "more"], garden: ["Tuin", "mdi:flower", "more"], pool: ["Zwembad", "mdi:pool", "more"]
-    };
-    (Object.entries(config.specialists ?? {}) as Array<[keyof SpecialistsConfig, SpecialistsConfig[keyof SpecialistsConfig]]>)
-      .filter(([, specialist]) => specialist.enabled)
-      .forEach(([key]) => navGrid.append(navigationLink(specialistNames[key][0], specialistNames[key][1], specialistNames[key][2])));
-    if (navGrid.childElementCount > 0) {
-      navigation.append(navGrid);
-      root.append(navigation);
+    if (!config.today?.enabled) {
+      const navGrid = buildSpecialistNavigation();
+      if (navGrid) {
+        const navigation = document.createElement("section");
+        navigation.append(sectionHeader("Snel naar", "Volledige specialistische dashboards"), navGrid);
+        root.append(navigation);
+      }
     }
 
     if (!config.today?.enabled) {
