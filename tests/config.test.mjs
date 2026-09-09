@@ -46,8 +46,20 @@ test("defaults zijn een geldige schema-v1-configuratie", () => {
   assert.equal(config.type, "custom:home-dashboard");
   assert.equal(config.schema_version, 1);
   assert.equal(config.general.palette, "ocean_blue");
+  assert.equal(config.layout.content_width, "wide");
+  assert.equal(config.layout.navigation_mode, "native");
   assert.deepEqual(validateConfig(config), []);
   assert.deepEqual(validateConfigSchema(config), []);
+});
+
+test("layout migreert naar brede native weergave en valideert navigatiemodi", () => {
+  const migrated = migrateConfig({ layout: { show_weather: false } }).config;
+  assert.equal(migrated.layout.content_width, "wide");
+  assert.equal(migrated.layout.navigation_mode, "native");
+  migrated.layout.navigation_mode = "kiosk";
+  assert.deepEqual(validateConfigSchema(migrated), []);
+  migrated.layout.navigation_mode = "invalid";
+  assert.ok(validateConfigSchema(migrated).some((issue) => issue.path === "layout.navigation_mode"));
 });
 
 test("kleurpalet migreert compatibel en weigert onbekende waarden", () => {

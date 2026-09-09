@@ -49,6 +49,8 @@ export const FIELD_DEFINITIONS: readonly FieldDefinition[] = [
   { path: "energy.ups_entity", section: "energy", label: "UPS", description: "Woningbrede UPS-status.", kind: "entity", selector: { entity: {} } },
   { path: "energy.phase_entities", section: "energy", label: "Fases", description: "Spanning of vermogen per fase.", kind: "entities", selector: { entity: { multiple: true } } },
 
+  { path: "layout.content_width", section: "layout", label: "Dashboardbreedte", description: "Breed gebruikt op grote schermen een extra Home Assistant-kolom.", kind: "select", options: ["wide", "standard"], optionLabels: { wide: "Volledige breedte", standard: "Standaard" } },
+  { path: "layout.navigation_mode", section: "layout", label: "Navigatie", description: "Geïntegreerd zet de navigatie in het dashboard; kiosk verbergt met de optionele kiosk-mode-resource ook de HA-bovenbalk.", kind: "select", options: ["native", "integrated", "kiosk"], optionLabels: { native: "Home Assistant-balk", integrated: "In dashboard", kiosk: "Kiosk (resource vereist)" } },
   { path: "layout.mobile_disclosure", section: "layout", label: "Mobiele disclosure", description: "Progressief houdt Home scanbaar.", kind: "select", options: ["progressive", "expanded"] },
   { path: "layout.show_weather", section: "layout", label: "Weer op Home", description: "Zichtbaarheid van weerkaart.", kind: "checkbox" },
   { path: "layout.show_persons", section: "layout", label: "Personen op Home", description: "Thuis, zone en freshness.", kind: "checkbox" },

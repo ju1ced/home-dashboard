@@ -12,6 +12,7 @@ import {
   registerHomeDashboardEnergyOverview
 } from "../cards/home-dashboard-energy-domain-cards";
 import { buildKiaDetailSections, registerHomeDashboardKiaIntegration } from "../cards/home-dashboard-kia-integration";
+import { registerHomeDashboardNavigation } from "../cards/home-dashboard-navigation";
 
 type LovelaceConfig = Record<string, unknown>;
 
@@ -19,6 +20,8 @@ export interface HomeDashboardViewConfig {
   type: "custom:home-dashboard-view";
   view: ViewPath | "room" | "specialist-kia";
   density: HomeDashboardConfigV1["general"]["density"];
+  content_width?: HomeDashboardConfigV1["layout"]["content_width"];
+  navigation_mode?: HomeDashboardConfigV1["layout"]["navigation_mode"];
   theme_mode?: HomeDashboardConfigV1["general"]["theme_mode"];
   palette?: HomeDashboardConfigV1["general"]["palette"];
   show_weather?: boolean;
@@ -68,6 +71,7 @@ function homeSections(config: HomeDashboardViewConfig, maxColumns: number): Love
       type: "custom:home-dashboard-home-overview",
       theme_mode: config.theme_mode,
       palette: config.palette,
+      navigation_mode: config.navigation_mode,
       today: config.today,
       persons: config.persons ?? [],
       security: config.security,
@@ -136,14 +140,20 @@ export function buildView(config: HomeDashboardViewConfig): LovelaceConfig {
   if (!["home", "rooms", "energy", "domains", "more", "room", "specialist-kia"].includes(config.view)) {
     return { type: "sections", max_columns: 1, dense_section_placement: false, sections: [{ type: "grid", cards: [markdown("Deze viewconfiguratie wordt niet ondersteund.", "Home Dashboard")] }] };
   }
-  const maxColumns = config.density === "compact" ? 4 : 3;
-  const sections = config.view === "home" ? homeSections(config, maxColumns)
+  const maxColumns = config.content_width === "wide" ? 4 : config.density === "compact" ? 4 : 3;
+  const contentSections = config.view === "home" ? homeSections(config, maxColumns)
     : config.view === "rooms" ? roomsSections(config.rooms ?? [], maxColumns, config.show_quick_actions !== false, config.palette, config.theme_mode)
       : config.view === "room" ? roomDetailSections(config.room, maxColumns, config.palette, config.theme_mode)
       : config.view === "specialist-kia" ? buildKiaDetailSections(config.kia, config.diagnostics, maxColumns, config.theme_mode, config.palette)
       : config.view === "energy" ? buildEnergySections(config.energy, maxColumns, config.theme_mode, config.palette)
         : config.view === "domains" ? buildDomainSections({ rooms: config.rooms, energy: config.energy, security: config.security, specialists: config.specialists, diagnostics: config.diagnostics }, maxColumns)
           : moreSections(config);
+  const navigation = config.navigation_mode && config.navigation_mode !== "native" && config.view !== "home" ? [{
+    type: "grid",
+    column_span: maxColumns,
+    cards: [{ type: "custom:home-dashboard-navigation", active: config.view, palette: config.palette, theme_mode: config.theme_mode, grid_options: { columns: "full", rows: "auto" } }]
+  }] : [];
+  const sections = [...navigation, ...contentSections];
   return {
     type: "sections",
     max_columns: maxColumns,
@@ -161,6 +171,7 @@ export class HomeDashboardViewStrategy extends HTMLElementBase {
 }
 
 export function registerHomeDashboardViewStrategy(): void {
+  registerHomeDashboardNavigation();
   registerHomeDashboardEnergyOverview();
   registerHomeDashboardKiaIntegration();
   if (typeof customElements === "undefined") return;

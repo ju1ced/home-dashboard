@@ -154,6 +154,27 @@ test("open room blijft open na HA-roundtrip, keywijziging en reorder", () => {
   assert.equal(editor.shadowRoot.items.find((item) => item.dataset.itemToken === "rooms:living_room_renamed").open, true);
 });
 
+test("quick-actionvolgorde wijzigt lokaal en wordt pas op toepassen opgeslagen", () => {
+  const config = createDefaultConfig();
+  const configuredRoom = room("office");
+  const first = ["light", "example_first"].join(".");
+  const second = ["cover", "example_second"].join(".");
+  const third = ["light", "example_third"].join(".");
+  configuredRoom.control_entities = [first, second, third];
+  config.rooms.push(configuredRoom);
+  const editor = new HomeDashboardStrategyEditor();
+  editor.connectedCallback();
+  editor.setConfig(config);
+  let changes = 0;
+  editor.addEventListener("config-changed", () => { changes += 1; });
+
+  editor.moveRoomControlDraft(0, 0, "down");
+  assert.deepEqual(editor._config.rooms[0].control_entities, [second, first, third]);
+  assert.equal(changes, 0);
+  editor.commit();
+  assert.equal(changes, 1);
+});
+
 test("tab-keypress verplaatst selectie en focus na de microtask", async () => {
   const editor = new HomeDashboardStrategyEditor();
   editor.connectedCallback();

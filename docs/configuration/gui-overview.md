@@ -21,6 +21,10 @@ De editor heeft tien onderdelen:
 
 De editor toont bewust maar één configuratieonderdeel tegelijk. Desktop gebruikt een vaste linkernavigatie; op smalle schermen verandert die in een horizontaal scrollbare tabbalk. Fout- en waarschuwingsbadges blijven bij elk onderdeel zichtbaar. Vorige/volgende-knoppen bieden een lineaire route, terwijl pijltjestoetsen, Home en End rechtstreeks tussen de sectietabs navigeren.
 
+Onder **Layout** kiest Dashboardbreedte tussen standaard en vier kolommen breed. Navigatie biedt de Home Assistant-balk, geïntegreerde dashboardnavigatie of kiosk. De kioskoptie levert de configuratie voor de optionele `kiosk-mode` frontendresource; zonder die resource blijft de interne navigatie bruikbaar maar kan een kaart de globale HA-bovenbalk niet betrouwbaar verbergen.
+
+De volgorde van kamerknoppen verandert lokaal met pijlen. Pas na **Volgorde toepassen** verstuurt de editor één configuratiewijziging, zodat Home Assistant niet na iedere tussenstap het volledige dashboard herbouwt.
+
 Herhaalbare items zoals personen, camera's, kamers en acties zijn inklapbaar. Een geopend item blijft na een geldige of ongeldige veldwijziging open; een nieuw item opent onmiddellijk voor invoer.
 
 ## Opslaan en validatie

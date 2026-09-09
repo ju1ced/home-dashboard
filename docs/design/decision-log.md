@@ -274,3 +274,11 @@
 - **Besluit:** `general.palette` kiest tussen het compatibele Huidig blauw, Warm zand, Rustig salie, Zacht leisteen en Gedempt petrol. Ieder palet bevat afzonderlijk gecontroleerde light- en dark-tokens; system mode erft de HA-oppervlakken en past merk- en statusaccenten toe.
 - **Scope:** de keuze loopt door naar Home, Kamers, kamerdetail, Energie en de centrale Kia-samenvatting. Native Home Assistant-kaarten en de globale HA-shell blijven hun actieve HA-thema volgen.
 - **Budget:** de harde bundlegrens groeit van 184 naar 190 kB voor vijf complete tokenreeksen, configuratievalidatie en toepassing op alle eigen kaarten. De gemeten candidate blijft onder deze buildgate.
+
+## D-046 — Brede compositie, lokale ordening en optionele kiosknavigatie
+
+- **Status:** gevraagd door de eigenaar op 9 september 2026; candidate `v0.8.0-alpha.7`.
+- **Besluit:** Home gebruikt standaard vier Sections-kolommen. Snel naar verhuist onder de afvalophaling en Nu actief vervalt omdat dezelfde toestand al in de contrastrijke kamerknoppen zichtbaar is.
+- **Ordening:** pijlen wijzigen de quick-actionvolgorde uitsluitend lokaal. **Volgorde toepassen** veroorzaakt daarna één configuratieopslag en één dashboardherbouw.
+- **Kiosk:** `layout.navigation_mode` ondersteunt native, geïntegreerd en kiosk. Geïntegreerd toont interne hoofdnavigatie met behoud van de HA-balk. Kiosk voegt `kiosk_mode.hide_header` toe; de optionele frontendresource of Companion App voert het verbergen uit. Dit is presentatie en geen autorisatiegrens.
+- **Budget:** de harde bundlegrens groeit van 190 naar 195 kB voor de gedeelde interne navigatie en configuratiecontracten.
