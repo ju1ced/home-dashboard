@@ -290,3 +290,12 @@
 - **Kiosk:** kiosk gebruikt exact dezelfde interne routes en levert daarnaast `kiosk_mode.hide_header`. Het effectief verbergen van de Home Assistant-bovenbalk blijft afhankelijk van de optionele kiosk-mode-resource of een kioskfunctie van de Companion App.
 - **Snel naar:** specialistische routes vullen samen de beschikbare rij en tonen een gevulde icoontegel, korte context en richtingspijl. Hierdoor zijn ze duidelijk als navigatie herkenbaar.
 - **Budget:** de harde minified bundlegrens groeit van 195 naar 198 kB voor de aanvullende navigatiesemantiek en styling.
+
+## D-048 — Eén navigatieframe, lokale kiosk en native configuratie-ingang
+
+- **Status:** PR, merge na groene checks en alpha-release door de eigenaar goedgekeurd op 11 september 2026; candidate v0.8.0-alpha.9. Geen Home Assistant-write of deployment goedgekeurd.
+- **Navigatie:** alle vijf hoofdviews, kamerdetails en Kia gebruiken dezelfde eerste volle-breedte navigatiecard van 66 px. De knoppen behouden hun positie, ook op mobiel; alle routelabels blijven zichtbaar. Home-context staat afzonderlijk onder de balk. Dit vervangt de afwijkende Home-begroetingsbalk uit D-047.
+- **Kiosk:** het externe configuratieveld bood geen zelfstandig werkende verberging. Een begrensde adapter in de huidige `hui-root` verbergt alleen de header en diens ruimte. Cleanup, native edit mode, een herstelknop en `?disable_km` voorkomen vastlopen. Geen globale resourcewijzigingen, private frontendimports of opgeslagen shellconfiguratie.
+- **Configuratie:** het beheerdersstandwiel gebruikt het bestaande native editor-menu. Bij onbekende markup volgt een zichtbare HA-balk met uitleg en dashboardbeheerlink, niet een eigen opslagpad. Visibility vervangt geen backendautorisatie.
+- **Compatibiliteit:** deze DOM-grens is versiegevoelig. Fictieve browsertests bewijzen het adaptergedrag, niet de runtime op de woninginstallatie. Live rooktest op exact goedgekeurd testdashboard blijft verplicht. Het bestaande bundlebudget blijft ongewijzigd.
+- **Bewijs:** [testscope en herstel](../releases/testing-navigation-consistency.md).

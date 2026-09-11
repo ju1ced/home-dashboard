@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 const require=createRequire(process.env.HD_BROWSER_PACKAGES ? `${process.env.HD_BROWSER_PACKAGES}/package.json` : import.meta.url);
 const {chromium}=require('playwright');
 const browser=await chromium.launch({headless:true,channel:process.env.HD_BROWSER_CHANNEL || 'msedge'});
-const directory='docs/renders/expandable-rooms';await mkdir(directory,{recursive:true});
+const directory=process.env.HD_RENDER_DIRECTORY || 'docs/renders/expandable-rooms';await mkdir(directory,{recursive:true});
 const page=await browser.newPage();
 await page.addInitScript(()=>{const RealDate=Date;window.Date=class extends RealDate {constructor(...args){super(...(args.length?args:['2026-09-07T08:00:00+02:00']));}static now(){return new RealDate('2026-09-07T08:00:00+02:00').getTime();}};});
 const errors=[];page.on('pageerror',error=>errors.push(error.message));
@@ -23,7 +23,7 @@ try {
     assert.equal(await page.locator('home-dashboard-room-controls').count(),4);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
     if(name==='kiosk-navigation') {
-      assert.equal(await page.locator('.hero-nav a').count(),5);
+      assert.equal(await page.locator('home-dashboard-navigation nav a').count(),5);
       assert.equal(await page.getByRole('link',{name:'Home',exact:true}).getAttribute('aria-current'),'page');
     }
     if(name==='warning') assert.equal(await page.getByText('Aandacht nodig',{exact:true}).count(),1);

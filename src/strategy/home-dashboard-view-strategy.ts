@@ -148,10 +148,10 @@ export function buildView(config: HomeDashboardViewConfig): LovelaceConfig {
       : config.view === "energy" ? buildEnergySections(config.energy, maxColumns, config.theme_mode, config.palette)
         : config.view === "domains" ? buildDomainSections({ rooms: config.rooms, energy: config.energy, security: config.security, specialists: config.specialists, diagnostics: config.diagnostics }, maxColumns)
           : moreSections(config);
-  const navigation = config.navigation_mode && config.navigation_mode !== "native" && config.view !== "home" ? [{
+  const navigation = config.navigation_mode && config.navigation_mode !== "native" ? [{
     type: "grid",
     column_span: maxColumns,
-    cards: [{ type: "custom:home-dashboard-navigation", active: config.view, palette: config.palette, theme_mode: config.theme_mode, grid_options: { columns: "full", rows: "auto" } }]
+    cards: [{ type: "custom:home-dashboard-navigation", active: config.view, navigation_mode: config.navigation_mode, palette: config.palette, theme_mode: config.theme_mode, grid_options: { columns: "full", rows: "auto" } }]
   }] : [];
   const sections = [...navigation, ...contentSections];
   return {
