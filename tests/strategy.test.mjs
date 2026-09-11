@@ -70,11 +70,11 @@ test("dashboardstrategy genereert vijf hoofdviews en stabiele kamer-subviews", a
   assert.deepEqual(generated, await HomeDashboardStrategy.generate(config));
 });
 
-test("brede layout en kioskmodus leveren vier kolommen, interne navigatie en headerconfiguratie", async () => {
+test("brede layout geeft kioskmodus door aan interne navigatie zonder externe kioskconfiguratie", async () => {
   const config = await normalConfig();
   config.layout.navigation_mode = "kiosk";
   const dashboard = await HomeDashboardStrategy.generate(config);
-  assert.deepEqual(dashboard.kiosk_mode, { hide_header: true });
+  assert.equal(Object.hasOwn(dashboard, "kiosk_mode"), false);
   const rooms = dashboard.views.find((view) => view.path === "rooms");
   const expanded = await HomeDashboardViewStrategy.generate(rooms.strategy);
   assert.equal(expanded.max_columns, 4);
@@ -90,7 +90,7 @@ test("geïntegreerde navigatie markeert op iedere vervolgpagina de juiste hoofdr
   assert.equal(config.layout.navigation_mode, "integrated");
   const dashboard = await HomeDashboardStrategy.generate(config);
   assert.equal(Object.hasOwn(dashboard, "kiosk_mode"), false);
-  for (const view of dashboard.views.filter((item) => item.path !== "home")) {
+  for (const view of dashboard.views) {
     const expanded = await HomeDashboardViewStrategy.generate(view.strategy);
     const navigation = expanded.sections[0].cards[0];
     assert.equal(navigation.type, "custom:home-dashboard-navigation");
@@ -150,7 +150,7 @@ test("Home levert één samenhangende compositie met volledige context en zes ca
   const dashboard = await HomeDashboardStrategy.generate(config);
   const home = dashboard.views.find((view) => view.path === "home");
   const expanded = await HomeDashboardViewStrategy.generate(home.strategy);
-  const overview = expanded.sections[0].cards[0];
+  const overview = expanded.sections[1].cards[0];
   assert.equal(overview.type, "custom:home-dashboard-home-overview");
   assert.equal(overview.theme_mode, config.general.theme_mode);
   assert.equal(overview.palette, config.general.palette);

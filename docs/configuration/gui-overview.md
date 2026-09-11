@@ -21,7 +21,11 @@ De editor heeft tien onderdelen:
 
 De editor toont bewust maar één configuratieonderdeel tegelijk. Desktop gebruikt een vaste linkernavigatie; op smalle schermen verandert die in een horizontaal scrollbare tabbalk. Fout- en waarschuwingsbadges blijven bij elk onderdeel zichtbaar. Vorige/volgende-knoppen bieden een lineaire route, terwijl pijltjestoetsen, Home en End rechtstreeks tussen de sectietabs navigeren.
 
-Onder **Layout** kiest Dashboardbreedte tussen standaard en vier kolommen breed. Navigatie biedt de Home Assistant-balk, geïntegreerde dashboardnavigatie of kiosk. De kioskoptie levert de configuratie voor de optionele `kiosk-mode` frontendresource; zonder die resource blijft de interne navigatie bruikbaar maar kan een kaart de globale HA-bovenbalk niet betrouwbaar verbergen.
+Onder **Layout** kiest Dashboardbreedte tussen standaard en vier kolommen breed. Navigatie biedt de Home Assistant-balk, geïntegreerde dashboardnavigatie of kiosk. De lokale navigatiecorrectie gebruikt op iedere view dezelfde eerste, volle-breedte balk met vaste hoogte en knopposities. De Home-begroeting staat eronder. Kiosk verbergt de HA-bovenbalk via een begrensde frontendadapter; een extra kiosk-mode-resource is hiervoor niet meer nodig.
+
+**Dashboard instellen** (tandwiel, alleen beheerders) opent de eigen Home Assistant-dashboardeditor via de native menubediening. Wanneer de frontend niet wordt herkend, verschijnt de HA-balk met een uitleg en een link naar dashboardbeheer. Er wordt geen configuratie opgeslagen door op het tandwiel te drukken. **Home Assistant-balk tonen** herstelt de balk tijdelijk; **Kiosk hervatten** verbergt hem weer. Als nooduitgang kun je `?disable_km` aan de dashboard-URL toevoegen; de interne links behouden deze keuze. Native edit mode en vertrek uit het dashboard herstellen de oorspronkelijke shell.
+
+Kiosk is presentatie, geen autorisatie. De adapter gebruikt de DOM-structuur van HA en vereist daarom een runtime-smoke na frontendupgrades. Ontbrekende of gewijzigde shellonderdelen blijven zichtbaar in plaats van dat private frontendmethoden worden aangeroepen. Externe kioskconfiguratie wordt niet gewijzigd. Zie de [lokale testchecklist](../releases/testing-navigation-consistency.md); live acceptatie staat nog open.
 
 De volgorde van kamerknoppen verandert lokaal met pijlen. Pas na **Volgorde toepassen** verstuurt de editor één configuratiewijziging, zodat Home Assistant niet na iedere tussenstap het volledige dashboard herbouwt.
 

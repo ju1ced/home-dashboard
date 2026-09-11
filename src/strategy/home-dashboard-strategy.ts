@@ -66,7 +66,6 @@ export class HomeDashboardStrategy extends HTMLElementBase {
     const orderedPaths = [config.general.start_view, ...config.layout.view_order.filter((path) => path !== config.general.start_view)];
     return {
       title: config.general.title,
-      ...(config.layout.navigation_mode === "kiosk" ? { kiosk_mode: { hide_header: true } } : {}),
       views: [
         ...orderedPaths.map((path) => createView(path, config)),
         ...config.rooms.map((room) => createRoomView(room, config)),

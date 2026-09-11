@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.0-alpha.9 — 2026-09-11
+
+- Eén gedeelde navigatiebalk met vaste maat en knopposities op alle hoofdviews, kamerdetails en Kia; Home-context staat onder de balk.
+- Kiosk verbergt de Home Assistant-header met een begrensde, opruimbare shelladapter, zonder extra kioskresource. Herstel via de navigatie of `?disable_km` blijft beschikbaar.
+- Een beheerdersstandwiel opent de native dashboardeditor; onbekende editormarkup krijgt een zichtbare HA-balk en dashboardbeheerlink als fallback.
+- De adapterbron, browserregressiecheck en volledige testscope worden samen geleverd. Schema v1 en bestaande actiegates blijven ongewijzigd.
+- [Testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.9.md). Live Home Assistant-acceptatie blijft een afzonderlijke gate; deze release voert geen deployment uit.
+
 ## 0.8.0-alpha.3 — 2026-09-08
 
 - Vandaag en de compacte camerakaart delen op desktop dezelfde boven- en onderlijn.

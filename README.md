@@ -1,5 +1,7 @@
 # Home Dashboard — ontwerpvoorstel
 
+Testcandidate **v0.8.0-alpha.9** gebruikt één navigatiebalk op dezelfde plek en met dezelfde maat in alle views, kiosk zonder extra frontendresource en een beheerderstandwiel voor de native dashboardeditor. Zie de [testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.9.md) en de [volledige testscope en runtimegrenzen](docs/releases/testing-navigation-consistency.md). De onderstaande alpha.8-beschrijving beschrijft de eerdere release.
+
 Werkcandidate **v0.8.0-alpha.8** maakt de interne navigatie standaard zichtbaar in de gekleurde balk. Kiosk gebruikt dezelfde vijf routes en kan met de optionele kiosk-mode-resource de HA-bovenbalk verbergen. De specialistische snelkoppelingen onder de afvalophaling zijn grotere kaarten met icoontegel, context en pijl. Zie de [actuele renders](docs/renders/expandable-rooms/README.md) en [testchecklist](docs/releases/testing-v0.8.0-alpha.8.md).
 
 Testrelease **v0.8.0-alpha.2** voegt een bredere Home-weergave en uitklapbare kamerpanelen met vijf soorten chips toe. [Renders en validatie](docs/renders/expandable-rooms/README.md) en de [testchecklist](docs/releases/testing-v0.8.0-alpha.2.md) beschrijven de nieuwe bediening.
@@ -102,4 +104,4 @@ scripts/          lokale preview en repositorychecks
 
 ## Status
 
-v0.8.0-alpha.8 staat lokaal klaar voor beoordeling. De fixtures voeren geen live Home Assistant-write uit.
+v0.8.0-alpha.9 is de testcandidate voor consistente navigatie, lokale kiosk en de configuratie-ingang. De fixtures voeren geen live Home Assistant-write uit; runtime-acceptatie blijft afzonderlijk vereist.
