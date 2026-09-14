@@ -32,7 +32,7 @@ De detailkaart blijft eigenaar van lockcontrols en alle andere voertuigacties. T
 
 ## Zwembad
 
-Anders dan Kia bestaat er geen onafhankelijk geteste HACS-kaart voor deze zwembadintegratie (een op maat gebouwde ESPHome-warmtepompproxy plus een Shelly-relais voor het zoutsysteem). De zwembadingang is daarom volledig zelfstandig: zowel de kleine read-only samenvatting als de volledige detailweergave worden native door dit dashboardpakket geregistreerd (`custom:home-dashboard-pool-summary`), met bestaande `tile`-kaarttypes voor de detailweergave. Er is dus geen aparte HACS-installatie of geteste minimumversie van een externe kaart nodig.
+Anders dan Kia bestaat er geen onafhankelijk geteste HACS-kaart voor deze zwembadintegratie (een op maat gebouwde ESPHome-warmtepompproxy plus een Shelly-relais voor het zoutsysteem). De zwembadingang registreert daarom native alleen de kleine read-only samenvattingskaart (`custom:home-dashboard-pool-summary`) en de bijbehorende route; er is geen aparte HACS-installatie of geteste minimumversie van een externe kaart nodig. De detailpagina toont momenteel enkel die samenvattingskaart — een uitgebreidere detailweergave met losse entiteitstegels is bewust nog niet gebouwd (zie de PR-geschiedenis) en volgt pas via een eigen, onafhankelijk geteste kaart.
 
 Activeer Zwembad onder **Dashboard bewerken → Kia, robot, tuin en zwembad**. Plaats de entiteitmapping als een geavanceerd JSON-object. Bijvoorbeeld, uitsluitend met fictieve sleutels:
 
@@ -58,12 +58,7 @@ Activeer Zwembad onder **Dashboard bewerken → Kia, robot, tuin en zwembad**. P
 }
 ```
 
-Voor de samenvatting zijn de eerste vijf mappings (`status`, `water_temperature`, `target_temperature`, `ambient_temperature`, `heater_power`) vereist. `has_error` en `salt_system_fault` zijn optionele binaire foutsignaal-entiteiten; wanneer één van beide `on` is, toont de samenvatting respectievelijk **Warmtepompfout** of **Zoutsysteemfout**. Alle overige sleutels zijn optioneel en verschijnen alleen op de detailpagina wanneer ze zijn ingevuld:
-
-- `compressor`, `circulate_pump` — operationele status van de warmtepompcomponenten.
-- `coil_temperature`, `exhaust_temperature` — extra warmtepomptemperaturen naast water- en buitentemperatuur.
-- `error_description` — leesbare foutomschrijving.
-- `filter_pump_state`, `proxy_online` — filterpompstatus en connectiviteit van de warmtepompbrug.
+Voor de samenvatting zijn de eerste vijf mappings (`status`, `water_temperature`, `target_temperature`, `ambient_temperature`, `heater_power`) vereist. `has_error` en `salt_system_fault` zijn optionele binaire foutsignaal-entiteiten; wanneer één van beide `on` is, toont de samenvatting respectievelijk **Warmtepompfout** of **Zoutsysteemfout**. De overige sleutels (`error_description`, `compressor`, `circulate_pump`, `coil_temperature`, `exhaust_temperature`, `filter_pump_state`, `proxy_online`) zijn gereserveerd voor een toekomstige uitgebreidere detailweergave; het contract accepteert ze nu al zodat bestaande configuraties niet later hoeven te migreren, maar er wordt momenteel nog niets mee gerenderd.
 
 ### Welke integratie?
 

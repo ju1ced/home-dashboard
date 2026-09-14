@@ -460,10 +460,8 @@ test("Zwembad krijgt een stabiele specialistroute, foutdetectie en een zelfstand
   try {
     const availableResource = await HomeDashboardViewStrategy.generate(specialist.strategy);
     const cards = availableResource.sections.flatMap((section) => section.cards);
-    const tileEntities = cards.filter((card) => card.type === "tile").map((card) => card.entity);
-    for (const entity of ["pool_compressor_primary", "pool_circulate_pump_primary", "pool_filter_pump_primary"]) {
-      assert.ok(tileEntities.includes(entity), `${entity} ontbreekt als detailtile`);
-    }
+    assert.ok(cards.some((card) => card.type === "custom:home-dashboard-pool-summary"), "samenvattingskaart ontbreekt");
+    assert.equal(cards.filter((card) => card.type === "tile").length, 0, "detailpagina moet zich beperken tot de samenvattingskaart, geen losse entiteitstegels");
   } finally {
     if (originalCustomElements === undefined) delete globalThis.customElements;
     else globalThis.customElements = originalCustomElements;

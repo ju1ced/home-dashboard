@@ -1,7 +1,6 @@
 import type { DiagnosticsConfig, PoolSpecialistConfig } from "../config/types";
 import { applyDashboardPalette, type DashboardPalette } from "../theme/palettes";
 import { escapeHtml, extractEntityMap, type HassLike, type HassState, isUnavailableState, stateFor, stateValue, summaryCardMarkup, summaryCardStyles } from "./specialist-summary-card";
-import { readonlyTile } from "./home-dashboard-energy-domain-cards";
 
 type LovelaceCardConfig = Record<string, unknown>;
 
@@ -173,10 +172,11 @@ function hasPoolSummaryMapping(pool: PoolSpecialistConfig): boolean {
 /**
  * Net als de printerspecialist is er geen onafhankelijk geteste HACS-kaart
  * voor deze op maat gebouwde zwembadintegratie (ESPHome-warmtepompproxy +
- * Shelly-zoutsysteem). De volledige detailweergave wordt daarom native met
- * bestaande tile-kaarttypes opgebouwd in plaats van doorgegeven aan een
- * externe kaart. Het strategy-genereren zelf heeft geen hass beschikbaar;
- * de tiles krijgen hun status rechtstreeks van de live hass-context.
+ * Shelly-zoutsysteem). In plaats van zelf een volledige detailweergave met
+ * losse tile-kaarten per entiteit op te bouwen (dat brak de specialist-/
+ * integratiegrens en paste niet binnen het bundelbudget), levert deze PR
+ * bewust alleen de samenvattingskaart, de route en het integratiecontract.
+ * Een uitgebreidere detailpagina is toekomstig werk voor een eigen kaart.
  */
 export function buildPoolDetailSections(pool: PoolSpecialistConfig | undefined, diagnostics: DiagnosticsConfig | undefined, maxColumns: number, themeMode: "system" | "light" | "dark" = "system", palette?: DashboardPalette): LovelaceCardConfig[] {
   if (!pool?.enabled) return [{ type: "grid", column_span: maxColumns, cards: [{ type: "markdown", title: "Zwembad", content: "De zwembadintegratie is niet ingeschakeld via **Dashboard bewerken → Kia, robot, tuin en zwembad**." }] }];
@@ -206,28 +206,7 @@ export function buildPoolDetailSections(pool: PoolSpecialistConfig | undefined, 
       grid_options: { columns: "full", rows: "auto" }
     });
   }
-  const sections: LovelaceCardConfig[] = [{ type: "grid", column_span: maxColumns, cards: summaryCards }];
-
-  const entities = poolEntities(pool);
-  const heatpumpCards: LovelaceCardConfig[] = [];
-  if (entities.compressor) heatpumpCards.push(readonlyTile(entities.compressor, "Compressor"));
-  if (entities.circulate_pump) heatpumpCards.push(readonlyTile(entities.circulate_pump, "Circulatiepomp"));
-  if (entities.coil_temperature) heatpumpCards.push(readonlyTile(entities.coil_temperature, "Coiltemperatuur"));
-  if (entities.exhaust_temperature) heatpumpCards.push(readonlyTile(entities.exhaust_temperature, "Uitlaattemperatuur"));
-  if (entities.error_description) heatpumpCards.push(readonlyTile(entities.error_description, "Foutomschrijving"));
-  if (heatpumpCards.length > 0) {
-    sections.push({ type: "grid", column_span: maxColumns, cards: [{ type: "heading", heading: "Warmtepomp", icon: "mdi:heat-pump-outline", grid_options: { columns: "full", rows: "auto" } }, ...heatpumpCards] });
-  }
-
-  const systemCards: LovelaceCardConfig[] = [];
-  if (entities.filter_pump_state) systemCards.push(readonlyTile(entities.filter_pump_state, "Filterpomp"));
-  if (entities.salt_system_fault) systemCards.push(readonlyTile(entities.salt_system_fault, "Zoutsysteem"));
-  if (entities.proxy_online) systemCards.push(readonlyTile(entities.proxy_online, "Warmtepompverbinding"));
-  if (systemCards.length > 0) {
-    sections.push({ type: "grid", column_span: maxColumns, cards: [{ type: "heading", heading: "Systemen", icon: "mdi:pump", grid_options: { columns: "full", rows: "auto" } }, ...systemCards] });
-  }
-
-  return sections;
+  return [{ type: "grid", column_span: maxColumns, cards: summaryCards }];
 }
 
 export function registerHomeDashboardPoolIntegration(): void {

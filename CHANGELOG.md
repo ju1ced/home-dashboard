@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Nieuwe zwembadspecialist: read-only samenvatting (status, water-/doel-/buitentemperatuur, optionele warmtepomp-/zoutsysteemfout) op Home en Domeinen, met een volledige `specialist-pool`-detailpagina (warmtepompcomponenten, extra temperaturen, foutomschrijving, filterpomp- en verbindingsstatus). Zonder externe HACS-kaartafhankelijkheid — dit dashboardpakket registreert de samenvattingskaart zelf. Niet standaard ingeschakeld.
+- Nieuwe zwembadspecialist: read-only samenvatting (status, water-/doel-/buitentemperatuur, optionele warmtepomp-/zoutsysteemfout) op Home en Domeinen, met een `specialist-pool`-route. Zonder externe HACS-kaartafhankelijkheid — dit dashboardpakket registreert de samenvattingskaart zelf; een uitgebreidere detailpagina met losse entiteitstegels volgt later via een eigen kaart. Niet standaard ingeschakeld.
 
 ## 0.8.0-alpha.10 — 2026-09-14
 

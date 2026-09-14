@@ -23,7 +23,7 @@ test("dist contains exactly one HACS JavaScript runtime artifact", async () => {
 
 test("release assets are deterministic for a given bundle", async () => {
   const bundle = await readFile(new URL("dist/home-dashboard.js", root));
-  // Zie scripts/verify-dist.mjs: verhoogd met de zwembadspecialist (PR: zwembaddashboard).
-  assert.ok(bundle.length < 205_000);
+  // Zie scripts/verify-dist.mjs: 203_000 is door de eigenaar goedgekeurd voor PR #41 (zwembadspecialist).
+  assert.ok(bundle.length < 203_000);
   assert.equal(bundle.includes(Buffer.from("sourceMappingURL")), false);
 });

@@ -7,6 +7,7 @@ import type {
 } from "../config/types";
 import { roomPath } from "./home-dashboard-room-cards";
 import { applyDashboardPalette, type DashboardPalette } from "../theme/palettes";
+import { extractEntityMap } from "./specialist-summary-card";
 
 export type LovelaceCardConfig = Record<string, unknown>;
 
@@ -75,6 +76,21 @@ function navigationButton(name: string, icon: string, path: string): LovelaceCar
     tap_action: { action: "navigate", navigation_path: path },
     hold_action: noAction(),
     double_tap_action: noAction()
+  };
+}
+
+function navigableStatusTile(entity: string, name: string, icon: string, path: string): LovelaceCardConfig {
+  return {
+    type: "tile",
+    entity,
+    name,
+    icon,
+    tap_action: { action: "navigate", navigation_path: path },
+    hold_action: noAction(),
+    double_tap_action: noAction(),
+    icon_tap_action: noAction(),
+    icon_hold_action: noAction(),
+    icon_double_tap_action: noAction()
   };
 }
 
@@ -329,7 +345,10 @@ export function buildDomainSections(sources: DomainSources, maxColumns: number):
   if (sources.specialists?.kia.enabled) mobilityOutdoor.push(navigationButton("Auto", "mdi:car-electric", "specialist-kia"));
   if (sources.specialists?.robot.enabled) mobilityOutdoor.push(navigationButton("Robot", "mdi:robot-vacuum", "more"));
   if (sources.specialists?.garden.enabled) mobilityOutdoor.push(navigationButton("Tuin", "mdi:flower", "more"));
-  if (sources.specialists?.pool.enabled) mobilityOutdoor.push(navigationButton("Zwembad", "mdi:pool", "specialist-pool"));
+  if (sources.specialists?.pool.enabled) {
+    const poolStatusEntity = extractEntityMap(sources.specialists.pool.card_config).status;
+    mobilityOutdoor.push(poolStatusEntity ? navigableStatusTile(poolStatusEntity, "Zwembad", "mdi:pool", "specialist-pool") : navigationButton("Zwembad", "mdi:pool", "specialist-pool"));
+  }
   if (sources.energy?.ev_power_entity) mobilityOutdoor.push(readonlyTile(sources.energy.ev_power_entity, "Actueel laadvermogen"));
   sections.push(fullSection("Mobiliteit & buiten", "mdi:garage-variant", mobilityOutdoor, maxColumns, "more"));
 

@@ -1,19 +1,8 @@
 import type { DiagnosticsConfig, KiaSpecialistConfig } from "../config/types";
 import { applyDashboardPalette, type DashboardPalette } from "../theme/palettes";
-import { summaryCardMarkup, summaryCardStyles } from "./specialist-summary-card";
+import { escapeHtml, extractEntityMap, type HassLike, type HassState, isUnavailableState, stateFor, stateValue, summaryCardMarkup, summaryCardStyles } from "./specialist-summary-card";
 
 type LovelaceCardConfig = Record<string, unknown>;
-
-interface HassState {
-  state: string;
-  last_updated?: string;
-  attributes?: Record<string, unknown>;
-}
-
-interface HassLike {
-  states?: Record<string, HassState | undefined>;
-  formatEntityState?: (state: HassState) => string;
-}
 
 interface KiaSummaryCardConfig {
   type: "custom:home-dashboard-kia-summary";
@@ -37,41 +26,8 @@ export interface KiaPresentation {
 
 const HTMLElementBase = (typeof HTMLElement === "undefined" ? class {} : HTMLElement) as typeof HTMLElement;
 
-function escapeHtml(value: unknown): string {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
 function cardEntities(kia: KiaSpecialistConfig): Record<string, string> {
-  const raw = kia.card_config.entities;
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
-  return Object.fromEntries(Object.entries(raw).filter(([, value]) => typeof value === "string" && value.trim()).map(([key, value]) => [key, value as string]));
-}
-
-function stateFor(hass: HassLike | undefined, entity: string | undefined): HassState | undefined {
-  return entity ? hass?.states?.[entity] : undefined;
-}
-
-function unavailable(state: HassState | undefined): boolean {
-  return !state || ["unknown", "unavailable"].includes(state.state.toLowerCase());
-}
-
-function stateValue(hass: HassLike | undefined, entity: string | undefined): string {
-  const state = stateFor(hass, entity);
-  if (!state || ["unknown", "unavailable"].includes(state.state.toLowerCase())) return "Niet beschikbaar";
-  if (typeof hass?.formatEntityState === "function") {
-    try {
-      return hass.formatEntityState(state);
-    } catch {
-      // Een formatterfout mag de read-only Kia-ingang niet blokkeren.
-    }
-  }
-  const unit = typeof state.attributes?.unit_of_measurement === "string" ? state.attributes.unit_of_measurement : "";
-  return `${state.state}${unit ? ` ${unit}` : ""}`;
+  return extractEntityMap(kia.card_config);
 }
 
 function minutesAgo(value: string | undefined, now: Date): number | undefined {
@@ -107,7 +63,7 @@ export function getKiaPresentation(hass: HassLike | undefined, kia: KiaSpecialis
   const mappingIncomplete = !batteryEntity || !rangeEntity || !chargingEntity || !updatedEntity;
   const updatedState = stateFor(hass, updatedEntity);
   const freshnessMinutes = minutesAgo(updatedState?.state, now);
-  const valuesUnavailable = [batteryEntity, rangeEntity, chargingEntity, updatedEntity].some((entity) => unavailable(stateFor(hass, entity)));
+  const valuesUnavailable = [batteryEntity, rangeEntity, chargingEntity, updatedEntity].some((entity) => isUnavailableState(stateFor(hass, entity)));
   const stale = freshnessMinutes === undefined || freshnessMinutes >= staleAfterMinutes;
   const isCharging = charging(stateFor(hass, chargingEntity));
   const securityWarning = unlocked(stateFor(hass, lockEntity));

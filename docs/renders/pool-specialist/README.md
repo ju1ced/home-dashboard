@@ -14,8 +14,6 @@ Render van de zelfstandige `custom:home-dashboard-pool-summary`-kaart (zie [Spec
 
 Fictieve data; geen live Home Assistant-verbinding. De harness stubt alleen de HA-kleurtokens die het dashboard zelf niet via het paletsysteem zet (`--warning-color`, `--error-color`, `--disabled-text-color`); `ha-icon` toont daardoor geen pictogram buiten de echte HA-frontend en de kaart mist een deel van HA's eigen chrome (schaduw/achtergrondafstemming).
 
-## Detailpagina (benadering)
+## Detailpagina
 
-- [Detailpagina, benaderende render](detail-page-approximation.png)
-
-De detailpagina (`specialist-pool`) bouwt op native Lovelace-kaarttypes (`tile`, `heading`, `grid`) die alleen binnen een echte Home Assistant-frontend renderen. Deze render roept de echte, gecompileerde `buildView()` (en daarmee `buildPoolDetailSections()`) aan voor sectiestructuur, entity-ID's en waarden — dat deel is dus authentiek — maar de kaarttypes zelf zijn met eigen CSS nagebouwd omdat de native HA-kaartrenderer hier niet beschikbaar is. Geen exacte HA-styling (ronde tile-iconen, kleur per `device_class`); de samenvattingskaart bovenaan die render is wél de echte, ingebouwde component.
+De detailpagina (`specialist-pool`) is teruggebracht tot uitsluitend de samenvattingskaart plus route — zie hierboven. `detail-page-approximation.png` in deze map is een render van een eerdere versie die ook losse warmtepomp-/systemen-tegels toonde; dat is uit deze PR geschrapt (zie review-item 1: geen zelfstandig geteste HACS-kaart, dus geen volledige native detailweergave). Het bestand staat nog in de map maar is niet langer representatief; een nieuwe render volgt zodra een echte detailkaart er is.
