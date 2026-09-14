@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.8.0-alpha.12 — 2026-09-14
+
+- Fix: de 3D-printerspecialist toonde per abuis haar volledige samenvattingskaart rechtstreeks op Home (eigen sectie) en op Domeinen (in de "Systeem"-sectie), in plaats van via een klein navigatieknopje zoals Kia, robot, tuin en zwembad. Printer krijgt nu dezelfde behandeling: een navigatietegel (met live status op Domeinen) die doorverwijst naar de bestaande `specialist-printer`-detailpagina.
+- [Testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.12.md). Live Home Assistant-acceptatie blijft een afzonderlijke gate; deze release voert geen deployment uit.
+
 ## 0.8.0-alpha.11 — 2026-09-14
 
 - Nieuwe 3D-printerspecialist: read-only samenvatting (status, voortgang, resterende tijd, nozzle-/bedtemperatuur, optionele filamentwaarschuwing) op Home en Domeinen, met een volledige `specialist-printer`-detailpagina (printtaaknaam, laagteller, doeltemperaturen, laatste fout(code), multi-slot filamentstatus, camera en printtaak-preview). Zonder externe HACS-kaartafhankelijkheid — dit dashboardpakket registreert de samenvattingskaart zelf. Niet standaard ingeschakeld.

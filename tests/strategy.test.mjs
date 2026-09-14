@@ -475,7 +475,9 @@ test("3D-printer krijgt een stabiele specialistroute, foutdetectie en een zelfst
   });
   const serialized = JSON.stringify(domains);
   assert.match(serialized, /specialist-printer/);
-  assert.match(serialized, /home-dashboard-printer-summary/);
+  const domainCards = domains.sections.flatMap((section) => section.cards);
+  assert.ok(domainCards.some((card) => card.type === "tile" && card.entity === "printer_status_primary"), "printerstatus ontbreekt als navigeerbare tegel op Domeinen");
+  assert.equal(domainCards.some((card) => card.type === "custom:home-dashboard-printer-summary"), false, "Domeinen mag niet de volledige samenvattingskaart embedden, enkel een navigeerbare tegel");
 });
 
 test("Zwembad krijgt een stabiele specialistroute, foutdetectie en een zelfstandige samenvattingskaart", async () => {
