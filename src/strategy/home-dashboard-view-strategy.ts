@@ -12,13 +12,14 @@ import {
   registerHomeDashboardEnergyOverview
 } from "../cards/home-dashboard-energy-domain-cards";
 import { buildKiaDetailSections, registerHomeDashboardKiaIntegration } from "../cards/home-dashboard-kia-integration";
+import { buildPrinterDetailSections, registerHomeDashboardPrinterIntegration } from "../cards/home-dashboard-printer-integration";
 import { registerHomeDashboardNavigation } from "../cards/home-dashboard-navigation";
 
 type LovelaceConfig = Record<string, unknown>;
 
 export interface HomeDashboardViewConfig {
   type: "custom:home-dashboard-view";
-  view: ViewPath | "room" | "specialist-kia";
+  view: ViewPath | "room" | "specialist-kia" | "specialist-printer";
   density: HomeDashboardConfigV1["general"]["density"];
   content_width?: HomeDashboardConfigV1["layout"]["content_width"];
   navigation_mode?: HomeDashboardConfigV1["layout"]["navigation_mode"];
@@ -36,6 +37,7 @@ export interface HomeDashboardViewConfig {
   diagnostics?: DiagnosticsConfig;
   room?: RoomConfig;
   kia?: SpecialistsConfig["kia"];
+  printer?: SpecialistsConfig["printer"];
 }
 
 const HTMLElementBase = (typeof HTMLElement === "undefined" ? class {} : HTMLElement) as typeof HTMLElement;
@@ -137,7 +139,7 @@ function moreSections(config: HomeDashboardViewConfig): LovelaceConfig[] {
 }
 
 export function buildView(config: HomeDashboardViewConfig): LovelaceConfig {
-  if (!["home", "rooms", "energy", "domains", "more", "room", "specialist-kia"].includes(config.view)) {
+  if (!["home", "rooms", "energy", "domains", "more", "room", "specialist-kia", "specialist-printer"].includes(config.view)) {
     return { type: "sections", max_columns: 1, dense_section_placement: false, sections: [{ type: "grid", cards: [markdown("Deze viewconfiguratie wordt niet ondersteund.", "Home Dashboard")] }] };
   }
   const maxColumns = config.content_width === "wide" ? 4 : config.density === "compact" ? 4 : 3;
@@ -145,6 +147,7 @@ export function buildView(config: HomeDashboardViewConfig): LovelaceConfig {
     : config.view === "rooms" ? roomsSections(config.rooms ?? [], maxColumns, config.show_quick_actions !== false, config.palette, config.theme_mode)
       : config.view === "room" ? roomDetailSections(config.room, maxColumns, config.palette, config.theme_mode)
       : config.view === "specialist-kia" ? buildKiaDetailSections(config.kia, config.diagnostics, maxColumns, config.theme_mode, config.palette)
+      : config.view === "specialist-printer" ? buildPrinterDetailSections(config.printer, config.diagnostics, maxColumns, config.theme_mode, config.palette)
       : config.view === "energy" ? buildEnergySections(config.energy, maxColumns, config.theme_mode, config.palette)
         : config.view === "domains" ? buildDomainSections({ rooms: config.rooms, energy: config.energy, security: config.security, specialists: config.specialists, diagnostics: config.diagnostics }, maxColumns)
           : moreSections(config);
@@ -174,6 +177,7 @@ export function registerHomeDashboardViewStrategy(): void {
   registerHomeDashboardNavigation();
   registerHomeDashboardEnergyOverview();
   registerHomeDashboardKiaIntegration();
+  registerHomeDashboardPrinterIntegration();
   if (typeof customElements === "undefined") return;
   const tag = "ll-strategy-view-home-dashboard-view";
   if (!customElements.get(tag)) customElements.define(tag, HomeDashboardViewStrategy);
