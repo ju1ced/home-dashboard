@@ -1,5 +1,6 @@
 import type { DiagnosticsConfig, KiaSpecialistConfig } from "../config/types";
 import { applyDashboardPalette, type DashboardPalette } from "../theme/palettes";
+import { summaryCardMarkup, summaryCardStyles } from "./specialist-summary-card";
 
 type LovelaceCardConfig = Record<string, unknown>;
 
@@ -176,9 +177,22 @@ export class HomeDashboardKiaSummary extends HTMLElementBase {
   private render(): void {
     if (!this.config) return;
     const root = this.shadowRoot ?? this.attachShadow({ mode: "open" });
-    root.innerHTML = `<style>
-      :host{display:block}a{display:block;color:inherit;text-decoration:none}a:focus-visible{outline:3px solid var(--primary-color);outline-offset:3px;border-radius:24px}ha-card{overflow:hidden;border:1px solid var(--divider-color);border-radius:22px}.main{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 20px;border-bottom:1px solid var(--divider-color)}.eyebrow{margin:0 0 4px;color:var(--primary-color);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}h2{margin:0;font-size:22px}.status{margin:4px 0 0;color:var(--secondary-text-color);font-size:14px;font-weight:650}.status.active,.footer strong{color:var(--primary-color)}.status.warning{color:var(--warning-color)}.status.unavailable{color:var(--disabled-text-color)}.main ha-icon{width:38px;height:38px;color:var(--primary-color)}.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.metric{min-width:0;padding:14px 18px;border-right:1px solid var(--divider-color)}.metric:last-child{border-right:0}.label{display:block;color:var(--secondary-text-color);font-size:12px;font-weight:600}.value{display:block;overflow:hidden;margin-top:3px;font-size:17px;font-variant-numeric:tabular-nums;text-overflow:ellipsis;white-space:nowrap}.footer{display:flex;justify-content:space-between;gap:12px;padding:11px 18px;border-top:1px solid var(--divider-color);color:var(--secondary-text-color);font-size:12px}@media(max-width:620px){.main{padding:16px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.metric{padding:13px 16px}.metric:nth-child(2){border-right:0}.metric:last-child{grid-column:1/-1;border-top:1px solid var(--divider-color)}}
-    </style><a href="${escapeHtml(this.config.navigation_path)}" aria-label="Open Kia-details"><ha-card><div class="main"><div><p class="eyebrow">Mobiliteit</p><h2 data-field="title">Kia</h2><p class="status" data-field="status">Voertuigstatus niet beschikbaar</p></div><ha-icon icon="mdi:car-electric"></ha-icon></div><div class="metrics"><div class="metric"><span class="label">Accu</span><strong class="value" data-field="battery">Niet beschikbaar</strong></div><div class="metric"><span class="label">Bereik</span><strong class="value" data-field="range">Niet beschikbaar</strong></div><div class="metric"><span class="label">Laden</span><strong class="value" data-field="charging">Niet beschikbaar</strong></div></div><div class="footer"><span data-field="freshness">Dataversheid niet beschikbaar</span><strong>Open details</strong></div></ha-card></a>`;
+    root.innerHTML = summaryCardMarkup({
+      styles: summaryCardStyles(),
+      navigationPath: escapeHtml(this.config.navigation_path),
+      ariaLabel: "Open Kia-details",
+      eyebrow: "Mobiliteit",
+      icon: "mdi:car-electric",
+      titleFallback: "Kia",
+      statusFallback: "Voertuigstatus niet beschikbaar",
+      metrics: [
+        { label: "Accu", field: "battery", fallback: "Niet beschikbaar" },
+        { label: "Bereik", field: "range", fallback: "Niet beschikbaar" },
+        { label: "Laden", field: "charging", fallback: "Niet beschikbaar" }
+      ],
+      footerField: "freshness",
+      footerFallback: "Dataversheid niet beschikbaar"
+    });
     this.updateValues();
   }
 

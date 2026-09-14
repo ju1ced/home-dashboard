@@ -48,11 +48,11 @@ function unique(values: readonly string[]): string[] {
   return [...new Set(values.filter(Boolean))];
 }
 
-function noAction(): LovelaceCardConfig {
+export function noAction(): LovelaceCardConfig {
   return { action: "none" };
 }
 
-function readonlyTile(entity: string, name?: string): LovelaceCardConfig {
+export function readonlyTile(entity: string, name?: string): LovelaceCardConfig {
   return {
     type: "tile",
     entity,
@@ -334,6 +334,7 @@ export function buildDomainSections(sources: DomainSources, maxColumns: number):
   sections.push(fullSection("Mobiliteit & buiten", "mdi:garage-variant", mobilityOutdoor, maxColumns, "more"));
 
   const systemCards: LovelaceCardConfig[] = [];
+  if (sources.specialists?.printer.enabled) systemCards.push(navigationButton("3D-printer", "mdi:printer-3d-nozzle", "specialist-printer"));
   if (sources.energy?.ups_entity) systemCards.push(readonlyTile(sources.energy.ups_entity, "Noodstroom"));
   const adminPath = sources.diagnostics?.admin_dashboard_path?.trim();
   if (adminPath) systemCards.push(navigationButton("Beheerdashboard", "mdi:shield-account-outline", adminPath));
