@@ -43,3 +43,12 @@ test("Home behoudt aandacht en expliciete kamerbediening zonder dubbele activite
   assert.match(bundle, /callService\(/);
   assert.doesNotMatch(bundle, /perform_action/);
 });
+
+test("Home-header sluit naadloos aan op de navigatiebalk, ongeacht de echte HA sections-rijafstand", async () => {
+  const bundle = await readFile(new URL("../dist/home-dashboard.js", import.meta.url), "utf8");
+  // Live HA gebruikt --ha-view-sections-row-gap (standaard 24px) tussen top-level
+  // sections, niet een vast getal. Een hardgecodeerde margin-top liet in de praktijk
+  // een zichtbare lijn tussen navigatie en header (zie v0.8.0-alpha.12-melding).
+  assert.match(bundle, /--ha-view-sections-row-gap/);
+  assert.doesNotMatch(bundle, /margin-top:-16px/);
+});

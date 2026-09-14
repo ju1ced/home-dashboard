@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.8.0-alpha.13 — 2026-09-14
+
+- Fix: op Home bleef een zichtbare lijn staan tussen de navigatiebalk en de gekleurde header eronder. Oorzaak: de "join"-CSS trok de header met een vast getal (-16px) omhoog om de ruimte tussen de twee Lovelace-sections te overbruggen, maar live Home Assistant gebruikt daarvoor `--ha-view-sections-row-gap` (standaard 24px), niet 16px. De header verwijst nu naar die daadwerkelijke HA-variabele (`margin-top:calc(-1 * var(--ha-view-sections-row-gap,24px))`), inclusief eventuele thema-aanpassingen daarvan.
+- [Testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.13.md). Live Home Assistant-acceptatie blijft een afzonderlijke gate; deze release voert geen deployment uit.
+
 ## 0.8.0-alpha.12 — 2026-09-14
 
 - Fix: de 3D-printerspecialist toonde per abuis haar volledige samenvattingskaart rechtstreeks op Home (eigen sectie) en op Domeinen (in de "Systeem"-sectie), in plaats van via een klein navigatieknopje zoals Kia, robot, tuin en zwembad. Printer krijgt nu dezelfde behandeling: een navigatietegel (met live status op Domeinen) die doorverwijst naar de bestaande `specialist-printer`-detailpagina.
