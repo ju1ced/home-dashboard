@@ -39,6 +39,10 @@ De browserbundle voert het canonieke JSON Schema zelf uit bij import en compilat
 
 `specialists.printer.card_config` volgt hetzelfde doorgeefpatroon als Kia, maar zonder externe kaartafhankelijkheid: het vaste cardtype `custom:home-dashboard-printer-summary` wordt door dit dashboardpakket zelf geregistreerd. Zie [Specialistische kaarten](../configuration/specialists.md) voor de minimale summarymappings en fallbacks.
 
+### Zwembad-cardconfiguratie
+
+`specialists.pool.card_config` volgt hetzelfde doorgeefpatroon als Kia, maar zonder externe kaartafhankelijkheid: het vaste cardtype `custom:home-dashboard-pool-summary` wordt door dit dashboardpakket zelf geregistreerd. Zie [Specialistische kaarten](../configuration/specialists.md) voor de minimale summarymappings en fallbacks.
+
 ## Coverage
 
 De test vergelijkt alle editorvelden en complexe GUI-collecties met het JSON Schema. Defaults, normal/warning/missing/unavailable-fixtures, validator, migratie en compiler worden uit dezelfde gebundelde release getest.

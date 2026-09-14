@@ -1,5 +1,5 @@
 /**
- * Gedeelde opmaak voor de kleine specialistsamenvattingskaarten (Kia, 3D-printer, ...)
+ * Gedeelde opmaak voor de kleine specialistsamenvattingskaarten (Kia, 3D-printer, zwembad, ...)
  * op Home en Domeinen. Elke specialist blijft eigenaar van zijn eigen
  * presentatielogica; alleen de herhaalde kaartvorm zit hier gebundeld, wat
  * ook de dashboardbundel binnen het vastgelegde groottebudget houdt.

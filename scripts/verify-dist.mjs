@@ -9,19 +9,15 @@ const bundle = await readFile(bundleUrl, "utf8");
 const bundleStats = await stat(bundleUrl);
 const distFiles = await readdir(distDirectory);
 const errors = [];
-// 198_000 -> 205_000: expliciet goedgekeurd door de eigenaar voor PR #39
-// (3D-printerspecialist), op basis van een reproduceerbare baseline gemeten in een
-// geïsoleerde worktree: main bouwt tot 194_883 bytes; de printerbranch bouwt, met de
-// volledige detailpagina (printtaakdetails, filamentslots, camera) behouden en na het
-// dedupliceren van home-dashboard-kia-integration.ts tegen specialist-summary-card.ts,
-// tot 203_831 bytes. Zoals bij de zwembadspecialist (PR #41) is dit structureel: geen
-// externe HACS-kaart om renderlogica naar uit te besteden, dus zelfs deze al
-// getrimde implementatie past niet binnen 198 kB. 205_000 geeft een marge boven de
-// gemeten 203_831 (zelfde verhouding als de door de eigenaar goedgekeurde pool-cap).
-// Een eerdere versie van dit bestand had ditzelfde getal, maar toen als zelfgeschreven
-// claim zonder echte goedkeuring (zie docs/releases/testing-printer-specialist.md) --
-// dat is nu gecorrigeerd.
-const maxBundleBytes = 205_000;
+// 198_000 -> 212_000: expliciet goedgekeurd door de eigenaar bij het samenvoegen van
+// PR #39 (3D-printerspecialist) en PR #41 (zwembadspecialist) in main. Geen van beide
+// eerder per-PR goedgekeurde cijfers (203_000 voor pool, 205_000 voor printer) dekt de
+// gecombineerde bundel. Reproduceerbare meting: main (vóór deze twee specialisten)
+// bouwt tot 194_883 bytes; met beide specialisten samengevoegd (inclusief de
+// gedeelde home-dashboard-kia-integration.ts-dedup, die nu maar één keer meetelt in
+// plaats van per branch) bouwt de bundel tot 210_486 bytes. 212_000 geeft een kleine
+// marge boven dat gemeten getal.
+const maxBundleBytes = 212_000;
 
 if (hacs.filename !== "home-dashboard.js") errors.push("hacs.json verwijst niet naar home-dashboard.js");
 if (hacs.homeassistant !== "2026.8.2") errors.push("Onverwachte minimale Home Assistant-versie");

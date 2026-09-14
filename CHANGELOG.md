@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Nieuwe 3D-printerspecialist: read-only samenvatting (status, voortgang, resterende tijd, nozzle-/bedtemperatuur, optionele filamentwaarschuwing) op Home en Domeinen, met een volledige `specialist-printer`-detailpagina (printtaaknaam, laagteller, doeltemperaturen, laatste fout(code), multi-slot filamentstatus, camera en printtaak-preview). Zonder externe HACS-kaartafhankelijkheid — dit dashboardpakket registreert de samenvattingskaart zelf. Niet standaard ingeschakeld.
+- Nieuwe zwembadspecialist: read-only samenvatting (status, water-/doel-/buitentemperatuur, optionele warmtepomp-/zoutsysteemfout) op Home en Domeinen, met een `specialist-pool`-route. Zonder externe HACS-kaartafhankelijkheid — dit dashboardpakket registreert de samenvattingskaart zelf; een uitgebreidere detailpagina met losse entiteitstegels volgt later via een eigen kaart. Niet standaard ingeschakeld.
 
 ## 0.8.0-alpha.10 — 2026-09-14
 

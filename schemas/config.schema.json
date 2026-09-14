@@ -177,7 +177,7 @@
         "printer": { "$ref": "#/$defs/printerSpecialist", "x-editor": "specialists" },
         "robot": { "$ref": "#/$defs/specialist", "x-editor": "specialists" },
         "garden": { "$ref": "#/$defs/specialist", "x-editor": "specialists" },
-        "pool": { "$ref": "#/$defs/specialist", "x-editor": "specialists" }
+        "pool": { "$ref": "#/$defs/poolSpecialist", "x-editor": "specialists" }
       }
     },
     "layout": {
@@ -235,6 +235,17 @@
       }
     },
     "printerSpecialist": {
+      "type": "object", "additionalProperties": false,
+      "required": ["enabled", "card_type", "minimum_version", "mapping_keys", "card_config"],
+      "properties": {
+        "enabled": { "type": "boolean", "x-editor": "specialists" },
+        "card_type": { "type": "string", "pattern": "^custom:", "x-editor": "system" },
+        "minimum_version": { "type": "string", "x-editor": "specialists" },
+        "mapping_keys": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/logicalKey" }, "x-editor": "specialists" },
+        "card_config": { "type": "object", "additionalProperties": true, "x-editor": "specialists" }
+      }
+    },
+    "poolSpecialist": {
       "type": "object", "additionalProperties": false,
       "required": ["enabled", "card_type", "minimum_version", "mapping_keys", "card_config"],
       "properties": {

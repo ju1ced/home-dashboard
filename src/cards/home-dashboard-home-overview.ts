@@ -680,7 +680,7 @@ export class HomeDashboardHomeOverview extends HTMLElementBase {
 
     const buildSpecialistNavigation = (compact = false): HTMLElement | undefined => {
       const specialistNames: Record<Exclude<keyof SpecialistsConfig, "printer">, [string, string, string, string]> = {
-        kia: ["Auto", "Voertuig", "mdi:car-electric", "specialist-kia"], robot: ["Robot", "Schoonmaak", "mdi:robot-vacuum", "more"], garden: ["Tuin", "Buiten", "mdi:flower", "more"], pool: ["Zwembad", "Waterkwaliteit", "mdi:pool", "more"]
+        kia: ["Auto", "Voertuig", "mdi:car-electric", "specialist-kia"], robot: ["Robot", "Schoonmaak", "mdi:robot-vacuum", "more"], garden: ["Tuin", "Buiten", "mdi:flower", "more"], pool: ["Zwembad", "Waterkwaliteit", "mdi:pool", "specialist-pool"]
       };
       const navGrid = document.createElement("div");
       navGrid.className = "nav-grid";

@@ -8,6 +8,7 @@ import {
   getHomeStructureSignature,
   getKiaPresentation,
   getPrinterPresentation,
+  getPoolPresentation,
   getRoomMetric,
   getWastePresentation,
   migrateConfig,
@@ -477,12 +478,121 @@ test("3D-printer krijgt een stabiele specialistroute, foutdetectie en een zelfst
   assert.match(serialized, /home-dashboard-printer-summary/);
 });
 
+test("Zwembad krijgt een stabiele specialistroute, foutdetectie en een zelfstandige samenvattingskaart", async () => {
+  const config = await normalConfig();
+  config.specialists.pool = {
+    enabled: true,
+    card_type: "custom:home-dashboard-pool-summary",
+    minimum_version: "",
+    mapping_keys: ["pool_primary"],
+    card_config: {
+      title: "Zwembad",
+      entities: {
+        status: "pool_status_primary",
+        water_temperature: "pool_water_temperature_primary",
+        target_temperature: "pool_target_temperature_primary",
+        ambient_temperature: "pool_ambient_temperature_primary",
+        heater_power: "pool_heater_power_primary",
+        has_error: "pool_has_error_primary",
+        salt_system_fault: "pool_salt_fault_primary",
+        compressor: "pool_compressor_primary",
+        circulate_pump: "pool_circulate_pump_primary",
+        filter_pump_state: "pool_filter_pump_primary"
+      }
+    }
+  };
+  const dashboard = await HomeDashboardStrategy.generate(config);
+  const specialist = dashboard.views.find((view) => view.path === "specialist-pool");
+  assert.equal(specialist.title, "Zwembad");
+  assert.equal(specialist.subview, true);
+  assert.equal(specialist.back_path, "domains");
+
+  const heating = getPoolPresentation({ states: {
+    pool_status_primary: { state: "heat" },
+    pool_water_temperature_primary: { state: "27.4", attributes: { unit_of_measurement: "°C" } },
+    pool_target_temperature_primary: { state: "28", attributes: { unit_of_measurement: "°C" } },
+    pool_ambient_temperature_primary: { state: "19.2", attributes: { unit_of_measurement: "°C" } },
+    pool_heater_power_primary: { state: "on" },
+    pool_has_error_primary: { state: "off" },
+    pool_salt_fault_primary: { state: "off" }
+  } }, config.specialists.pool);
+  assert.equal(heating.status, "heat");
+  assert.equal(heating.waterTemperature, "27.4 °C");
+  assert.equal(heating.tone, "normal");
+
+  const heaterOff = getPoolPresentation({ states: {
+    pool_status_primary: { state: "idle" },
+    pool_water_temperature_primary: { state: "24.1", attributes: { unit_of_measurement: "°C" } },
+    pool_target_temperature_primary: { state: "28", attributes: { unit_of_measurement: "°C" } },
+    pool_ambient_temperature_primary: { state: "14.0", attributes: { unit_of_measurement: "°C" } },
+    pool_heater_power_primary: { state: "off" },
+    pool_has_error_primary: { state: "off" },
+    pool_salt_fault_primary: { state: "off" }
+  } }, config.specialists.pool);
+  assert.equal(heaterOff.status, "Warmtepomp uit");
+  assert.equal(heaterOff.tone, "normal");
+
+  const failed = getPoolPresentation({ states: {
+    pool_status_primary: { state: "fault" },
+    pool_water_temperature_primary: { state: "24.1", attributes: { unit_of_measurement: "°C" } },
+    pool_target_temperature_primary: { state: "28", attributes: { unit_of_measurement: "°C" } },
+    pool_ambient_temperature_primary: { state: "14.0", attributes: { unit_of_measurement: "°C" } },
+    pool_heater_power_primary: { state: "on" },
+    pool_has_error_primary: { state: "on" },
+    pool_salt_fault_primary: { state: "off" }
+  } }, config.specialists.pool);
+  assert.equal(failed.status, "Warmtepompfout");
+  assert.equal(failed.tone, "error");
+
+  const saltFault = getPoolPresentation({ states: {
+    pool_status_primary: { state: "heat" },
+    pool_water_temperature_primary: { state: "24.1", attributes: { unit_of_measurement: "°C" } },
+    pool_target_temperature_primary: { state: "28", attributes: { unit_of_measurement: "°C" } },
+    pool_ambient_temperature_primary: { state: "14.0", attributes: { unit_of_measurement: "°C" } },
+    pool_heater_power_primary: { state: "on" },
+    pool_has_error_primary: { state: "off" },
+    pool_salt_fault_primary: { state: "on" }
+  } }, config.specialists.pool);
+  assert.equal(saltFault.status, "Zoutsysteemfout");
+  assert.equal(saltFault.tone, "error");
+
+  const unavailableResource = await HomeDashboardViewStrategy.generate(specialist.strategy);
+  const specialistSection = unavailableResource.sections.find((section) => section.cards.some((card) => card.type === "custom:home-dashboard-pool-summary"));
+  assert.match(specialistSection.cards[1].content, /niet geladen worden/);
+
+  const originalCustomElements = globalThis.customElements;
+  globalThis.customElements = { get: (tag) => tag === "home-dashboard-pool-summary" ? class PoolSummary {} : undefined };
+  try {
+    const availableResource = await HomeDashboardViewStrategy.generate(specialist.strategy);
+    const cards = availableResource.sections.flatMap((section) => section.cards);
+    assert.ok(cards.some((card) => card.type === "custom:home-dashboard-pool-summary"), "samenvattingskaart ontbreekt");
+    assert.equal(cards.filter((card) => card.type === "tile").length, 0, "detailpagina moet zich beperken tot de samenvattingskaart, geen losse entiteitstegels");
+  } finally {
+    if (originalCustomElements === undefined) delete globalThis.customElements;
+    else globalThis.customElements = originalCustomElements;
+  }
+
+  const domains = await HomeDashboardViewStrategy.generate({
+    type: "custom:home-dashboard-view",
+    view: "domains",
+    density: "comfortable",
+    rooms: config.rooms,
+    energy: config.energy,
+    security: config.security,
+    specialists: config.specialists,
+    diagnostics: config.diagnostics
+  });
+  const serialized = JSON.stringify(domains);
+  assert.match(serialized, /specialist-pool/);
+});
+
 test("lege en unavailable fixtures blijven renderbaar", async () => {
   for (const name of ["warning", "unavailable"]) {
     const fixture = JSON.parse(await readFile(new URL(`../config/examples/${name}.json`, import.meta.url), "utf8"));
     const fixtureConfig = migrateConfig(fixture).config;
     const dashboard = await HomeDashboardStrategy.generate(fixtureConfig);
-    assert.equal(dashboard.views.length, 5 + fixtureConfig.rooms.length);
+    const specialistViews = [fixtureConfig.specialists.kia.enabled, fixtureConfig.specialists.pool.enabled].filter(Boolean).length;
+    assert.equal(dashboard.views.length, 5 + fixtureConfig.rooms.length + specialistViews);
     for (const view of dashboard.views) {
       assert.doesNotThrow(() => JSON.stringify(view));
       await assert.doesNotReject(() => HomeDashboardViewStrategy.generate(view.strategy));

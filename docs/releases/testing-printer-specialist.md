@@ -1,6 +1,8 @@
 # 3D-printerspecialist — bundle- en testbaseline
 
-## Goedgekeurde bundelgrens
+**Achterhaald:** dit was de goedkeuring voor de printerbranch in isolatie, vóórdat PR #39 en PR #41 samen in `main` werden samengevoegd. Het huidige, geldige budget staat in `scripts/verify-dist.mjs` (212.000 bytes, gemeten op de gecombineerde bundel). Dit document blijft staan als historisch bewijs van de reproduceerbare printer-only meting.
+
+## Goedgekeurde bundelgrens (printerbranch in isolatie, vóór samenvoegen)
 
 De eigenaar heeft **205.000 bytes** goedgekeurd voor `scripts/verify-dist.mjs` en `tests/foundation.test.mjs`, op basis van de reproduceerbare meting hieronder.
 
