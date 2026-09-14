@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.8.0-alpha.15 — 2026-09-14
+
+- Home: navigatie, datum/begroeting en statuschips vormen op voldoende brede kaarten één horizontale, gekleurde header. Op kleinere kaartbreedtes blijft dezelfde header overzichtelijk onder elkaar staan.
+- De Home-view levert één samengestelde section; hierdoor bestaat er geen Lovelace-section-gap meer tussen navigatie en context. Native modus behoudt de zelfstandige Home-header.
+- Browserregressie controleert brede uitlijning, mobiel stapelen, overflow en collisions voor geïntegreerde en kioskmodus. Geen configuratievelden, dependencies, acties of autorisatiepaden gewijzigd.
+
 ## 0.8.0-alpha.14 — 2026-09-14
 
 - Home: compactere aansluiting tussen navigatie en begroeting (8 px bovenruimte, 16 px onderruimte); omgebroken statuschips duwen de begroeting niet meer omlaag. Native modus behoudt de zelfstandige header.

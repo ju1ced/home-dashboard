@@ -54,8 +54,6 @@ const hass={states,connection:{subscribeMessage:async callback=>{queueMicrotask(
 };
 const home=document.querySelector('home-dashboard-home-overview');
 const navigationMode=params.get('navigation')==='native'?'native':params.get('navigation')==='kiosk'?'kiosk':'integrated';
-const navigation=document.querySelector('home-dashboard-navigation');
-if(navigationMode==='native') navigation.remove();
-else { navigation.setConfig({type:'custom:home-dashboard-navigation',active:'home',navigation_mode:navigationMode,theme_mode:'system'});navigation.hass=hass; }
+
 home.setConfig({type:'custom:home-dashboard-home-overview',...config,theme_mode:'system',navigation_mode:navigationMode});home.hass=hass;
 window.roomFixture={home,hass,config,calls,ref};
