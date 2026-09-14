@@ -334,7 +334,7 @@ export function buildDomainSections(sources: DomainSources, maxColumns: number):
   sections.push(fullSection("Mobiliteit & buiten", "mdi:garage-variant", mobilityOutdoor, maxColumns, "more"));
 
   const systemCards: LovelaceCardConfig[] = [];
-  if (sources.specialists?.printer.enabled) systemCards.push(navigationButton("3D-printer", "mdi:printer-3d-nozzle", "specialist-printer"));
+  if (sources.specialists?.printer.enabled) systemCards.push({ type: "custom:home-dashboard-printer-summary", printer: sources.specialists.printer, stale_after_minutes: sources.diagnostics?.stale_after_minutes ?? 30, navigation_path: "specialist-printer", grid_options: { columns: "full", rows: "auto" } });
   if (sources.energy?.ups_entity) systemCards.push(readonlyTile(sources.energy.ups_entity, "Noodstroom"));
   const adminPath = sources.diagnostics?.admin_dashboard_path?.trim();
   if (adminPath) systemCards.push(navigationButton("Beheerdashboard", "mdi:shield-account-outline", adminPath));

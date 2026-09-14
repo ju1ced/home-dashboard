@@ -23,7 +23,7 @@ test("dist contains exactly one HACS JavaScript runtime artifact", async () => {
 
 test("release assets are deterministic for a given bundle", async () => {
   const bundle = await readFile(new URL("dist/home-dashboard.js", root));
-  // Zie scripts/verify-dist.mjs: verhoogd met de 3D-printerspecialist (PR: 3D-printer dashboard).
-  assert.ok(bundle.length < 203_000);
+  // Zie docs/releases/testing-printer-specialist.md voor de goedgekeurde baseline.
+  assert.ok(bundle.length <= 205_000);
   assert.equal(bundle.includes(Buffer.from("sourceMappingURL")), false);
 });

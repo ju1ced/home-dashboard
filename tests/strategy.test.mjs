@@ -474,6 +474,7 @@ test("3D-printer krijgt een stabiele specialistroute, foutdetectie en een zelfst
   });
   const serialized = JSON.stringify(domains);
   assert.match(serialized, /specialist-printer/);
+  assert.match(serialized, /home-dashboard-printer-summary/);
 });
 
 test("lege en unavailable fixtures blijven renderbaar", async () => {

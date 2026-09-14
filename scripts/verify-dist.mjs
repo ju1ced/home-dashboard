@@ -9,9 +9,9 @@ const bundle = await readFile(bundleUrl, "utf8");
 const bundleStats = await stat(bundleUrl);
 const distFiles = await readdir(distDirectory);
 const errors = [];
-// Verhoogd van 198_000 met de toevoeging van de 3D-printerspecialist (PR: 3D-printer dashboard).
-// Zie de PR-beschrijving voor de motivatie; graag herbeoordelen bij review.
-const maxBundleBytes = 203_000;
+// Door de expliciet goedgekeurde 3D-printerspecialist: zie
+// docs/releases/testing-printer-specialist.md voor de reproduceerbare baseline.
+const maxBundleBytes = 205_000;
 
 if (hacs.filename !== "home-dashboard.js") errors.push("hacs.json verwijst niet naar home-dashboard.js");
 if (hacs.homeassistant !== "2026.8.2") errors.push("Onverwachte minimale Home Assistant-versie");

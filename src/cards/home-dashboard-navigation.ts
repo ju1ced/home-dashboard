@@ -4,7 +4,7 @@ import { attachKiosk, dashboardShell } from "./dashboard-shell";
 
 interface NavigationConfig {
   type: "custom:home-dashboard-navigation";
-  active?: ViewPath | "room" | "specialist-kia";
+  active?: ViewPath | "room" | "specialist-kia" | "specialist-printer";
   palette?: DashboardPalette;
   theme_mode?: "system" | "light" | "dark";
   navigation_mode?: "native" | "integrated" | "kiosk";
@@ -94,7 +94,7 @@ export class HomeDashboardNavigation extends HTMLElementBase {
     const nav = document.createElement("nav");
     this.toggleAttribute("data-home", this.config.active === "home");
     nav.setAttribute("aria-label", "Dashboardnavigatie");
-    const active = this.config.active === "room" ? "rooms" : this.config.active === "specialist-kia" ? "domains" : this.config.active;
+    const active = this.config.active === "room" ? "rooms" : ["specialist-kia", "specialist-printer"].includes(this.config.active ?? "") ? "domains" : this.config.active;
     for (const [path, label, iconName] of links) {
       const link = document.createElement("a");
       link.href = path;
