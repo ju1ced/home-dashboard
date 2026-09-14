@@ -95,6 +95,12 @@ test("geïntegreerde navigatie markeert op iedere vervolgpagina de juiste hoofdr
   for (const view of dashboard.views) {
     const expanded = await HomeDashboardViewStrategy.generate(view.strategy);
     const navigation = expanded.sections[0].cards[0];
+    if (view.strategy.view === "home") {
+      assert.equal(navigation.type, "custom:home-dashboard-home-overview");
+      assert.equal(navigation.navigation_mode, "integrated");
+      assert.equal(expanded.sections.length, 1, "Home owns one header, not a second navigation section");
+      continue;
+    }
     assert.equal(navigation.type, "custom:home-dashboard-navigation");
     assert.equal(navigation.active, view.strategy.view);
   }
@@ -152,7 +158,7 @@ test("Home levert één samenhangende compositie met volledige context en zes ca
   const dashboard = await HomeDashboardStrategy.generate(config);
   const home = dashboard.views.find((view) => view.path === "home");
   const expanded = await HomeDashboardViewStrategy.generate(home.strategy);
-  const overview = expanded.sections[1].cards[0];
+  const overview = expanded.sections[0].cards[0];
   assert.equal(overview.type, "custom:home-dashboard-home-overview");
   assert.equal(overview.theme_mode, config.general.theme_mode);
   assert.equal(overview.palette, config.general.palette);

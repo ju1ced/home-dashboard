@@ -306,3 +306,10 @@
 - **Besluit:** datum, begroeting en de drie statuschips (thuis, weer, aandacht) blijven samen in een gekleurde Home-header met dezelfde achtergrond-, tekst- en afrondingsstijl als Kamers, met responsieve padding. Op brede schermen staan datum/begroeting in het midden en de chips rechts; op mobiel stapelen ze binnen dezelfde header.
 - **Navigatie:** de gedeelde navigatiecard blijft afzonderlijk erboven staan. Haar maat, routes, configuratie-ingang en kioskgedrag veranderen niet. Dit corrigeert de transparante Home-contextpresentatie uit alpha.9 zonder de vaste navigatiepositie terug te draaien.
 - **Validatie:** de bestaande fictieve browsermatrix controleert nu ook de drie chips, gecentreerde begroeting/datum, rechteruitlijning en vergelijking met de Kamers-header in geïntegreerde, kiosk- en native modus. Normal/warning/missing/unavailable en light/dark blijven afgedekt. Geen nieuwe acties, configuratievelden of dependencies; bestaande autorisatie en confirmations blijven ongewijzigd.
+
+## D-050 — Home-header componeert navigatie en context responsief
+
+- **Status:** testcandidate v0.8.0-alpha.15, na expliciete publicatiegoedkeuring door de eigenaar; geen Home Assistant-write of deployment goedgekeurd.
+- **Besluit:** Home gebruikt in geïntegreerde en kioskmodus één section met één gekleurde header. Bij minstens 1200 px beschikbare kaartbreedte staan navigatie links, datum/begroeting gecentreerd en statuschips rechts op één horizontale rij. Onder die grens stapelen dezelfde onderdelen zonder clipping of overlap.
+- **Compatibiliteit:** native modus behoudt de zelfstandige Home-header. Routes, kioskherstel, editoringang, actie- en autorisatiepaden blijven ongewijzigd; het configuratieschema verandert niet.
+- **Validatie:** de regressiecheck dekt brede uitlijning en mobiele stapeling voor geïntegreerde en kioskmodus. De bestaande browsermatrix blijft normal/warning/missing/unavailable, thema's, focus, overflow en navigatiegedrag controleren.

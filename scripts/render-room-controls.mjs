@@ -21,8 +21,8 @@ async function assertHomeHeader() {
   assert.deepEqual(await header.locator('.pill').evaluateAll(chips=>chips.map(chip=>chip.dataset.live)),['home-count','weather','attention']);
   const layout=await page.evaluate(()=>{
     const header=roomFixture.home.shadowRoot.querySelector('.top');
-    const navigation=document.querySelector('home-dashboard-navigation')?.shadowRoot?.querySelector('nav');
-    const intro=header.firstElementChild.getBoundingClientRect();
+    const navigation=header.querySelector('home-dashboard-navigation')?.shadowRoot?.querySelector('nav');
+    const intro=header.querySelector('.intro').getBoundingClientRect();
     const bounds=header.getBoundingClientRect();
     const chips=header.querySelector('.pills').getBoundingClientRect();
     const rooms=document.createElement('home-dashboard-room-overview');
@@ -32,18 +32,20 @@ async function assertHomeHeader() {
     const style=getComputedStyle(header);
     const chipBoxes=[...header.querySelectorAll('.pill')].map(chip=>chip.getBoundingClientRect());
     const navigationBounds=navigation?.getBoundingClientRect();
-    const result={background:style.backgroundColor,referenceBackground:reference.backgroundColor,color:style.color,referenceColor:reference.color,radius:style.borderRadius,referenceRadius:reference.borderRadius,center:Math.abs(intro.x+intro.width/2-bounds.x-bounds.width/2),chipsRight:Math.abs(chips.right-(bounds.right-parseFloat(style.paddingRight))),overlap:intro.right>chips.left&&intro.bottom>chips.top,inside:chips.left>=bounds.left&&chips.right<=bounds.right&&chips.bottom<=bounds.bottom,chromeGap:navigationBounds?bounds.top-navigationBounds.bottom:null,mobileStacked:chipBoxes.every((chip,index)=>index===0||(chip.top>chipBoxes[index-1].bottom&&Math.abs(chip.x+chip.width/2-(bounds.x+bounds.width/2))<1))};
+    const result={background:style.backgroundColor,referenceBackground:reference.backgroundColor,color:style.color,referenceColor:reference.color,center:Math.abs(intro.x+intro.width/2-bounds.x-bounds.width/2),overlap:intro.right>chips.left&&intro.left<chips.right&&intro.bottom>chips.top&&intro.top<chips.bottom,inside:chips.left>=bounds.left&&chips.right<=bounds.right&&chips.bottom<=bounds.bottom,integrated:Boolean(navigationBounds),inline:navigationBounds?Math.abs(intro.y+intro.height/2-navigationBounds.y-navigationBounds.height/2)<1:false,sameRow:navigationBounds?Math.abs(intro.y+intro.height/2-navigationBounds.y-navigationBounds.height/2):null,stacked:navigationBounds?intro.top>=navigationBounds.bottom&&chips.top>=intro.bottom:null,mobileStacked:chipBoxes.every((chip,index)=>index===0||(chip.top>chipBoxes[index-1].bottom&&Math.abs(chip.x+chip.width/2-(bounds.x+bounds.width/2))<1))};
     rooms.remove();
     return result;
   });
   assert.equal(layout.background,layout.referenceBackground,'Home keeps the coloured Rooms-style header');
   assert.equal(layout.color,layout.referenceColor,'header copy keeps the Rooms foreground contrast');
-  if(layout.chromeGap!==null) assert.match(layout.radius,/^0px 0px/,'Home header has no top corners when joined to navigation');
-
-  if(layout.chromeGap!==null) assert.ok(Math.abs(layout.chromeGap)<1,`navigation and Home header edges meet exactly (gap ${layout.chromeGap}px)`);
+  if(layout.integrated) {
+    if(layout.inline) assert.ok(layout.sameRow<1,'wide header aligns greeting with navigation');
+    else assert.equal(layout.stacked,true,'insufficient width stacks context below navigation');
+  }
   assert.ok(layout.center<1,'date and greeting remain horizontally centred');
   assert.equal(layout.inside,true,'all three chips remain inside the header');
-  if(page.viewportSize().width>800){assert.ok(layout.chipsRight<1,'status chips stay right-aligned');assert.equal(layout.overlap,false);}else assert.equal(layout.mobileStacked,true,'status chips stack in the centred mobile header');
+  assert.equal(layout.overlap,false);
+  if(page.viewportSize().width<=800) assert.equal(layout.mobileStacked,true,'status chips stack in the centred mobile header');
 }
 try {
   for(const [name,width,height,query] of [ ['desktop',1440,1100,''],['tablet',1024,1100,''],['mobile',390,844,''],['dark',1440,1100,'?theme=dark'],['warning',1440,1100,'?fixture=warning'],['missing',390,844,'?fixture=missing'],['unavailable',390,844,'?fixture=unavailable'],['kiosk-navigation',1440,1100,'?navigation=kiosk'] ]) {

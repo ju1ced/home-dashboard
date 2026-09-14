@@ -159,7 +159,9 @@ for (const [file, expected] of renderSizes) {
   }
 }
 
-const allFiles = await walk(root);
+// Generated output is intentionally gitignored and may contain local release
+// metadata. Privacy verification covers only tracked source and fixtures.
+const allFiles = (await walk(root)).filter((file) => !path.relative(root, file).startsWith("generated/"));
 const markdownFiles = allFiles.filter((file) => file.endsWith(".md"));
 const textExtensions = new Set([".md", ".html", ".css", ".js", ".mjs", ".ts", ".json", ".yaml", ".yml"]);
 const textFiles = allFiles.filter((file) => textExtensions.has(path.extname(file).toLowerCase()));
