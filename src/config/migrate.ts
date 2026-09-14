@@ -60,6 +60,12 @@ export function migrateConfig(input: unknown): MigrationResult {
     // geversioneerde Kia-card. mergeKnown bewaart dynamische cardvelden niet.
     merged.specialists.kia.card_config = structuredClone(inputKia.card_config);
   }
+  const inputPrinter = inputSpecialists && isObject(inputSpecialists.printer) ? inputSpecialists.printer : undefined;
+  if (inputPrinter && isObject(inputPrinter.card_config)) {
+    // Zelfde transparante doorgeefpatroon als Kia: mergeKnown bewaart geen
+    // dynamische entiteitsmappings, dus die worden hier expliciet behouden.
+    merged.specialists.printer.card_config = structuredClone(inputPrinter.card_config);
+  }
   if (merged.specialists.kia.card_type === "custom:ha-kia-connect-dashboard") {
     // De HACS-resource heet ha-kia-connect-dashboard.js, maar registreert de
     // Lovelace-kaart als custom:kia-dashboard-card. Bewaar bestaande private
