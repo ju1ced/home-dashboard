@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Nieuwe 3D-printerspecialist: read-only samenvatting (status, voortgang, resterende tijd, nozzle-/bedtemperatuur) op Home en Domeinen, met een volledige `specialist-printer`-detailpagina (doeltemperaturen, laatste fout, optionele camera). Zonder externe HACS-kaartafhankelijkheid — dit dashboardpakket registreert de samenvattingskaart zelf. Niet standaard ingeschakeld.
+
 ## 0.8.0-alpha.10 — 2026-09-14
 
 - Herstelt de gekleurde Home-header onder de vaste navigatie. Datum en begroeting staan op brede schermen gecentreerd; de drie statuschips blijven rechts in dezelfde header en stapelen op mobiel.
@@ -14,6 +18,7 @@
 - Een beheerdersstandwiel opent de native dashboardeditor; onbekende editormarkup krijgt een zichtbare HA-balk en dashboardbeheerlink als fallback.
 - De adapterbron, browserregressiecheck en volledige testscope worden samen geleverd. Schema v1 en bestaande actiegates blijven ongewijzigd.
 - [Testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.9.md). Live Home Assistant-acceptatie blijft een afzonderlijke gate; deze release voert geen deployment uit.
+
 
 ## 0.8.0-alpha.3 — 2026-09-08
 

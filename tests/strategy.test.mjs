@@ -7,6 +7,7 @@ import {
   getCameraPresentation,
   getHomeStructureSignature,
   getKiaPresentation,
+  getPrinterPresentation,
   getRoomMetric,
   getWastePresentation,
   migrateConfig,
@@ -370,6 +371,73 @@ test("Kia krijgt een stabiele specialistroute, stale fallback en een zelfstandig
     if (originalCustomElements === undefined) delete globalThis.customElements;
     else globalThis.customElements = originalCustomElements;
   }
+});
+
+test("3D-printer krijgt een stabiele specialistroute, foutdetectie en een zelfstandige samenvattingskaart", async () => {
+  const config = await normalConfig();
+  config.specialists.printer = {
+    enabled: true,
+    card_type: "custom:home-dashboard-printer-summary",
+    minimum_version: "",
+    mapping_keys: ["printer_primary"],
+    card_config: {
+      title: "Werkplaatsprinter",
+      entities: {
+        status: "printer_status_primary",
+        progress: "printer_progress_primary",
+        time_remaining: "printer_time_remaining_primary",
+        nozzle_temperature: "printer_nozzle_primary",
+        bed_temperature: "printer_bed_primary",
+        job_failed: "printer_job_failed_primary",
+        camera_entity: "printer_camera_primary"
+      }
+    }
+  };
+  const dashboard = await HomeDashboardStrategy.generate(config);
+  const specialist = dashboard.views.find((view) => view.path === "specialist-printer");
+  assert.equal(specialist.title, "Werkplaatsprinter");
+  assert.equal(specialist.subview, true);
+  assert.equal(specialist.back_path, "domains");
+
+  const printing = getPrinterPresentation({ states: {
+    printer_status_primary: { state: "printing" },
+    printer_progress_primary: { state: "42", attributes: { unit_of_measurement: "%" } },
+    printer_time_remaining_primary: { state: "38", attributes: { unit_of_measurement: "min" } },
+    printer_nozzle_primary: { state: "210", attributes: { unit_of_measurement: "°C" } },
+    printer_bed_primary: { state: "60", attributes: { unit_of_measurement: "°C" } },
+    printer_job_failed_primary: { state: "off" }
+  } }, config.specialists.printer);
+  assert.equal(printing.status, "printing");
+  assert.equal(printing.progress, "42 %");
+  assert.equal(printing.tone, "normal");
+
+  const failed = getPrinterPresentation({ states: {
+    printer_status_primary: { state: "error" },
+    printer_progress_primary: { state: "12", attributes: { unit_of_measurement: "%" } },
+    printer_time_remaining_primary: { state: "0", attributes: { unit_of_measurement: "min" } },
+    printer_nozzle_primary: { state: "0", attributes: { unit_of_measurement: "°C" } },
+    printer_bed_primary: { state: "0", attributes: { unit_of_measurement: "°C" } },
+    printer_job_failed_primary: { state: "on" }
+  } }, config.specialists.printer);
+  assert.equal(failed.status, "Printfout");
+  assert.equal(failed.tone, "error");
+
+  const unavailableResource = await HomeDashboardViewStrategy.generate(specialist.strategy);
+  const specialistSection = unavailableResource.sections.find((section) => section.cards.some((card) => card.type === "custom:home-dashboard-printer-summary"));
+  assert.match(specialistSection.cards[1].content, /niet geladen worden/);
+
+  const domains = await HomeDashboardViewStrategy.generate({
+    type: "custom:home-dashboard-view",
+    view: "domains",
+    density: "comfortable",
+    rooms: config.rooms,
+    energy: config.energy,
+    security: config.security,
+    specialists: config.specialists,
+    diagnostics: config.diagnostics
+  });
+  const serialized = JSON.stringify(domains);
+  assert.match(serialized, /specialist-printer/);
 });
 
 test("lege en unavailable fixtures blijven renderbaar", async () => {

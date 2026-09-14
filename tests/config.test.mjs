@@ -116,6 +116,29 @@ test("oude Kia-resource-identiteit migreert naar het geregistreerde kaarttype", 
   assert.equal(validateConfig(config).filter((issue) => issue.severity === "error").length, 0);
 });
 
+test("3D-printer behoudt haar geavanceerde cardconfiguratie en het vaste cardcontract", () => {
+  const migrated = migrateConfig({
+    type: "custom:home-dashboard",
+    schema_version: 1,
+    specialists: {
+      printer: {
+        enabled: true,
+        card_type: "custom:home-dashboard-printer-summary",
+        minimum_version: "1.0.0",
+        mapping_keys: ["printer_primary"],
+        card_config: { title: "Werkplaatsprinter", entities: { status: "printer_status_primary" } }
+      }
+    }
+  }).config;
+  assert.equal(migrated.specialists.printer.card_type, "custom:home-dashboard-printer-summary");
+  assert.deepEqual(migrated.specialists.printer.card_config, { title: "Werkplaatsprinter", entities: { status: "printer_status_primary" } });
+  assert.deepEqual(validateConfigSchema(migrated), []);
+  assert.equal(validateConfig(migrated).filter((issue) => issue.severity === "error").length, 0);
+
+  migrated.specialists.printer.card_config = [];
+  assert.ok(validateConfig(migrated).some((issue) => issue.path === "specialists.printer.card_config"));
+});
+
 test("oude Vandaag-configuratie krijgt alle benoemde energie-KPI's zonder dataverlies", () => {
   const migrated = migrateConfig({
     type: "custom:home-dashboard",

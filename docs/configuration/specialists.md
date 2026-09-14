@@ -29,3 +29,39 @@ Voor de samenvatting zijn de eerste vier mappings vereist. `door_lock` is option
 - Versiecontrole: de browser kan alleen zien dat de resource geladen is. Vergelijk de geïnstalleerde kaartversie zelf met de in de configuratie vastgelegde minimumversie vóór een runtime-test.
 
 De detailkaart blijft eigenaar van lockcontrols en alle andere voertuigacties. Test die alleen volgens de veiligheids- en confirmationcontracten van de Kia-repository, op een afzonderlijk goedgekeurd testdashboard.
+
+## 3D-printer
+
+Anders dan Kia bestaat er (nog) geen onafhankelijk geteste HACS-kaart voor deze printerintegratie. De printeringang is daarom volledig zelfstandig: zowel de kleine read-only samenvatting als de volledige detailweergave worden native door dit dashboardpakket geregistreerd (`custom:home-dashboard-printer-summary`), met bestaande `tile`- en `picture-entity`-kaarttypes voor de detailweergave. Er is dus geen aparte HACS-installatie of geteste minimumversie van een externe kaart nodig.
+
+Activeer 3D-printer onder **Dashboard bewerken → Kia, 3D-printer, robot, tuin en zwembad**. Plaats de entiteitmapping als een geavanceerd JSON-object. Bijvoorbeeld, uitsluitend met fictieve sleutels:
+
+```json
+{
+  "title": "Werkplaatsprinter",
+  "entities": {
+    "status": "printer_status_primary",
+    "progress": "printer_progress_primary",
+    "time_remaining": "printer_time_remaining_primary",
+    "nozzle_temperature": "printer_nozzle_primary",
+    "bed_temperature": "printer_bed_primary",
+    "nozzle_target": "printer_nozzle_target_primary",
+    "bed_target": "printer_bed_target_primary",
+    "last_error": "printer_last_error_primary",
+    "job_failed": "printer_job_failed_primary",
+    "camera_entity": "printer_camera_primary"
+  }
+}
+```
+
+Voor de samenvatting zijn de eerste vijf mappings (`status`, `progress`, `time_remaining`, `nozzle_temperature`, `bed_temperature`) vereist. `job_failed` is een optionele binaire foutsignaal-entiteit; wanneer die `on` is, toont de samenvatting **Printfout**. `nozzle_target`, `bed_target`, `last_error` en `camera_entity` zijn optioneel en verschijnen alleen op de detailpagina wanneer ze zijn ingevuld; is er een `camera_entity` gemapt, dan toont de detailpagina die als losse `picture-entity`-sectie.
+
+### Welke integratie?
+
+Dit contract is bewust integratieneutraal: elke Home Assistant-integratie die vergelijkbare entiteiten blootstelt (bijvoorbeeld een cloud-, Moonraker/Klipper- of OctoPrint-gebaseerde printerintegratie) kan hier gekoppeld worden door de bijpassende `entity_id`'s in te vullen. Er wordt geen specifiek merk of model verondersteld.
+
+### Fallbacks
+
+- Onvolledige mapping: de samenvatting meldt **Printerstatus onvolledig**.
+- `unknown`, `unavailable` of ontbrekende waarden: de samenvatting en detailtiles tonen expliciet **Niet beschikbaar** in plaats van een verouderde waarde.
+- Ontbrekende samenvattingsresource: dit zou enkel bij een gebroken build mogen voorkomen; een native uitlegblok verwijst dan naar het herladen van de browser.
