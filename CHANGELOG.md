@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.0-alpha.10 — 2026-09-14
+
+- Herstelt de gekleurde Home-header onder de vaste navigatie. Datum en begroeting staan op brede schermen gecentreerd; de drie statuschips blijven rechts in dezelfde header en stapelen op mobiel.
+- Behoudt de gedeelde navigatiegeometrie, kioskadapter, native configuratie-ingang en bestaande actiongates uit alpha.9.
+- Breidt de fictieve browsermatrix uit met contrast-, uitlijnings- en containmentchecks voor de Home-header in normal, warning, missing, unavailable, light, dark, kiosk en native modus.
+- [Testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.10.md). Live Home Assistant-acceptatie blijft een afzonderlijke gate; deze release voert geen deployment uit.
+
 ## 0.8.0-alpha.9 — 2026-09-11
 
 - Eén gedeelde navigatiebalk met vaste maat en knopposities op alle hoofdviews, kamerdetails en Kia; Home-context staat onder de balk.

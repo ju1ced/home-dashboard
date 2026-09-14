@@ -1,5 +1,7 @@
 # Home Dashboard — ontwerpvoorstel
 
+Testcandidate **v0.8.0-alpha.10** corrigeert Home bovenop alpha.9: datum, begroeting en de drie statuschips blijven in een gekleurde header zoals Kamers. Datum en begroeting staan gecentreerd; chips staan rechts en stapelen op mobiel binnen dezelfde header. De vaste navigatie erboven blijft ongewijzigd. Zie de [testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.10.md).
+
 Testcandidate **v0.8.0-alpha.9** gebruikt één navigatiebalk op dezelfde plek en met dezelfde maat in alle views, kiosk zonder extra frontendresource en een beheerderstandwiel voor de native dashboardeditor. Zie de [testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.9.md) en de [volledige testscope en runtimegrenzen](docs/releases/testing-navigation-consistency.md). De onderstaande alpha.8-beschrijving beschrijft de eerdere release.
 
 Werkcandidate **v0.8.0-alpha.8** maakt de interne navigatie standaard zichtbaar in de gekleurde balk. Kiosk gebruikt dezelfde vijf routes en kan met de optionele kiosk-mode-resource de HA-bovenbalk verbergen. De specialistische snelkoppelingen onder de afvalophaling zijn grotere kaarten met icoontegel, context en pijl. Zie de [actuele renders](docs/renders/expandable-rooms/README.md) en [testchecklist](docs/releases/testing-v0.8.0-alpha.8.md).
@@ -104,4 +106,4 @@ scripts/          lokale preview en repositorychecks
 
 ## Status
 
-v0.8.0-alpha.9 is de testcandidate voor consistente navigatie, lokale kiosk en de configuratie-ingang. De fixtures voeren geen live Home Assistant-write uit; runtime-acceptatie blijft afzonderlijk vereist.
+v0.8.0-alpha.10 is de testcandidate voor consistente navigatie, lokale kiosk, de configuratie-ingang en de herstelde gekleurde Home-header. De fixtures voeren geen live Home Assistant-write uit; runtime-acceptatie blijft afzonderlijk vereist.

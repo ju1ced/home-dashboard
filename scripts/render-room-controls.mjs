@@ -14,9 +14,38 @@ async function open(query='') {
   await page.waitForFunction(()=>window.roomFixture && document.querySelector('home-dashboard-home-overview').shadowRoot.querySelector('home-dashboard-room-controls'));
   await page.getByRole('button',{name:'Bediening Woonkamer',exact:true}).click();
 }
+async function assertHomeHeader() {
+  const header=page.locator('home-dashboard-home-overview .top');
+  assert.equal(await header.locator('.date').textContent(),'maandag 7 september');
+  assert.equal(await header.getByRole('heading',{name:'Goedemorgen',exact:true}).count(),1);
+  assert.deepEqual(await header.locator('.pill').evaluateAll(chips=>chips.map(chip=>chip.dataset.live)),['home-count','weather','attention']);
+  const layout=await page.evaluate(()=>{
+    const header=roomFixture.home.shadowRoot.querySelector('.top');
+    const intro=header.firstElementChild.getBoundingClientRect();
+    const bounds=header.getBoundingClientRect();
+    const chips=header.querySelector('.pills').getBoundingClientRect();
+    const rooms=document.createElement('home-dashboard-room-overview');
+    rooms.setConfig({type:'custom:home-dashboard-room-overview',rooms:[],theme_mode:'system'});
+    document.body.append(rooms);
+    const reference=getComputedStyle(rooms.shadowRoot.querySelector('.hero'));
+    const style=getComputedStyle(header);
+    const chipBoxes=[...header.querySelectorAll('.pill')].map(chip=>chip.getBoundingClientRect());
+    const result={background:style.backgroundColor,referenceBackground:reference.backgroundColor,color:style.color,referenceColor:reference.color,radius:style.borderRadius,referenceRadius:reference.borderRadius,center:Math.abs(intro.x+intro.width/2-bounds.x-bounds.width/2),chipsRight:Math.abs(chips.right-(bounds.right-parseFloat(style.paddingRight))),overlap:intro.right>chips.left&&intro.bottom>chips.top,inside:chips.left>=bounds.left&&chips.right<=bounds.right&&chips.bottom<=bounds.bottom,mobileStacked:chipBoxes.every((chip,index)=>index===0||(chip.top>chipBoxes[index-1].bottom&&Math.abs(chip.x+chip.width/2-(bounds.x+bounds.width/2))<1))};
+    rooms.remove();
+    return result;
+  });
+  assert.equal(layout.background,layout.referenceBackground,'Home keeps the coloured Rooms-style header');
+  assert.equal(layout.color,layout.referenceColor,'header copy keeps the Rooms foreground contrast');
+  assert.equal(layout.radius,layout.referenceRadius);
+
+  assert.ok(layout.center<1,'date and greeting remain horizontally centred');
+  assert.equal(layout.inside,true,'all three chips remain inside the header');
+  if(page.viewportSize().width>800){assert.ok(layout.chipsRight<1,'status chips stay right-aligned');assert.equal(layout.overlap,false);}else assert.equal(layout.mobileStacked,true,'status chips stack in the centred mobile header');
+}
 try {
   for(const [name,width,height,query] of [ ['desktop',1440,1100,''],['tablet',1024,1100,''],['mobile',390,844,''],['dark',1440,1100,'?theme=dark'],['warning',1440,1100,'?fixture=warning'],['missing',390,844,'?fixture=missing'],['unavailable',390,844,'?fixture=unavailable'],['kiosk-navigation',1440,1100,'?navigation=kiosk'] ]) {
     await page.setViewportSize({width,height});await open(query);
+    await assertHomeHeader();
     assert.equal(await page.getByText('Afvalophaling',{exact:true}).count(),1);
     assert.equal(await page.getByText('Niet recent',{exact:false}).count(),0);
     assert.equal(await page.getByText('Geen recente context',{exact:false}).count(),0);
@@ -31,6 +60,7 @@ try {
     await page.screenshot({path:`${directory}/${name}.png`,fullPage:true});
   }
   await page.setViewportSize({width:1440,height:1100});await open();
+  await open('?navigation=native');await assertHomeHeader();await open();
   const roomToggle=page.getByRole('button',{name:'Bediening Woonkamer',exact:true});
   assert.equal(await roomToggle.getAttribute('aria-expanded'),'true');
   await page.evaluate(()=>{window.lastDetails='';roomFixture.home.addEventListener('hass-more-info',event=>window.lastDetails=event.detail.entityId);});
