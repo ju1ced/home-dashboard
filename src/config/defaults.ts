@@ -88,9 +88,10 @@ export function createDefaultConfig(): HomeDashboardConfigV1 {
       },
       pool: {
         enabled: false,
-        card_type: "custom:pool-dashboard-card",
+        card_type: "custom:home-dashboard-pool-summary",
         minimum_version: "",
-        mapping_keys: []
+        mapping_keys: [],
+        card_config: {}
       }
     },
     layout: {

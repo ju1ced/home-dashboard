@@ -116,6 +116,50 @@ test("oude Kia-resource-identiteit migreert naar het geregistreerde kaarttype", 
   assert.equal(validateConfig(config).filter((issue) => issue.severity === "error").length, 0);
 });
 
+test("Zwembad behoudt haar geavanceerde cardconfiguratie en het vaste cardcontract", () => {
+  const migrated = migrateConfig({
+    type: "custom:home-dashboard",
+    schema_version: 1,
+    specialists: {
+      pool: {
+        enabled: true,
+        card_type: "custom:home-dashboard-pool-summary",
+        minimum_version: "1.0.0",
+        mapping_keys: ["pool_primary"],
+        card_config: { title: "Zwembad", entities: { status: "pool_status_primary" } }
+      }
+    }
+  }).config;
+  assert.equal(migrated.specialists.pool.card_type, "custom:home-dashboard-pool-summary");
+  assert.deepEqual(migrated.specialists.pool.card_config, { title: "Zwembad", entities: { status: "pool_status_primary" } });
+  assert.deepEqual(validateConfigSchema(migrated), []);
+  assert.equal(validateConfig(migrated).filter((issue) => issue.severity === "error").length, 0);
+
+  migrated.specialists.pool.card_config = [];
+  assert.ok(validateConfig(migrated).some((issue) => issue.path === "specialists.pool.card_config"));
+});
+
+test("oude Zwembad-kaartcontract migreert naar het geregistreerde kaarttype", () => {
+  const { config, warnings } = migrateConfig({
+    type: "custom:home-dashboard",
+    schema_version: 1,
+    specialists: {
+      pool: {
+        enabled: true,
+        card_type: "custom:pool-dashboard-card",
+        minimum_version: "",
+        mapping_keys: ["pool_water_quality"],
+        card_config: { title: "Zwembad", entities: { status: "pool_status_primary" } }
+      }
+    }
+  });
+  assert.equal(config.specialists.pool.card_type, "custom:home-dashboard-pool-summary");
+  assert.deepEqual(config.specialists.pool.card_config, { title: "Zwembad", entities: { status: "pool_status_primary" } });
+  assert.ok(warnings.some((warning) => warning.includes("verouderde Zwembad-kaarttype")));
+  assert.deepEqual(validateConfigSchema(config), []);
+  assert.equal(validateConfig(config).filter((issue) => issue.severity === "error").length, 0);
+});
+
 test("oude Vandaag-configuratie krijgt alle benoemde energie-KPI's zonder dataverlies", () => {
   const migrated = migrateConfig({
     type: "custom:home-dashboard",

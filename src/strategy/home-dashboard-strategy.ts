@@ -69,7 +69,8 @@ export class HomeDashboardStrategy extends HTMLElementBase {
       views: [
         ...orderedPaths.map((path) => createView(path, config)),
         ...config.rooms.map((room) => createRoomView(room, config)),
-        ...(config.specialists.kia.enabled ? [createKiaView(config)] : [])
+        ...(config.specialists.kia.enabled ? [createKiaView(config)] : []),
+        ...(config.specialists.pool.enabled ? [createPoolView(config)] : [])
       ]
     };
   }
@@ -148,6 +149,27 @@ function createKiaView(config: HomeDashboardConfigV1): Record<string, unknown> {
       theme_mode: config.general.theme_mode,
       palette: config.general.palette,
       kia: config.specialists.kia,
+      diagnostics: config.diagnostics
+    } satisfies HomeDashboardViewConfig
+  };
+}
+
+function createPoolView(config: HomeDashboardConfigV1): Record<string, unknown> {
+  return {
+    title: typeof config.specialists.pool.card_config.title === "string" && config.specialists.pool.card_config.title.trim() ? config.specialists.pool.card_config.title : "Zwembad",
+    path: "specialist-pool",
+    icon: "mdi:pool",
+    subview: true,
+    back_path: "domains",
+    strategy: {
+      type: "custom:home-dashboard-view",
+      view: "specialist-pool",
+      density: config.general.density,
+      content_width: config.layout.content_width,
+      navigation_mode: config.layout.navigation_mode,
+      theme_mode: config.general.theme_mode,
+      palette: config.general.palette,
+      pool: config.specialists.pool,
       diagnostics: config.diagnostics
     } satisfies HomeDashboardViewConfig
   };
