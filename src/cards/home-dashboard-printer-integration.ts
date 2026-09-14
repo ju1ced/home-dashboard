@@ -31,14 +31,15 @@ function printerEntities(printer: PrinterSpecialistConfig): Record<string, strin
   return extractEntityMap(printer.card_config);
 }
 
-function jobFailed(state: HassState | undefined): boolean {
+function isOn(state: HassState | undefined): boolean {
   return Boolean(state && ["on", "true"].includes(state.state.toLowerCase()));
 }
 
 /**
- * `job_failed` is de expliciete foutsignaal-entiteit die de printerintegratie
- * blootstelt; op de vrije-tekst `status`-waarde zelf wordt bewust niet
- * fuzzy-gematcht, dat is te taalgevoelig om betrouwbaar te zijn.
+ * `job_failed` en `insufficient_filament` zijn de expliciete foutsignaal-
+ * entiteiten die de printerintegratie blootstelt; op de vrije-tekst
+ * `status`-waarde zelf wordt bewust niet fuzzy-gematcht, dat is te
+ * taalgevoelig om betrouwbaar te zijn.
  */
 export function getPrinterPresentation(hass: HassLike | undefined, printer: PrinterSpecialistConfig): PrinterPresentation {
   const entities = printerEntities(printer);
@@ -51,6 +52,7 @@ export function getPrinterPresentation(hass: HassLike | undefined, printer: Prin
 
   const statusState = stateFor(hass, statusEntity);
   const failedState = stateFor(hass, entities.job_failed);
+  const insufficientFilamentState = stateFor(hass, entities.insufficient_filament);
   const valuesUnavailable = [statusEntity, progressEntity, nozzleEntity, bedEntity].some((entity) => isUnavailableState(stateFor(hass, entity)));
 
   const title = typeof printer.card_config.title === "string" && printer.card_config.title.trim() ? printer.card_config.title : "3D-printer";
@@ -60,9 +62,12 @@ export function getPrinterPresentation(hass: HassLike | undefined, printer: Prin
   if (mappingIncomplete) {
     status = "Printerstatus onvolledig";
     tone = "warning";
-  } else if (jobFailed(failedState)) {
+  } else if (isOn(failedState)) {
     status = "Printfout";
     tone = "error";
+  } else if (isOn(insufficientFilamentState)) {
+    status = "Filament bijna op";
+    tone = "warning";
   } else if (valuesUnavailable) {
     status = "Printerstatus niet beschikbaar";
     tone = "unavailable";
@@ -200,30 +205,53 @@ export function buildPrinterDetailSections(printer: PrinterSpecialistConfig | un
 
   const entities = printerEntities(printer);
   const detailCards: LovelaceCardConfig[] = [];
+  if (entities.job_name) detailCards.push(readonlyTile(entities.job_name, "Printtaak"));
+  if (entities.current_layer) detailCards.push(readonlyTile(entities.current_layer, "Huidige laag"));
+  if (entities.total_layers) detailCards.push(readonlyTile(entities.total_layers, "Totaal aantal lagen"));
   if (entities.nozzle_target) detailCards.push(readonlyTile(entities.nozzle_target, "Nozzledoeltemperatuur"));
   if (entities.bed_target) detailCards.push(readonlyTile(entities.bed_target, "Beddoeltemperatuur"));
   if (entities.last_error) detailCards.push(readonlyTile(entities.last_error, "Laatste fout"));
+  if (entities.last_error_code) detailCards.push(readonlyTile(entities.last_error_code, "Laatste foutcode"));
   if (detailCards.length > 0) {
     sections.push({ type: "grid", column_span: maxColumns, cards: [{ type: "heading", heading: "Printdetails", icon: "mdi:printer-3d-nozzle-outline", grid_options: { columns: "full", rows: "auto" } }, ...detailCards] });
   }
 
+  const filamentCards: LovelaceCardConfig[] = [];
+  if (entities.loaded_filament_slot) filamentCards.push(readonlyTile(entities.loaded_filament_slot, "Geladen slot"));
+  for (const [key, slot] of [["filament_slot_1", 1], ["filament_slot_2", 2], ["filament_slot_3", 3], ["filament_slot_4", 4]] as const) {
+    if (entities[key]) filamentCards.push(readonlyTile(entities[key], `Slot ${slot}`));
+  }
+  if (filamentCards.length > 0) {
+    sections.push({ type: "grid", column_span: maxColumns, cards: [{ type: "heading", heading: "Filament", icon: "mdi:printer-3d-nozzle-outline", grid_options: { columns: "full", rows: "auto" } }, ...filamentCards] });
+  }
+
+  const visualCards: LovelaceCardConfig[] = [];
   if (entities.camera_entity) {
-    sections.push({
-      type: "grid",
-      column_span: maxColumns,
-      cards: [{
-        type: "picture-entity",
-        entity: entities.camera_entity,
-        camera_view: "auto",
-        show_name: true,
-        show_state: false,
-        tap_action: noAction(),
-        hold_action: noAction(),
-        double_tap_action: noAction(),
-        grid_options: { columns: "full", rows: "auto" }
-      }]
+    visualCards.push({
+      type: "picture-entity",
+      entity: entities.camera_entity,
+      camera_view: "auto",
+      show_name: true,
+      show_state: false,
+      tap_action: noAction(),
+      hold_action: noAction(),
+      double_tap_action: noAction(),
+      grid_options: { columns: "full", rows: "auto" }
     });
   }
+  if (entities.job_preview_entity) {
+    visualCards.push({
+      type: "picture-entity",
+      entity: entities.job_preview_entity,
+      show_name: true,
+      show_state: false,
+      tap_action: noAction(),
+      hold_action: noAction(),
+      double_tap_action: noAction(),
+      grid_options: { columns: "full", rows: "auto" }
+    });
+  }
+  if (visualCards.length > 0) sections.push({ type: "grid", column_span: maxColumns, cards: visualCards });
 
   return sections;
 }

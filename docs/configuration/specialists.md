@@ -47,14 +47,32 @@ Activeer 3D-printer onder **Dashboard bewerken → Kia, 3D-printer, robot, tuin 
     "bed_temperature": "printer_bed_primary",
     "nozzle_target": "printer_nozzle_target_primary",
     "bed_target": "printer_bed_target_primary",
+    "job_name": "printer_job_name_primary",
+    "current_layer": "printer_current_layer_primary",
+    "total_layers": "printer_total_layers_primary",
     "last_error": "printer_last_error_primary",
+    "last_error_code": "printer_last_error_code_primary",
     "job_failed": "printer_job_failed_primary",
-    "camera_entity": "printer_camera_primary"
+    "insufficient_filament": "printer_insufficient_filament_primary",
+    "loaded_filament_slot": "printer_loaded_slot_primary",
+    "filament_slot_1": "printer_filament_slot_1_primary",
+    "filament_slot_2": "printer_filament_slot_2_primary",
+    "filament_slot_3": "printer_filament_slot_3_primary",
+    "filament_slot_4": "printer_filament_slot_4_primary",
+    "camera_entity": "printer_camera_primary",
+    "job_preview_entity": "printer_job_preview_primary"
   }
 }
 ```
 
-Voor de samenvatting zijn de eerste vijf mappings (`status`, `progress`, `time_remaining`, `nozzle_temperature`, `bed_temperature`) vereist. `job_failed` is een optionele binaire foutsignaal-entiteit; wanneer die `on` is, toont de samenvatting **Printfout**. `nozzle_target`, `bed_target`, `last_error` en `camera_entity` zijn optioneel en verschijnen alleen op de detailpagina wanneer ze zijn ingevuld; is er een `camera_entity` gemapt, dan toont de detailpagina die als losse `picture-entity`-sectie.
+Voor de samenvatting zijn de eerste vijf mappings (`status`, `progress`, `time_remaining`, `nozzle_temperature`, `bed_temperature`) vereist. `job_failed` en `insufficient_filament` zijn optionele binaire foutsignaal-entiteiten; wanneer één van beide `on` is, toont de samenvatting respectievelijk **Printfout** of **Filament bijna op**. Alle overige sleutels zijn optioneel en verschijnen alleen op de detailpagina wanneer ze zijn ingevuld:
+
+- `nozzle_target`, `bed_target` — doeltemperaturen naast de actuele waarden.
+- `job_name`, `current_layer`, `total_layers` — welk bestand print en hoe ver de laagopbouw staat.
+- `last_error`, `last_error_code` — laatste foutmelding en -code.
+- `loaded_filament_slot`, `filament_slot_1`…`filament_slot_4` — voor printers met een multi-slot filamentsysteem (bv. Anycubic ACE Pro, Bambu AMS); toont per slot het geladen materiaal en welk slot actief is.
+- `camera_entity` — een `camera`-entiteit, getoond als `picture-entity`.
+- `job_preview_entity` — een `image`-entiteit met de sliced-previewthumbnail van de huidige printtaak, eveneens als `picture-entity`.
 
 ### Welke integratie?
 
