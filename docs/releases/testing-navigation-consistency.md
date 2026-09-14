@@ -1,11 +1,11 @@
-# Navigatiecorrectie in v0.8.0-alpha.9
+# Navigatie- en Home-headercorrectie in v0.8.0-alpha.10
 
-PR, merge na groene checks en publicatie als alpha zijn door de eigenaar goedgekeurd. De releasecandidate is v0.8.0-alpha.9; schema v1 blijft ongewijzigd. Deze toestemming omvat geen Home Assistant-write of deployment. Zie de [releasechecklist](testing-v0.8.0-alpha.9.md).
+PR, merge na groene checks en publicatie als alpha zijn door de eigenaar goedgekeurd. De releasecandidate is v0.8.0-alpha.10; schema v1 blijft ongewijzigd. Deze toestemming omvat geen Home Assistant-write of deployment. Zie de [releasechecklist](testing-v0.8.0-alpha.10.md).
 
 ## Wijzigingen
 
 - Eén eerste, volle-breedte navigatiecard op Home, Kamers, Energie, Domeinen, Meer, kamerdetails en Kia. De balk is 66 px hoog; knoppen wisselen niet van positie wanneer de actieve route verandert.
-- Home-begroeting en status blijven beschikbaar onder de navigatie, zonder tweede gekleurde balk.
+- Home-begroeting en status blijven beschikbaar in een gekleurde header onder de navigatie, met dezelfde oppervlakte- en spacinggrammatica als Kamers. Datum en begroeting centreren op brede schermen; de chips staan rechts en stapelen op mobiel.
 - Kiosk gebruikt een lokale, opruimbare shelladapter in plaats van alleen configuratie voor een externe resource.
 - Het tandwiel **Dashboard instellen** opent voor beheerders de native Home Assistant-dashboardeditor. De eigen HA-editor blijft verantwoordelijk voor opslaan, autorisatie en bevestigingen.
 - **Home Assistant-balk tonen**, **Kiosk hervatten** en `?disable_km` bieden herstel. Bij onbekende editormarkup verschijnt de HA-balk met uitleg en een dashboardbeheerlink.

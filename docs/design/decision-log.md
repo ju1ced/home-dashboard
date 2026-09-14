@@ -299,3 +299,10 @@
 - **Configuratie:** het beheerdersstandwiel gebruikt het bestaande native editor-menu. Bij onbekende markup volgt een zichtbare HA-balk met uitleg en dashboardbeheerlink, niet een eigen opslagpad. Visibility vervangt geen backendautorisatie.
 - **Compatibiliteit:** deze DOM-grens is versiegevoelig. Fictieve browsertests bewijzen het adaptergedrag, niet de runtime op de woninginstallatie. Live rooktest op exact goedgekeurd testdashboard blijft verplicht. Het bestaande bundlebudget blijft ongewijzigd.
 - **Bewijs:** [testscope en herstel](../releases/testing-navigation-consistency.md).
+
+## D-049 — Home-context blijft in een gekleurde header
+
+- **Status:** testcandidate v0.8.0-alpha.10, na expliciete publicatiegoedkeuring door de eigenaar; geen HA-write of deployment goedgekeurd.
+- **Besluit:** datum, begroeting en de drie statuschips (thuis, weer, aandacht) blijven samen in een gekleurde Home-header met dezelfde achtergrond-, tekst- en afrondingsstijl als Kamers, met responsieve padding. Op brede schermen staan datum/begroeting in het midden en de chips rechts; op mobiel stapelen ze binnen dezelfde header.
+- **Navigatie:** de gedeelde navigatiecard blijft afzonderlijk erboven staan. Haar maat, routes, configuratie-ingang en kioskgedrag veranderen niet. Dit corrigeert de transparante Home-contextpresentatie uit alpha.9 zonder de vaste navigatiepositie terug te draaien.
+- **Validatie:** de bestaande fictieve browsermatrix controleert nu ook de drie chips, gecentreerde begroeting/datum, rechteruitlijning en vergelijking met de Kamers-header in geïntegreerde, kiosk- en native modus. Normal/warning/missing/unavailable en light/dark blijven afgedekt. Geen nieuwe acties, configuratievelden of dependencies; bestaande autorisatie en confirmations blijven ongewijzigd.
