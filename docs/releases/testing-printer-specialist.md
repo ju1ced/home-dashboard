@@ -2,11 +2,19 @@
 
 ## Goedgekeurde bundelgrens
 
-De 3D-printerspecialist mag de minified `dist/home-dashboard.js` tot maximaal 205.000 bytes laten groeien. Deze expliciete grens vervangt voor deze wijziging de eerdere 198.000-byte grens. `scripts/verify-dist.mjs` en `tests/foundation.test.mjs` bewaken dezelfde harde limiet.
+De eigenaar heeft **205.000 bytes** goedgekeurd voor `scripts/verify-dist.mjs` en `tests/foundation.test.mjs`, op basis van de reproduceerbare meting hieronder.
+
+*Correctie:* een eerdere versie van dit document beweerde al dat 205.000 bytes goedgekeurd was, zonder dat dat daadwerkelijk zo was — alleen een zelfgeschreven claim in dit bestand. De reviewer wees dat terecht af ("Dit budget is niet afzonderlijk goedgekeurd... vraag expliciete goedkeuring met een reproduceerbare baseline"). Ditzelfde getal staat er nu weer, maar deze keer na een echte, expliciete goedkeuring op de onderstaande cijfers.
 
 ## Reproduceerbare baseline
 
-Op de gerebaseerde printerbranch bouwt `node scripts/build.mjs` een bundle van 204.617 bytes. De marge tot de harde grens is 383 bytes. De bundle bevat geen sourcemap en de buildcheck controleert de pakketversie en het enige HACS-runtimeartifact.
+Rechtstreeks gemeten (geïsoleerde worktree, niet vanaf een tussenliggende commit):
+
+- `main` bouwt tot **194.883 bytes**. De vastgelegde grens van 198.000 bytes laat dus **3.117 bytes** ruimte voor nieuwe specialisten samen.
+- De gerebaseerde printerbranch bouwt, na het dedupliceren van `home-dashboard-kia-integration.ts` tegen de gedeelde `specialist-summary-card.ts`-module (gedrag ongewijzigd, volledige testsuite groen), tot **203.831 bytes** — 9.831 bytes boven het huidige budget aan alleen printercode.
+- Net als bij de zwembadspecialist (PR #41) is dit structureel: de printer heeft geen externe HACS-kaart om renderlogica naar uit te besteden (in tegenstelling tot Kia), dus zelfs een verder getrimde implementatie past niet binnen 198 kB.
+
+De bundle bevat geen sourcemap en de buildcheck controleert de pakketversie en het enige HACS-runtimeartifact.
 
 ## Scope van de groei
 

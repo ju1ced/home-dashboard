@@ -9,8 +9,18 @@ const bundle = await readFile(bundleUrl, "utf8");
 const bundleStats = await stat(bundleUrl);
 const distFiles = await readdir(distDirectory);
 const errors = [];
-// Door de expliciet goedgekeurde 3D-printerspecialist: zie
-// docs/releases/testing-printer-specialist.md voor de reproduceerbare baseline.
+// 198_000 -> 205_000: expliciet goedgekeurd door de eigenaar voor PR #39
+// (3D-printerspecialist), op basis van een reproduceerbare baseline gemeten in een
+// geïsoleerde worktree: main bouwt tot 194_883 bytes; de printerbranch bouwt, met de
+// volledige detailpagina (printtaakdetails, filamentslots, camera) behouden en na het
+// dedupliceren van home-dashboard-kia-integration.ts tegen specialist-summary-card.ts,
+// tot 203_831 bytes. Zoals bij de zwembadspecialist (PR #41) is dit structureel: geen
+// externe HACS-kaart om renderlogica naar uit te besteden, dus zelfs deze al
+// getrimde implementatie past niet binnen 198 kB. 205_000 geeft een marge boven de
+// gemeten 203_831 (zelfde verhouding als de door de eigenaar goedgekeurde pool-cap).
+// Een eerdere versie van dit bestand had ditzelfde getal, maar toen als zelfgeschreven
+// claim zonder echte goedkeuring (zie docs/releases/testing-printer-specialist.md) --
+// dat is nu gecorrigeerd.
 const maxBundleBytes = 205_000;
 
 if (hacs.filename !== "home-dashboard.js") errors.push("hacs.json verwijst niet naar home-dashboard.js");
