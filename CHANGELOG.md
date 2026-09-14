@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Nieuwe zwembadspecialist: read-only samenvatting (status, water-/doel-/buitentemperatuur, optionele warmtepomp-/zoutsysteemfout) op Home en Domeinen, met een volledige `specialist-pool`-detailpagina (warmtepompcomponenten, extra temperaturen, foutomschrijving, filterpomp- en verbindingsstatus). Zonder externe HACS-kaartafhankelijkheid — dit dashboardpakket registreert de samenvattingskaart zelf. Niet standaard ingeschakeld.
+
 ## 0.8.0-alpha.10 — 2026-09-14
 
 - Herstelt de gekleurde Home-header onder de vaste navigatie. Datum en begroeting staan op brede schermen gecentreerd; de drie statuschips blijven rechts in dezelfde header en stapelen op mobiel.
