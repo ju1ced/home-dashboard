@@ -7,6 +7,7 @@ import {
   getCameraPresentation,
   getHomeStructureSignature,
   getKiaPresentation,
+  getPrinterPresentation,
   getPoolPresentation,
   getRoomMetric,
   getWastePresentation,
@@ -371,6 +372,110 @@ test("Kia krijgt een stabiele specialistroute, stale fallback en een zelfstandig
     if (originalCustomElements === undefined) delete globalThis.customElements;
     else globalThis.customElements = originalCustomElements;
   }
+});
+
+test("3D-printer krijgt een stabiele specialistroute, foutdetectie en een zelfstandige samenvattingskaart", async () => {
+  const config = await normalConfig();
+  config.specialists.printer = {
+    enabled: true,
+    card_type: "custom:home-dashboard-printer-summary",
+    minimum_version: "",
+    mapping_keys: ["printer_primary"],
+    card_config: {
+      title: "Werkplaatsprinter",
+      entities: {
+        status: "printer_status_primary",
+        progress: "printer_progress_primary",
+        time_remaining: "printer_time_remaining_primary",
+        nozzle_temperature: "printer_nozzle_primary",
+        bed_temperature: "printer_bed_primary",
+        job_failed: "printer_job_failed_primary",
+        insufficient_filament: "printer_insufficient_filament_primary",
+        job_name: "printer_job_name_primary",
+        current_layer: "printer_current_layer_primary",
+        total_layers: "printer_total_layers_primary",
+        last_error_code: "printer_last_error_code_primary",
+        loaded_filament_slot: "printer_loaded_slot_primary",
+        filament_slot_1: "printer_filament_slot_1_primary",
+        camera_entity: "printer_camera_primary",
+        job_preview_entity: "printer_job_preview_primary"
+      }
+    }
+  };
+  const dashboard = await HomeDashboardStrategy.generate(config);
+  const specialist = dashboard.views.find((view) => view.path === "specialist-printer");
+  assert.equal(specialist.title, "Werkplaatsprinter");
+  assert.equal(specialist.subview, true);
+  assert.equal(specialist.back_path, "domains");
+
+  const printing = getPrinterPresentation({ states: {
+    printer_status_primary: { state: "printing" },
+    printer_progress_primary: { state: "42", attributes: { unit_of_measurement: "%" } },
+    printer_time_remaining_primary: { state: "38", attributes: { unit_of_measurement: "min" } },
+    printer_nozzle_primary: { state: "210", attributes: { unit_of_measurement: "°C" } },
+    printer_bed_primary: { state: "60", attributes: { unit_of_measurement: "°C" } },
+    printer_job_failed_primary: { state: "off" }
+  } }, config.specialists.printer);
+  assert.equal(printing.status, "printing");
+  assert.equal(printing.progress, "42 %");
+  assert.equal(printing.tone, "normal");
+
+  const failed = getPrinterPresentation({ states: {
+    printer_status_primary: { state: "error" },
+    printer_progress_primary: { state: "12", attributes: { unit_of_measurement: "%" } },
+    printer_time_remaining_primary: { state: "0", attributes: { unit_of_measurement: "min" } },
+    printer_nozzle_primary: { state: "0", attributes: { unit_of_measurement: "°C" } },
+    printer_bed_primary: { state: "0", attributes: { unit_of_measurement: "°C" } },
+    printer_job_failed_primary: { state: "on" }
+  } }, config.specialists.printer);
+  assert.equal(failed.status, "Printfout");
+  assert.equal(failed.tone, "error");
+
+  const lowFilament = getPrinterPresentation({ states: {
+    printer_status_primary: { state: "printing" },
+    printer_progress_primary: { state: "88", attributes: { unit_of_measurement: "%" } },
+    printer_time_remaining_primary: { state: "5", attributes: { unit_of_measurement: "min" } },
+    printer_nozzle_primary: { state: "210", attributes: { unit_of_measurement: "°C" } },
+    printer_bed_primary: { state: "60", attributes: { unit_of_measurement: "°C" } },
+    printer_job_failed_primary: { state: "off" },
+    printer_insufficient_filament_primary: { state: "on" }
+  } }, config.specialists.printer);
+  assert.equal(lowFilament.status, "Filament bijna op");
+  assert.equal(lowFilament.tone, "warning");
+
+  const unavailableResource = await HomeDashboardViewStrategy.generate(specialist.strategy);
+  const specialistSection = unavailableResource.sections.find((section) => section.cards.some((card) => card.type === "custom:home-dashboard-printer-summary"));
+  assert.match(specialistSection.cards[1].content, /niet geladen worden/);
+
+  const originalCustomElements = globalThis.customElements;
+  globalThis.customElements = { get: (tag) => tag === "home-dashboard-printer-summary" ? class PrinterSummary {} : undefined };
+  try {
+    const availableResource = await HomeDashboardViewStrategy.generate(specialist.strategy);
+    const cards = availableResource.sections.flatMap((section) => section.cards);
+    const tileEntities = cards.filter((card) => card.type === "tile").map((card) => card.entity);
+    for (const entity of ["printer_job_name_primary", "printer_current_layer_primary", "printer_total_layers_primary", "printer_last_error_code_primary", "printer_loaded_slot_primary", "printer_filament_slot_1_primary"]) {
+      assert.ok(tileEntities.includes(entity), `${entity} ontbreekt als detailtile`);
+    }
+    const pictureEntities = cards.filter((card) => card.type === "picture-entity").map((card) => card.entity);
+    assert.deepEqual(pictureEntities.sort(), ["printer_camera_primary", "printer_job_preview_primary"]);
+  } finally {
+    if (originalCustomElements === undefined) delete globalThis.customElements;
+    else globalThis.customElements = originalCustomElements;
+  }
+
+  const domains = await HomeDashboardViewStrategy.generate({
+    type: "custom:home-dashboard-view",
+    view: "domains",
+    density: "comfortable",
+    rooms: config.rooms,
+    energy: config.energy,
+    security: config.security,
+    specialists: config.specialists,
+    diagnostics: config.diagnostics
+  });
+  const serialized = JSON.stringify(domains);
+  assert.match(serialized, /specialist-printer/);
+  assert.match(serialized, /home-dashboard-printer-summary/);
 });
 
 test("Zwembad krijgt een stabiele specialistroute, foutdetectie en een zelfstandige samenvattingskaart", async () => {

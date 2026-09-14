@@ -679,14 +679,18 @@ export class HomeDashboardHomeOverview extends HTMLElementBase {
     };
 
     const buildSpecialistNavigation = (compact = false): HTMLElement | undefined => {
-      const specialistNames: Record<keyof SpecialistsConfig, [string, string, string, string]> = {
+      const specialistNames: Record<Exclude<keyof SpecialistsConfig, "printer">, [string, string, string, string]> = {
         kia: ["Auto", "Voertuig", "mdi:car-electric", "specialist-kia"], robot: ["Robot", "Schoonmaak", "mdi:robot-vacuum", "more"], garden: ["Tuin", "Buiten", "mdi:flower", "more"], pool: ["Zwembad", "Waterkwaliteit", "mdi:pool", "specialist-pool"]
       };
       const navGrid = document.createElement("div");
       navGrid.className = "nav-grid";
       (Object.entries(config.specialists ?? {}) as Array<[keyof SpecialistsConfig, SpecialistsConfig[keyof SpecialistsConfig]]>)
         .filter(([, specialist]) => specialist.enabled)
-        .forEach(([key]) => navGrid.append(specialistNavigationLink(specialistNames[key][0], specialistNames[key][1], specialistNames[key][2], specialistNames[key][3])));
+        .forEach(([key]) => {
+          if (key === "printer") return;
+          const [label, description, icon, path] = specialistNames[key];
+          navGrid.append(specialistNavigationLink(label, description, icon, path));
+        });
       if (!navGrid.childElementCount) return undefined;
       if (!compact) return navGrid;
       const wrapper = document.createElement("div");
@@ -836,6 +840,16 @@ export class HomeDashboardHomeOverview extends HTMLElementBase {
       roomGrid.append(hint);
     }
     roomsSection.append(roomGrid); root.append(roomsSection);
+
+    if (config.specialists?.printer.enabled) {
+      const printer = document.createElement("home-dashboard-printer-summary") as LovelaceCardElement;
+      printer.setConfig?.({ type: "custom:home-dashboard-printer-summary", printer: config.specialists.printer, stale_after_minutes: config.diagnostics?.stale_after_minutes ?? 30, navigation_path: "specialist-printer", theme_mode: config.theme_mode, palette: config.palette });
+      printer.hass = hass;
+      this.childCards.push(printer);
+      const printerSection = document.createElement("section");
+      printerSection.append(sectionHeader("3D-printer", "Actuele printstatus en temperatuur"), printer);
+      root.append(printerSection);
+    }
 
     if (!config.today?.enabled) {
       const navGrid = buildSpecialistNavigation();

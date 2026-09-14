@@ -13,7 +13,7 @@ De canonieke machineleesbare bron is [`schemas/config.schema.json`](../../schema
 | `rooms` | area/floor mapping, capabilities en quick actions |
 | `energy` | standaard Energy-bronnen plus lokale KPI's |
 | `actions` | expliciete actionallowlist en veiligheidsbeleid |
-| `specialists` | adapters voor Kia, robot, tuin en zwembad |
+| `specialists` | adapters voor Kia, 3D-printer, robot, tuin en zwembad |
 | `layout` | zichtbaarheid, disclosure en vaste viewpaths |
 | `diagnostics` | freshness en operationele unavailable-allowlist |
 
@@ -34,6 +34,10 @@ De browserbundle voert het canonieke JSON Schema zelf uit bij import en compilat
 ### Kia-cardconfiguratie
 
 `specialists.kia.card_config` is een expliciet geavanceerd object. Het bewaart de publieke configuratie van `custom:kia-dashboard-card` zonder die voertuiglogica naar deze repository te verplaatsen. Het object wordt bij migratie en export verliesvrij bewaard en altijd met het vaste cardtype `custom:kia-dashboard-card` gerenderd. Zie [Specialistische kaarten](../configuration/specialists.md) voor de minimale summarymappings en fallbacks.
+
+### Printer-cardconfiguratie
+
+`specialists.printer.card_config` volgt hetzelfde doorgeefpatroon als Kia, maar zonder externe kaartafhankelijkheid: het vaste cardtype `custom:home-dashboard-printer-summary` wordt door dit dashboardpakket zelf geregistreerd. Zie [Specialistische kaarten](../configuration/specialists.md) voor de minimale summarymappings en fallbacks.
 
 ### Zwembad-cardconfiguratie
 

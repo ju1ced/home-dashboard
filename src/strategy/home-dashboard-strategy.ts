@@ -70,6 +70,7 @@ export class HomeDashboardStrategy extends HTMLElementBase {
         ...orderedPaths.map((path) => createView(path, config)),
         ...config.rooms.map((room) => createRoomView(room, config)),
         ...(config.specialists.kia.enabled ? [createKiaView(config)] : []),
+        ...(config.specialists.printer.enabled ? [createPrinterView(config)] : []),
         ...(config.specialists.pool.enabled ? [createPoolView(config)] : [])
       ]
     };
@@ -149,6 +150,27 @@ function createKiaView(config: HomeDashboardConfigV1): Record<string, unknown> {
       theme_mode: config.general.theme_mode,
       palette: config.general.palette,
       kia: config.specialists.kia,
+      diagnostics: config.diagnostics
+    } satisfies HomeDashboardViewConfig
+  };
+}
+
+function createPrinterView(config: HomeDashboardConfigV1): Record<string, unknown> {
+  return {
+    title: typeof config.specialists.printer.card_config.title === "string" && config.specialists.printer.card_config.title.trim() ? config.specialists.printer.card_config.title : "3D-printer",
+    path: "specialist-printer",
+    icon: "mdi:printer-3d-nozzle",
+    subview: true,
+    back_path: "domains",
+    strategy: {
+      type: "custom:home-dashboard-view",
+      view: "specialist-printer",
+      density: config.general.density,
+      content_width: config.layout.content_width,
+      navigation_mode: config.layout.navigation_mode,
+      theme_mode: config.general.theme_mode,
+      palette: config.general.palette,
+      printer: config.specialists.printer,
       diagnostics: config.diagnostics
     } satisfies HomeDashboardViewConfig
   };

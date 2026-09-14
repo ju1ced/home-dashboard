@@ -75,6 +75,6 @@ export const EDITOR_COVERAGE = Object.freeze({
     "rooms[].hvac.entity", "rooms[].hvac.comfort_entities", "rooms[].hvac.history_entities", "rooms[].hvac.modes", "rooms[].hvac.presets", "rooms[].hvac.fan_modes", "rooms[].hvac.swing_modes",
     "actions[].key", "actions[].label", "actions[].sequence", "actions[].risk", "actions[].confirmation_text", "actions[].hold_required", "actions[].verification_entity"
   ],
-  specialist: ["specialists.kia", "specialists.robot", "specialists.garden", "specialists.pool"],
+  specialist: ["specialists.kia", "specialists.printer", "specialists.robot", "specialists.garden", "specialists.pool"],
   ordered: ["layout.view_order"]
 });

@@ -20,7 +20,7 @@ const SECTION_TITLES: Record<string, string> = {
   rooms: "Kamers",
   energy: "Energie",
   actions: "Acties",
-  specialists: "Kia, robot, tuin en zwembad",
+  specialists: "Kia, 3D-printer, robot, tuin en zwembad",
   layout: "Layout",
   diagnostics: "Diagnostiek"
 };
@@ -211,6 +211,7 @@ function renderSpecialists(config: HomeDashboardConfigV1): string {
     <label>Geteste minimumversie<input data-specialist="${key}" data-field="minimum_version" value="${escapeHtml(specialist.minimum_version)}"></label>
     <label>Logische mappingsleutels<input data-specialist="${key}" data-field="mapping_keys" value="${escapeHtml(specialist.mapping_keys.join(", "))}"></label>
     ${key === "kia" ? `<label>Geavanceerde Kia-cardconfiguratie<small>Deze private configuratie wordt ongewijzigd aan de zelfstandige Kia-card doorgegeven. Gebruik daarin onder meer <code>entities</code>; geen echte mappings in Git opslaan.</small><textarea rows="9" data-specialist="kia" data-field="card_config">${escapeHtml(JSON.stringify(config.specialists.kia.card_config, null, 2))}</textarea></label>` : ""}
+    ${key === "printer" ? `<label>Geavanceerde printer-cardconfiguratie<small>Bevat onder meer <code>entities</code> met logische sleutels als <code>status</code>, <code>progress</code>, <code>nozzle_temperature</code>; geen echte mappings in Git opslaan.</small><textarea rows="9" data-specialist="printer" data-field="card_config">${escapeHtml(JSON.stringify(config.specialists.printer.card_config, null, 2))}</textarea></label>` : ""}
     ${key === "pool" ? `<label>Geavanceerde zwembad-cardconfiguratie<small>Bevat onder meer <code>entities</code> met logische sleutels als <code>status</code>, <code>water_temperature</code>, <code>heater_power</code>; geen echte mappings in Git opslaan.</small><textarea rows="9" data-specialist="pool" data-field="card_config">${escapeHtml(JSON.stringify(config.specialists.pool.card_config, null, 2))}</textarea></label>` : ""}
   </article>`;
   }).join("");

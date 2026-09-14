@@ -158,6 +158,7 @@ export function validateConfig(config: HomeDashboardConfigV1): ValidationIssue[]
 
   const expectedCardTypes: Record<string, string> = {
     kia: "custom:kia-dashboard-card",
+    printer: "custom:home-dashboard-printer-summary",
     robot: "custom:robot-vacuum-card",
     garden: "custom:garden-dashboard-card",
     pool: "custom:home-dashboard-pool-summary"
@@ -178,6 +179,9 @@ export function validateConfig(config: HomeDashboardConfigV1): ValidationIssue[]
   }
   if (typeof config.specialists.kia.card_config !== "object" || config.specialists.kia.card_config === null || Array.isArray(config.specialists.kia.card_config)) {
     issues.push(issue("specialists.kia.card_config", "card_config", "Kia-cardconfiguratie moet een object zijn."));
+  }
+  if (typeof config.specialists.printer.card_config !== "object" || config.specialists.printer.card_config === null || Array.isArray(config.specialists.printer.card_config)) {
+    issues.push(issue("specialists.printer.card_config", "card_config", "Printer-cardconfiguratie moet een object zijn."));
   }
   if (typeof config.specialists.pool.card_config !== "object" || config.specialists.pool.card_config === null || Array.isArray(config.specialists.pool.card_config)) {
     issues.push(issue("specialists.pool.card_config", "card_config", "Zwembad-cardconfiguratie moet een object zijn."));

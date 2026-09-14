@@ -9,13 +9,15 @@ const bundle = await readFile(bundleUrl, "utf8");
 const bundleStats = await stat(bundleUrl);
 const distFiles = await readdir(distDirectory);
 const errors = [];
-// 198_000 -> 203_000: expliciet goedgekeurd door de eigenaar voor PR #41 (zwembadspecialist),
-// op basis van een reproduceerbare baseline: main bouwt tot 194_883 bytes; de zwembad-PR is al
-// teruggebracht tot samenvattingskaart + route + configcontract (geen native detailtegels meer,
-// zie review-item 1) en bouwt na die trim tot 201_907 bytes. Het zwembad heeft, anders dan Kia,
-// geen externe HACS-kaart om de renderlogica naar uit te besteden, dus zelfs de minimale
-// implementatie past niet binnen 198 kB. 203_000 geeft een kleine marge boven de gemeten 201_907.
-const maxBundleBytes = 203_000;
+// 198_000 -> 212_000: expliciet goedgekeurd door de eigenaar bij het samenvoegen van
+// PR #39 (3D-printerspecialist) en PR #41 (zwembadspecialist) in main. Geen van beide
+// eerder per-PR goedgekeurde cijfers (203_000 voor pool, 205_000 voor printer) dekt de
+// gecombineerde bundel. Reproduceerbare meting: main (vóór deze twee specialisten)
+// bouwt tot 194_883 bytes; met beide specialisten samengevoegd (inclusief de
+// gedeelde home-dashboard-kia-integration.ts-dedup, die nu maar één keer meetelt in
+// plaats van per branch) bouwt de bundel tot 210_486 bytes. 212_000 geeft een kleine
+// marge boven dat gemeten getal.
+const maxBundleBytes = 212_000;
 
 if (hacs.filename !== "home-dashboard.js") errors.push("hacs.json verwijst niet naar home-dashboard.js");
 if (hacs.homeassistant !== "2026.8.2") errors.push("Onverwachte minimale Home Assistant-versie");
