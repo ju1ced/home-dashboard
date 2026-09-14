@@ -4,7 +4,9 @@
 
 ## Volgende teststap
 
-De kamerbedieningsslice is uitgewerkt in v0.8.0-alpha.1. Volg de [testchecklist](../releases/testing-v0.8.0-alpha.1.md) voor GUI-instelling, gerichte acties, regressies en rollback. Productiecutover blijft een aparte beslissing.
+Testcandidate **v0.8.0-alpha.14** verfijnt de Home-header bovenop alpha.13: navigatie en begroeting blijven één gekleurd vlak, met minder lege binnenruimte. Zie de [versiechecklist](../releases/testing-v0.8.0-alpha.14.md) en het [browserbewijs](../releases/testing-header-spacing.md). Publicatie is goedgekeurd; live acceptatie blijft een afzonderlijke gate.
+
+Daarna volgt de bestaande QA-gate: responsive gedrag, toetsenbord/focus, themecontrast en runtimecontrole op het expliciet goedgekeurde testdashboard. Specialistische volledigheid (robot, tuin en de uitgebreide zwembadkaart) en performance/resource-audit blijven afzonderlijke roadmapstappen, niet impliciet voltooid door de huidige alpha's. De eerder gevonden zwembadstatusrandgevallen moeten eerst tegen de actuele bron worden bevestigd en vervolgens als aparte regressieslice worden opgelost.
 
 ## Status en doel
 
