@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.8.0-alpha.14 — 2026-09-14
+
+- Home: compactere aansluiting tussen navigatie en begroeting (8 px bovenruimte, 16 px onderruimte); omgebroken statuschips duwen de begroeting niet meer omlaag. Native modus behoudt de zelfstandige header.
+- Herstelt een ontbrekend sluithaakje in de mobiele Home-CSS waardoor volgende responsive regels werden genegeerd. Het browserharnas gebruikt nu dezelfde sectieafstand als de alpha.13-aansluiting.
+
 ## 0.8.0-alpha.13 — 2026-09-14
 
 - Fix: op Home bleef een zichtbare lijn staan tussen de navigatiebalk en de gekleurde header eronder. Oorzaak: de "join"-CSS trok de header met een vast getal (-16px) omhoog om de ruimte tussen de twee Lovelace-sections te overbruggen, maar live Home Assistant gebruikt daarvoor `--ha-view-sections-row-gap` (standaard 24px), niet 16px. De header verwijst nu naar die daadwerkelijke HA-variabele (`margin-top:calc(-1 * var(--ha-view-sections-row-gap,24px))`), inclusief eventuele thema-aanpassingen daarvan.
