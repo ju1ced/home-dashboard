@@ -21,6 +21,7 @@ async function assertHomeHeader() {
   assert.deepEqual(await header.locator('.pill').evaluateAll(chips=>chips.map(chip=>chip.dataset.live)),['home-count','weather','attention']);
   const layout=await page.evaluate(()=>{
     const header=roomFixture.home.shadowRoot.querySelector('.top');
+    const navigation=document.querySelector('home-dashboard-navigation')?.shadowRoot?.querySelector('nav');
     const intro=header.firstElementChild.getBoundingClientRect();
     const bounds=header.getBoundingClientRect();
     const chips=header.querySelector('.pills').getBoundingClientRect();
@@ -30,14 +31,16 @@ async function assertHomeHeader() {
     const reference=getComputedStyle(rooms.shadowRoot.querySelector('.hero'));
     const style=getComputedStyle(header);
     const chipBoxes=[...header.querySelectorAll('.pill')].map(chip=>chip.getBoundingClientRect());
-    const result={background:style.backgroundColor,referenceBackground:reference.backgroundColor,color:style.color,referenceColor:reference.color,radius:style.borderRadius,referenceRadius:reference.borderRadius,center:Math.abs(intro.x+intro.width/2-bounds.x-bounds.width/2),chipsRight:Math.abs(chips.right-(bounds.right-parseFloat(style.paddingRight))),overlap:intro.right>chips.left&&intro.bottom>chips.top,inside:chips.left>=bounds.left&&chips.right<=bounds.right&&chips.bottom<=bounds.bottom,mobileStacked:chipBoxes.every((chip,index)=>index===0||(chip.top>chipBoxes[index-1].bottom&&Math.abs(chip.x+chip.width/2-(bounds.x+bounds.width/2))<1))};
+    const navigationBounds=navigation?.getBoundingClientRect();
+    const result={background:style.backgroundColor,referenceBackground:reference.backgroundColor,color:style.color,referenceColor:reference.color,radius:style.borderRadius,referenceRadius:reference.borderRadius,center:Math.abs(intro.x+intro.width/2-bounds.x-bounds.width/2),chipsRight:Math.abs(chips.right-(bounds.right-parseFloat(style.paddingRight))),overlap:intro.right>chips.left&&intro.bottom>chips.top,inside:chips.left>=bounds.left&&chips.right<=bounds.right&&chips.bottom<=bounds.bottom,chromeGap:navigationBounds?bounds.top-navigationBounds.bottom:null,mobileStacked:chipBoxes.every((chip,index)=>index===0||(chip.top>chipBoxes[index-1].bottom&&Math.abs(chip.x+chip.width/2-(bounds.x+bounds.width/2))<1))};
     rooms.remove();
     return result;
   });
   assert.equal(layout.background,layout.referenceBackground,'Home keeps the coloured Rooms-style header');
   assert.equal(layout.color,layout.referenceColor,'header copy keeps the Rooms foreground contrast');
-  assert.equal(layout.radius,layout.referenceRadius);
+  if(layout.chromeGap!==null) assert.match(layout.radius,/^0px 0px/,'Home header has no top corners when joined to navigation');
 
+  if(layout.chromeGap!==null) assert.ok(Math.abs(layout.chromeGap)<1,`navigation and Home header edges meet exactly (gap ${layout.chromeGap}px)`);
   assert.ok(layout.center<1,'date and greeting remain horizontally centred');
   assert.equal(layout.inside,true,'all three chips remain inside the header');
   if(page.viewportSize().width>800){assert.ok(layout.chipsRight<1,'status chips stay right-aligned');assert.equal(layout.overlap,false);}else assert.equal(layout.mobileStacked,true,'status chips stack in the centred mobile header');

@@ -4,7 +4,7 @@ import { attachKiosk, dashboardShell } from "./dashboard-shell";
 
 interface NavigationConfig {
   type: "custom:home-dashboard-navigation";
-  active?: ViewPath | "room" | "specialist-kia";
+  active?: ViewPath | "room" | "specialist-kia" | "specialist-printer" | "specialist-pool";
   palette?: DashboardPalette;
   theme_mode?: "system" | "light" | "dark";
   navigation_mode?: "native" | "integrated" | "kiosk";
@@ -90,10 +90,11 @@ export class HomeDashboardNavigation extends HTMLElementBase {
   private render(): void {
     if (!this.shadowRoot || !this.config) return;
     const style = document.createElement("style");
-    style.textContent = `:host{display:block;min-width:0;--hd-hero:var(--primary-color,#087fb9)}*{box-sizing:border-box}nav{display:flex;align-items:center;gap:8px;min-height:66px;padding:10px 14px;border-radius:18px;background:var(--hd-hero);box-shadow:0 1px 2px rgb(20 35 28/.06),0 7px 24px rgb(20 35 28/.035);overflow-x:auto;scrollbar-width:none}nav::-webkit-scrollbar{display:none}a{display:flex;flex:0 0 auto;align-items:center;gap:8px;min-height:44px;padding:8px 13px;border:1px solid rgb(255 255 255/.28);border-radius:12px;background:rgb(255 255 255/.10);color:#fff;text-decoration:none;font-size:.84rem;font-weight:750}a:hover,a:focus-visible{background:rgb(255 255 255/.20);border-color:rgb(255 255 255/.58);outline:0}a[aria-current=page]{background:#fff;border-color:#fff;color:var(--hd-hero);box-shadow:0 3px 12px rgb(0 0 0/.13)}ha-icon{width:20px;height:20px}@media(max-width:560px){nav{border-radius:15px;padding:8px}a{min-width:44px;justify-content:center;padding:8px}a span{display:none}a[aria-current=page] span{display:inline}}`;
+    style.textContent = `:host{display:block;min-width:0;--hd-hero:var(--primary-color,#087fb9)}*{box-sizing:border-box}nav{display:flex;align-items:center;gap:8px;min-height:66px;padding:10px 14px;border-radius:18px;background:var(--hd-hero);overflow-x:auto;scrollbar-width:none}:host([data-home]) nav{border-radius:18px 18px 0 0}nav::-webkit-scrollbar{display:none}a{display:flex;flex:0 0 auto;align-items:center;gap:8px;min-height:44px;padding:8px 13px;border:1px solid rgb(255 255 255/.28);border-radius:12px;background:rgb(255 255 255/.10);color:#fff;text-decoration:none;font-size:.84rem;font-weight:750}a:hover,a:focus-visible{background:rgb(255 255 255/.20);border-color:rgb(255 255 255/.58);outline:0}a[aria-current=page]{background:#fff;border-color:#fff;color:var(--hd-hero);box-shadow:0 3px 12px rgb(0 0 0/.13)}ha-icon{width:20px;height:20px}@media(max-width:560px){nav{border-radius:15px;padding:8px}:host([data-home]) nav{border-radius:15px 15px 0 0}a{min-width:44px;justify-content:center;padding:8px}a span{display:none}a[aria-current=page] span{display:inline}}`;
     const nav = document.createElement("nav");
+    this.toggleAttribute("data-home", this.config.active === "home");
     nav.setAttribute("aria-label", "Dashboardnavigatie");
-    const active = this.config.active === "room" ? "rooms" : this.config.active === "specialist-kia" ? "domains" : this.config.active;
+    const active = this.config.active === "room" ? "rooms" : ["specialist-kia", "specialist-printer", "specialist-pool"].includes(this.config.active ?? "") ? "domains" : this.config.active;
     for (const [path, label, iconName] of links) {
       const link = document.createElement("a");
       link.href = path;

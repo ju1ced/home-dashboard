@@ -60,12 +60,31 @@ export function migrateConfig(input: unknown): MigrationResult {
     // geversioneerde Kia-card. mergeKnown bewaart dynamische cardvelden niet.
     merged.specialists.kia.card_config = structuredClone(inputKia.card_config);
   }
+  const inputPrinter = inputSpecialists && isObject(inputSpecialists.printer) ? inputSpecialists.printer : undefined;
+  if (inputPrinter && isObject(inputPrinter.card_config)) {
+    // Zelfde transparante doorgeefpatroon als Kia: mergeKnown bewaart geen
+    // dynamische entiteitsmappings, dus die worden hier expliciet behouden.
+    merged.specialists.printer.card_config = structuredClone(inputPrinter.card_config);
+  }
   if (merged.specialists.kia.card_type === "custom:ha-kia-connect-dashboard") {
     // De HACS-resource heet ha-kia-connect-dashboard.js, maar registreert de
     // Lovelace-kaart als custom:kia-dashboard-card. Bewaar bestaande private
     // configuratie en corrigeer alleen deze historische systeemwaarde.
     merged.specialists.kia.card_type = "custom:kia-dashboard-card";
     warnings.push("Het verouderde Kia-kaarttype is hersteld naar custom:kia-dashboard-card.");
+  }
+  const inputPool = inputSpecialists && isObject(inputSpecialists.pool) ? inputSpecialists.pool : undefined;
+  if (inputPool && isObject(inputPool.card_config)) {
+    // Zelfde transparante doorgeefpatroon als Kia/printer: mergeKnown bewaart
+    // geen dynamische entiteitsmappings, dus die worden hier expliciet behouden.
+    merged.specialists.pool.card_config = structuredClone(inputPool.card_config);
+  }
+  if (merged.specialists.pool.card_type === "custom:pool-dashboard-card") {
+    // Vroege alpha's reserveerden dit cardtype voor een nooit-gepubliceerde
+    // externe kaart. Bewaar bestaande private configuratie en corrigeer
+    // alleen deze historische systeemwaarde naar de zelfstandige kaart.
+    merged.specialists.pool.card_type = "custom:home-dashboard-pool-summary";
+    warnings.push("Het verouderde Zwembad-kaarttype is hersteld naar custom:home-dashboard-pool-summary.");
   }
   const inputToday = isObject(input.today) ? input.today : undefined;
   const legacyBatteryPower = inputToday?.battery_power_entity;

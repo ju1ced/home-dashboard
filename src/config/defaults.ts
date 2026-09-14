@@ -74,6 +74,13 @@ export function createDefaultConfig(): HomeDashboardConfigV1 {
         mapping_keys: [],
         card_config: {}
       },
+      printer: {
+        enabled: false,
+        card_type: "custom:home-dashboard-printer-summary",
+        minimum_version: "",
+        mapping_keys: [],
+        card_config: {}
+      },
       robot: {
         enabled: false,
         card_type: "custom:robot-vacuum-card",
@@ -88,9 +95,10 @@ export function createDefaultConfig(): HomeDashboardConfigV1 {
       },
       pool: {
         enabled: false,
-        card_type: "custom:pool-dashboard-card",
+        card_type: "custom:home-dashboard-pool-summary",
         minimum_version: "",
-        mapping_keys: []
+        mapping_keys: [],
+        card_config: {}
       }
     },
     layout: {

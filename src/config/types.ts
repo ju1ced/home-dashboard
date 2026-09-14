@@ -147,11 +147,32 @@ export interface KiaSpecialistConfig extends SpecialistConfig {
   card_config: Record<string, unknown>;
 }
 
+/**
+ * In tegenstelling tot Kia bestaat er geen onafhankelijk geteste HACS-kaart
+ * voor deze printerintegratie. `card_config.entities` blijft dezelfde
+ * doorgeefconfiguratie, maar `card_type` wijst naar de zelfstandige
+ * samenvattingskaart die deze repository zelf registreert.
+ */
+export interface PrinterSpecialistConfig extends SpecialistConfig {
+  card_config: Record<string, unknown>;
+}
+
+/**
+ * Net als de printerspecialist bestaat er geen onafhankelijk geteste HACS-
+ * kaart voor deze op maat gebouwde zwembadintegratie (ESPHome-warmtepomp-
+ * proxy + Shelly-zoutsysteem). `card_type` wijst daarom naar de zelfstandige
+ * samenvattingskaart die deze repository zelf registreert.
+ */
+export interface PoolSpecialistConfig extends SpecialistConfig {
+  card_config: Record<string, unknown>;
+}
+
 export interface SpecialistsConfig {
   kia: KiaSpecialistConfig;
+  printer: PrinterSpecialistConfig;
   robot: SpecialistConfig;
   garden: SpecialistConfig;
-  pool: SpecialistConfig;
+  pool: PoolSpecialistConfig;
 }
 
 export interface LayoutConfig {
