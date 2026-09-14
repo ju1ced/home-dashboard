@@ -48,11 +48,11 @@ function unique(values: readonly string[]): string[] {
   return [...new Set(values.filter(Boolean))];
 }
 
-function noAction(): LovelaceCardConfig {
+export function noAction(): LovelaceCardConfig {
   return { action: "none" };
 }
 
-function readonlyTile(entity: string, name?: string): LovelaceCardConfig {
+export function readonlyTile(entity: string, name?: string): LovelaceCardConfig {
   return {
     type: "tile",
     entity,
@@ -329,7 +329,7 @@ export function buildDomainSections(sources: DomainSources, maxColumns: number):
   if (sources.specialists?.kia.enabled) mobilityOutdoor.push(navigationButton("Auto", "mdi:car-electric", "specialist-kia"));
   if (sources.specialists?.robot.enabled) mobilityOutdoor.push(navigationButton("Robot", "mdi:robot-vacuum", "more"));
   if (sources.specialists?.garden.enabled) mobilityOutdoor.push(navigationButton("Tuin", "mdi:flower", "more"));
-  if (sources.specialists?.pool.enabled) mobilityOutdoor.push(navigationButton("Zwembad", "mdi:pool", "more"));
+  if (sources.specialists?.pool.enabled) mobilityOutdoor.push(navigationButton("Zwembad", "mdi:pool", "specialist-pool"));
   if (sources.energy?.ev_power_entity) mobilityOutdoor.push(readonlyTile(sources.energy.ev_power_entity, "Actueel laadvermogen"));
   sections.push(fullSection("Mobiliteit & buiten", "mdi:garage-variant", mobilityOutdoor, maxColumns, "more"));
 
