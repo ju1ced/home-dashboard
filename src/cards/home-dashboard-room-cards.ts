@@ -412,11 +412,11 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     const style = document.createElement("style");
     style.textContent = `
       :host{display:block;min-width:0}.detail{display:grid;gap:22px;width:100%;margin:0 auto}.hero{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:24px;border-radius:22px;background:var(--hd-hero,var(--primary-color,#245c4d));color:var(--hd-hero-text,#fff)}.hero-copy{display:grid;gap:4px}.eyebrow{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.75}.hero h1{margin:0;font-size:1.85rem}.hero p{margin:0;opacity:.75}.hero-pills{display:flex;justify-content:flex-end;gap:7px;flex-wrap:wrap}.hero-pill{padding:7px 10px;border:1px solid color-mix(in srgb,currentColor 28%,transparent);border-radius:999px;font-size:.78rem;font-weight:650}
-      .group{display:grid;gap:10px}.group-heading{display:grid;grid-template-columns:34px minmax(0,1fr);align-items:center;gap:9px;min-height:44px}.group-icon{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:color-mix(in srgb,var(--primary-color) 10%,transparent);color:var(--primary-color)}.group-heading-copy{display:grid}.group-heading-copy>strong{font-size:1.05rem}.group-heading-copy>small{color:var(--secondary-text-color)}.disclosure{border:0}.disclosure>summary{cursor:pointer;list-style:none}.disclosure>summary::-webkit-details-marker{display:none}.disclosure>summary::after{content:"›";justify-self:end;grid-column:3;transform:rotate(90deg);font-size:1.35rem;color:var(--secondary-text-color)}.disclosure:not([open])>summary::after{transform:rotate(0)}.disclosure>summary:focus-visible{outline:2px solid var(--primary-color);outline-offset:3px;border-radius:10px}.disclosure[open]>.entity-grid,.disclosure[open]>.entity-list{margin-top:10px}.status-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}.status{display:grid;gap:5px;min-height:72px;padding:12px;border:1px solid var(--divider-color);border-radius:14px;background:var(--ha-card-background,var(--card-background-color));color:var(--primary-text-color);text-align:left;cursor:pointer}.status ha-icon{width:22px;height:22px;color:var(--primary-color)}.status small{color:var(--secondary-text-color);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.status strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.status.warning{border-color:color-mix(in srgb,var(--error-color,#b3261e) 45%,var(--divider-color));background:color-mix(in srgb,var(--error-color,#b3261e) 7%,var(--card-background-color))}.status.unavailable{opacity:.75}.status:focus-visible{outline:2px solid var(--primary-color);outline-offset:2px}
-      .columns{display:grid;grid-template-columns:minmax(0,2fr) minmax(250px,1fr);gap:20px;align-items:start}.columns.side-only{grid-template-columns:1fr}.main,.side{display:grid;gap:20px}.entity-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.entity-list{display:grid;gap:8px}.entity{display:grid;grid-template-columns:42px minmax(0,1fr) 22px;align-items:center;gap:10px;min-height:74px;padding:12px;border:1px solid var(--divider-color);border-radius:15px;background:var(--ha-card-background,var(--card-background-color));color:var(--primary-text-color);cursor:pointer;text-align:left}.entity:hover{border-color:var(--primary-color)}.entity:focus-visible{outline:2px solid var(--primary-color);outline-offset:2px}.entity.warning{border-color:color-mix(in srgb,var(--error-color,#b3261e) 45%,var(--divider-color));background:color-mix(in srgb,var(--error-color,#b3261e) 7%,var(--card-background-color))}.entity.unavailable{opacity:.72}.entity.compact{min-height:60px}.entity-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:color-mix(in srgb,var(--primary-color) 12%,transparent);color:var(--primary-color)}.entity.warning .entity-icon{color:var(--error-color,#b3261e);background:color-mix(in srgb,var(--error-color,#b3261e) 12%,transparent)}.entity-copy{display:grid;min-width:0}.entity-copy strong,.entity-copy small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.entity-copy small{color:var(--secondary-text-color)}.entity-chevron{color:var(--secondary-text-color)}
+      .group{display:grid;gap:10px}.group-heading{display:grid;grid-template-columns:34px minmax(0,1fr);align-items:center;gap:9px;min-height:44px}.group-icon{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:color-mix(in srgb,var(--primary-color) 10%,transparent);color:var(--primary-color)}.group-heading-copy{display:grid}.group-heading-copy>strong{font-size:1.05rem}.group-heading-copy>small{color:var(--secondary-text-color)}.disclosure{border:0}.disclosure>summary{cursor:pointer;list-style:none}.disclosure>summary::-webkit-details-marker{display:none}.disclosure>summary::after{content:"›";justify-self:end;grid-column:3;transform:rotate(90deg);font-size:1.35rem;color:var(--secondary-text-color)}.disclosure:not([open])>summary::after{transform:rotate(0)}.disclosure>summary:focus-visible{outline:2px solid var(--primary-color);outline-offset:3px;border-radius:10px}.disclosure[open]>.entity-grid,.disclosure[open]>.entity-list{margin-top:10px}.room-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}.status{display:grid;gap:5px;min-height:80px;padding:12px;border:1px solid var(--divider-color);border-radius:14px;background:var(--ha-card-background,var(--card-background-color));color:var(--primary-text-color);text-align:left;cursor:pointer}.status ha-icon{width:22px;height:22px;color:var(--primary-color)}.status small{color:var(--secondary-text-color);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.status strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.status.warning{border-color:color-mix(in srgb,var(--error-color,#b3261e) 45%,var(--divider-color));background:color-mix(in srgb,var(--error-color,#b3261e) 7%,var(--card-background-color))}.status.unavailable{opacity:.75}.status:focus-visible{outline:2px solid var(--primary-color);outline-offset:2px}
+      .room-layout-primary{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(280px,.9fr);gap:20px;align-items:start}.room-layout-primary.side-only{grid-template-columns:1fr}.main,.side{display:grid;gap:20px}.entity-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.entity-list{display:grid;gap:8px}.entity{display:grid;grid-template-columns:42px minmax(0,1fr) 22px;align-items:center;gap:10px;min-height:74px;padding:12px;border:1px solid var(--divider-color);border-radius:15px;background:var(--ha-card-background,var(--card-background-color));color:var(--primary-text-color);cursor:pointer;text-align:left}.entity:hover{border-color:var(--primary-color)}.entity:focus-visible{outline:2px solid var(--primary-color);outline-offset:2px}.entity.warning{border-color:color-mix(in srgb,var(--error-color,#b3261e) 45%,var(--divider-color));background:color-mix(in srgb,var(--error-color,#b3261e) 7%,var(--card-background-color))}.entity.unavailable{opacity:.72}.entity.compact{min-height:60px}.entity-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:color-mix(in srgb,var(--primary-color) 12%,transparent);color:var(--primary-color)}.entity.warning .entity-icon{color:var(--error-color,#b3261e);background:color-mix(in srgb,var(--error-color,#b3261e) 12%,transparent)}.entity-copy{display:grid;min-width:0}.entity-copy strong,.entity-copy small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.entity-copy small{color:var(--secondary-text-color)}.entity-chevron{color:var(--secondary-text-color)}
       .climate{display:grid;grid-template-columns:minmax(210px,.8fr) minmax(0,2fr);gap:12px;padding:16px;border:1px solid var(--divider-color);border-radius:16px;background:var(--ha-card-background,var(--card-background-color))}.climate-main{display:grid;align-content:center;gap:5px}.climate-main span{color:var(--secondary-text-color);font-size:.78rem}.climate-main strong{font-size:2rem}.climate-main button{justify-self:start;min-height:44px;border:0;background:none;color:var(--primary-color);padding:8px 0;cursor:pointer;font:inherit;font-weight:700}.climate-main button:focus-visible{outline:2px solid var(--primary-color);outline-offset:2px;border-radius:6px}.climate-sensors{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.history-note{padding:12px;border-radius:12px;background:var(--secondary-background-color);color:var(--secondary-text-color);font-size:.82rem}
-      @media(max-width:900px){.status-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.columns{grid-template-columns:1fr}.side{grid-template-columns:repeat(2,minmax(0,1fr))}.climate{grid-template-columns:1fr}}
-      @media(max-width:600px){.detail{gap:18px}.hero{align-items:flex-start;flex-direction:column;padding:18px}.hero h1{font-size:1.55rem}.hero-pills{justify-content:flex-start}.status-grid,.entity-grid,.climate-sensors{grid-template-columns:repeat(2,minmax(0,1fr))}.entity{grid-template-columns:36px minmax(0,1fr);min-height:70px}.entity-chevron{display:none}.entity-icon{width:36px;height:36px}.entity-copy strong{font-size:.88rem}.side{display:grid;grid-template-columns:1fr}.status{min-height:66px}}
+      @media(max-width:900px){.room-layout-primary{grid-template-columns:1fr}.side{grid-template-columns:repeat(2,minmax(0,1fr))}.climate{grid-template-columns:1fr}}
+      @media(max-width:600px){.detail{gap:18px}.hero{align-items:flex-start;flex-direction:column;padding:18px}.hero h1{font-size:1.55rem}.hero-pills{justify-content:flex-start}.room-summary-grid,.entity-grid,.climate-sensors{grid-template-columns:repeat(2,minmax(0,1fr))}.entity{grid-template-columns:36px minmax(0,1fr);min-height:70px}.entity-chevron{display:none}.entity-icon{width:36px;height:36px}.entity-copy strong{font-size:.88rem}.side{display:grid;grid-template-columns:1fr}.status{min-height:72px}}
     `;
     const root = document.createElement("main");
     root.className = "detail";
@@ -430,7 +430,7 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     const title = document.createElement("h1");
     title.textContent = room.name;
     const subtitle = document.createElement("p");
-    subtitle.textContent = "Status en bediening via de standaard Home Assistant-detailvensters.";
+    subtitle.textContent = "Status en bediening via Details.";
     heroCopy.append(eyebrow, title, subtitle);
     const heroPills = document.createElement("div");
     heroPills.className = "hero-pills";
@@ -443,8 +443,15 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     hero.append(heroCopy, heroPills);
     root.append(hero);
 
-    const statusEntities = [...new Set([...room.safety_entities, ...room.hvac.comfort_entities].filter(Boolean))].slice(0, 6);
-    if (statusEntities.length > 0) {
+    const summaryItems: Array<[string, string, string, DeviceRole]> = [
+      room.hvac.entity ? ["Comfort", room.hvac.entity, "mdi:thermostat", "climate"] : undefined,
+      room.light_entities[0] ? ["Verlichting actief", room.light_entities[0], "mdi:lightbulb-group-outline", "light"] : undefined,
+      room.cover_entities[0] ? ["Openingen", room.cover_entities[0], "mdi:window-shutter", "cover"] : undefined,
+      room.media_entities[0] ? ["Media", room.media_entities[0], "mdi:speaker-multiple", "media"] : undefined,
+      room.hvac.comfort_entities[0] ? ["Ruimtesensor", room.hvac.comfort_entities[0], "mdi:home-thermometer-outline", "comfort"] : undefined,
+      room.safety_entities[0] ? ["Veiligheid", room.safety_entities[0], "mdi:shield-home-outline", "safety"] : undefined
+    ].filter((item): item is [string, string, string, DeviceRole] => Boolean(item));
+    if (summaryItems.length > 0) {
       const statusGroup = document.createElement("section");
       statusGroup.className = "group";
       const header = document.createElement("header");
@@ -455,23 +462,22 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
       const statusCopy = document.createElement("span");
       statusCopy.className = "group-heading-copy";
       const headerTitle = document.createElement("strong");
-      headerTitle.textContent = "Ruimtestatus";
+      headerTitle.textContent = "Snel overzicht";
       const headerCopy = document.createElement("small");
-      headerCopy.textContent = "De belangrijkste sensoren blijven op mobiel direct zichtbaar";
+      headerCopy.textContent = "Actuele status en bediening";
       statusCopy.append(headerTitle, headerCopy);
       header.append(statusIcon, statusCopy);
       const grid = document.createElement("div");
-      grid.className = "status-grid";
-      statusEntities.forEach((entity, index) => {
-        const role: DeviceRole = room.safety_entities.includes(entity) ? "safety" : "comfort";
+      grid.className = "room-summary-grid";
+      summaryItems.forEach(([labelText, entity, iconName, role], index) => {
         const presentation = devicePresentation(this.currentHass, entity, role, index);
         const card = document.createElement("button");
         card.type = "button";
         card.className = `status ${presentation.tone}`;
         card.setAttribute("aria-label", `Open ${presentation.label}: ${presentation.value}`);
-        card.append(icon(presentation.icon));
+        card.append(icon(iconName));
         const label = document.createElement("small");
-        label.textContent = presentation.label;
+        label.textContent = labelText;
         const value = document.createElement("strong");
         value.textContent = presentation.value;
         card.append(label, value);
@@ -483,11 +489,11 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     }
 
     const columns = document.createElement("div");
-    columns.className = "columns";
+    columns.className = "room-layout-primary";
     const main = document.createElement("div");
     main.className = "main";
-    const lights = this.group("Verlichting", "Lampen, groepen en scènes via Home Assistant", room.light_entities, "light");
-    const covers = this.group("Covers & openingen", "Rolluiken, gordijnen en andere gemapte covers", room.cover_entities, "cover");
+    const lights = this.group("Verlichting", "Lampen en groepen", room.light_entities, "light");
+    const covers = this.group("Covers & openingen", "Gemapte covers en openingen", room.cover_entities, "cover");
     if (lights) main.append(lights);
     if (covers) main.append(covers);
     if (room.hvac.entity || room.hvac.comfort_entities.length > 0) {
@@ -503,7 +509,7 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
       const headerTitle = document.createElement("strong");
       headerTitle.textContent = "Comfort & klimaat";
       const headerCopy = document.createElement("small");
-      headerCopy.textContent = "Actuele toestand, doel en omgevingswaarden";
+      headerCopy.textContent = "Actueel, doel en omgeving";
       headerText.append(headerTitle, headerCopy);
       header.append(headerIcon, headerText);
       const panel = document.createElement("div");
@@ -522,7 +528,7 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
         targetLabel.textContent = target === undefined ? "Geen doeltemperatuur" : `Doel ${target} °C · ${state?.state ?? "onbekend"}`;
         const open = document.createElement("button");
         open.type = "button";
-        open.textContent = "Open klimaatbediening →";
+        open.textContent = "Open klimaat →";
         open.addEventListener("click", () => showMoreInfo(this, room.hvac.entity));
         climateMain.append(label, value, targetLabel, open);
         panel.append(climateMain);
@@ -534,14 +540,14 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
       climateGroup.append(header, panel);
       main.append(climateGroup);
     }
-    const power = this.group("Apparaten & energie", "Actuele apparaat- en verbruiksstatus", room.power_entities, "power", false, true);
+    const power = this.group("Apparaten & energie", "Apparaatstatus", room.power_entities, "power", false, true);
     if (power) main.append(power);
     columns.append(main);
     const side = document.createElement("aside");
     side.className = "side";
-    const media = this.group("Media", "Spelers, bron en afspeelstatus", room.media_entities, "media", true);
-    const safety = this.group("Veiligheid", "Openingen, melders en afwijkingen", room.safety_entities, "safety", true);
-    const cameras = this.group("Camera's", "Lokale beelden openen in Home Assistant", room.camera_entities, "camera", true, true);
+    const media = this.group("Media", "Spelers en afspeelstatus", room.media_entities, "media", true);
+    const safety = this.group("Veiligheid", "Melders en afwijkingen", room.safety_entities, "safety", true);
+    const cameras = this.group("Camera's", "Beelden via Home Assistant", room.camera_entities, "camera", true, true);
     if (media) side.append(media);
     if (safety) side.append(safety);
     if (cameras) side.append(cameras);
@@ -551,11 +557,11 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
 
     const historyCount = new Set([...room.history_entities, ...room.hvac.history_entities].filter(Boolean)).size;
     if (historyCount > 0) {
-      const historySources = this.group("Historie", "Bronnen in de 72-uurs grafiek onder dit kamerdashboard", [...room.history_entities, ...room.hvac.history_entities], "history", true, true);
+      const historySources = this.group("Historie", "Bronnen voor de 72-uurs grafiek", [...room.history_entities, ...room.hvac.history_entities], "history", true, true);
       if (historySources) root.append(historySources);
       const note = document.createElement("div");
       note.className = "history-note";
-      note.textContent = `Onder dit kamerdashboard volgt de 72-uurs historie voor ${historyCount} geselecteerde bron${historyCount === 1 ? "" : "nen"}.`;
+      note.textContent = `72-uurs historie voor ${historyCount} geselecteerde bron${historyCount === 1 ? "" : "nen"}.`;
       root.append(note);
     }
     this.shadowRoot.replaceChildren(style, root);

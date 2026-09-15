@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.8.0-alpha.16 — 2026-09-15
+
+- Kamers: iedere detailpagina begint met een compact, capability-gedreven operationeel overzicht voor comfort, verlichting, openingen, media, sensoren en veiligheid. Alleen geconfigureerde bronnen worden getoond; warning, missing en unavailable blijven expliciet herkenbaar.
+- Kamerdetail groepeert vervolginformatie in duidelijke domeinblokken en gebruikt op brede schermen een gebalanceerde hoofd-/zijkolom. Op mobiel blijft het overzicht compact en stapelen de blokken zonder clipping of overlap.
+- De bediening blijft beperkt tot standaard Home Assistant-detailvensters; deze release voegt geen servicecalls, configuratiewrites, dependencies of autorisatiepaden toe.
+- [Testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.16.md). Live Home Assistant-acceptatie blijft een afzonderlijke gate; deze release voert geen deployment uit.
+
 ## 0.8.0-alpha.15 — 2026-09-14
 
 - Home: navigatie, datum/begroeting en statuschips vormen op voldoende brede kaarten één horizontale, gekleurde header. Op kleinere kaartbreedtes blijft dezelfde header overzichtelijk onder elkaar staan.

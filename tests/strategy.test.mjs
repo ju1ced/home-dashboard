@@ -634,7 +634,7 @@ test("cameracarrousel rendert één beeldbreedte en een compacte privacyrail", a
 test("visuele cards behouden HA-details naast expliciete kameracties", async () => {
   const bundle = await readFile(new URL("../dist/home-dashboard.js", import.meta.url), "utf8");
   assert.match(bundle, /hass-more-info/);
-  assert.match(bundle, /Open klimaatbediening/);
+  assert.match(bundle, /Open klimaat/);
   assert.match(bundle, /Samenhangend Home-overzicht/);
   assert.match(bundle, /callService\(/);
   assert.doesNotMatch(bundle, /callWS\(/);

@@ -35,6 +35,17 @@ test("kamerdetail heeft herkenbare capabilityblokken met veilige HA-detailbedien
   assert.doesNotMatch(source, /callWS\(/);
 });
 
+test("kamerdetail prioriteert een compact operationeel overzicht boven afzonderlijke lege kolommen", async () => {
+  const source = await readFile(sourceUrl, "utf8");
+  assert.match(source, /room-summary-grid/);
+  assert.match(source, /Snel overzicht/);
+  assert.match(source, /Verlichting actief/);
+  assert.match(source, /Openingen/);
+  assert.match(source, /Media/);
+  assert.match(source, /Comfort/);
+  assert.match(source, /room-layout-primary/);
+});
+
 test("roominteracties hebben touch-, focus- en mobiele disclosurecontracten", async () => {
   const source = await readFile(sourceUrl, "utf8");
   const controls = await readFile(new URL("../src/cards/home-dashboard-room-controls.ts", import.meta.url), "utf8");
@@ -44,7 +55,8 @@ test("roominteracties hebben touch-, focus- en mobiele disclosurecontracten", as
   assert.match(source, /\.status:focus-visible/);
   assert.match(source, /document\.createElement\(progressive \? "details" : "section"\)/);
   assert.match(source, /matchMedia\?\.\("\(max-width: 600px\)"\)/);
-  assert.match(source, /room\.safety_entities, \.\.\.room\.hvac\.comfort_entities/);
+  assert.match(source, /room\.safety_entities\[0\]/);
+  assert.match(source, /room\.hvac\.comfort_entities\[0\]/);
 });
 
 test("kameracties gebruiken korte namen, entiteitsiconen en duidelijke actieve types", async () => {

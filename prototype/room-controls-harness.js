@@ -57,3 +57,10 @@ const navigationMode=params.get('navigation')==='native'?'native':params.get('na
 
 home.setConfig({type:'custom:home-dashboard-home-overview',...config,theme_mode:'system',navigation_mode:navigationMode});home.hass=hass;
 window.roomFixture={home,hass,config,calls,ref};
+if(params.get('detail')==='1'){
+  const detail=document.createElement('home-dashboard-room-detail');
+  detail.setConfig({type:'custom:home-dashboard-room-detail',room:config.rooms[0],theme_mode:'system'});
+  detail.hass=hass;
+  home.replaceWith(detail);
+  window.roomFixture.detail=detail;
+}
