@@ -34,7 +34,11 @@ const rooms=['Woonkamer','Bureau','Keuken','Terras'].map((name,index)=>({
   control_cover_entity:index<3?put('cover',`cover_${index}`,'open',{friendly_name:`${name} rolluik`,supported_features:11,device_class:'shutter'}):'',
   control_awning_entity:index===0||index===3?put('cover',`awning_${index}`,'closed',{friendly_name:`${name} luifel`,supported_features:11,device_class:'awning'}):'',
   control_media_entity:put('media_player',`radio_${index}`,index<2?'playing':'idle',{friendly_name:`${name} radio`,supported_features:16385}),
-  hvac:{entity:index<3?put('climate',`climate_${index}`,'heat',{temperature:21,current_temperature:20,hvac_action:'heating',friendly_name:`${name} klimaat`}):'',comfort_entities:[put('sensor',`temperature_${index}`,String(21-index),{unit_of_measurement:'°C'})]}
+  hvac:{entity:index<3?put('climate',`climate_${index}`,'heat',{temperature:21,current_temperature:20,hvac_action:'heating',friendly_name:`${name} klimaat`}):'',comfort_entities:[put('sensor',`temperature_${index}`,String(21-index),{unit_of_measurement:'°C'})]},
+  image_entity:index===0?put('image',`photo_${index}`,'available',{}):'',
+  temperature_history_entity:index<3?ref('sensor',`temperature_${index}`):'',
+  smart_plugs:index===0?[{key:'media_plug',name:'Mediahoek',switch_entity:put('switch','media_plug','on',{friendly_name:'Mediahoek'}),power_entity:put('sensor','media_power','176',{unit_of_measurement:'W'}),energy_entity:put('sensor','media_energy','0.6',{unit_of_measurement:'kWh'}),voltage_entity:put('sensor','media_voltage','231',{unit_of_measurement:'V'})}]:[],
+  desk:index===1?{card_type:'custom:linak-desk-card',card_config:{entity:put('number','desk_height','0.72',{unit_of_measurement:'m'})}}:undefined
 }));
 const config=migrateConfig({rooms,today:{enabled:true,weather_entity:put('weather','weather','cloudy',{temperature:19,temperature_unit:'°C'}),forecast_days:3,
   battery_soc_entity:put('sensor','battery','42',{unit_of_measurement:'%'}),battery_charge_power_entity:put('sensor','charge','0',{unit_of_measurement:'W'}),battery_discharge_power_entity:put('sensor','discharge','0',{unit_of_measurement:'W'}),solar_power_entity:put('sensor','solar','320',{unit_of_measurement:'W'}),home_consumption_entity:put('sensor','consumption','860',{unit_of_measurement:'W'}),monthly_capacity_peak_entity:put('sensor','peak','4.2',{unit_of_measurement:'kW'}),

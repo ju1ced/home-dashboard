@@ -114,6 +114,31 @@
           "camera_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "rooms" },
           "power_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "rooms" },
           "history_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "rooms" },
+          "image_entity": { "$ref": "#/$defs/entityReference", "x-editor": "rooms" },
+          "temperature_history_entity": { "$ref": "#/$defs/entityReference", "x-editor": "rooms" },
+          "smart_plugs": {
+            "type": "array", "uniqueItems": true, "x-editor": "rooms",
+            "items": {
+              "type": "object", "additionalProperties": false,
+              "required": ["key", "name", "switch_entity", "power_entity", "energy_entity", "voltage_entity"],
+              "properties": {
+                "key": { "$ref": "#/$defs/logicalKey", "x-editor": "rooms" },
+                "name": { "type": "string", "x-editor": "rooms" },
+                "switch_entity": { "$ref": "#/$defs/entityReference", "x-editor": "rooms" },
+                "power_entity": { "$ref": "#/$defs/entityReference", "x-editor": "rooms" },
+                "energy_entity": { "$ref": "#/$defs/entityReference", "x-editor": "rooms" },
+                "voltage_entity": { "$ref": "#/$defs/entityReference", "x-editor": "rooms" }
+              }
+            }
+          },
+          "desk": {
+            "type": "object", "additionalProperties": false, "x-editor": "rooms",
+            "required": ["card_type", "card_config"],
+            "properties": {
+              "card_type": { "const": "custom:linak-desk-card", "x-editor": "system" },
+              "card_config": { "type": "object", "additionalProperties": true, "x-editor": "rooms" }
+            }
+          },
           "hvac": {
             "type": "object", "additionalProperties": false, "x-editor": "rooms",
             "required": ["entity", "comfort_entities", "history_entities", "modes", "presets", "fan_modes", "swing_modes"],

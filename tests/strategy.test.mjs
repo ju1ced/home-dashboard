@@ -631,10 +631,12 @@ test("cameracarrousel rendert één beeldbreedte en een compacte privacyrail", a
   assert.doesNotMatch(bundle, /Privacy actief/);
 });
 
-test("visuele cards behouden HA-details naast expliciete kameracties", async () => {
+test("visuele cards houden bediening op de kamerpagina naast secundaire HA-details", async () => {
   const bundle = await readFile(new URL("../dist/home-dashboard.js", import.meta.url), "utf8");
   assert.match(bundle, /hass-more-info/);
-  assert.match(bundle, /Open klimaat/);
+  assert.match(bundle, /Nu bedienen/);
+  assert.match(bundle, /open_cover/);
+  assert.match(bundle, /Ontgrendel om te schakelen/);
   assert.match(bundle, /Samenhangend Home-overzicht/);
   assert.match(bundle, /callService\(/);
   assert.doesNotMatch(bundle, /callWS\(/);

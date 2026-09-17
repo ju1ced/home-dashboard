@@ -124,6 +124,10 @@ export function migrateConfig(input: unknown): MigrationResult {
     camera_entities: [],
     power_entities: [],
     history_entities: [],
+    image_entity: "",
+    temperature_history_entity: "",
+    smart_plugs: [],
+    desk: { card_type: "custom:linak-desk-card", card_config: {} },
     hvac: {
       entity: "",
       comfort_entities: [],
@@ -138,6 +142,9 @@ export function migrateConfig(input: unknown): MigrationResult {
     const inputRoom = roomInputs[index];
     if (isObject(inputRoom) && Array.isArray(inputRoom.control_entities)) {
       room.control_entities = structuredClone(inputRoom.control_entities) as string[];
+    }
+    if (isObject(inputRoom) && isObject(inputRoom.desk) && isObject(inputRoom.desk.card_config)) {
+      room.desk = { card_type: "custom:linak-desk-card", card_config: structuredClone(inputRoom.desk.card_config) };
     }
   });
   merged.actions = normalizeItems<ActionConfig>(merged.actions, (index) => ({

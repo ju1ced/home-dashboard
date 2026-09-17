@@ -4,7 +4,7 @@
 
 ## Volgende teststap
 
-Testcandidate **v0.8.0-alpha.16** werkt de kamer-subviews uit met een capability-gedreven operationeel overzicht en semantische domeinblokken. De brede layout gebruikt een hoofd-/zijkolom; op mobiel stapelt de inhoud zonder verlies van statuscontext. Zie de [versiechecklist](../releases/testing-v0.8.0-alpha.16.md). Publicatie is goedgekeurd; live acceptatie blijft een afzonderlijke gate.
+Testcandidate **v0.8.0-alpha.17** brengt directe, begrensde bediening naar kamerdetails en behoudt alle bestaande statusbronnen als read-only blokken. Smart plugs en coverbewegingen hebben een inline bevestiging. Zie de [versiechecklist](../releases/testing-v0.8.0-alpha.17.md). Live acceptatie blijft een afzonderlijke gate.
 
 Daarna volgt de bestaande QA-gate: responsive gedrag, toetsenbord/focus, themecontrast en runtimecontrole op het expliciet goedgekeurde testdashboard. Specialistische volledigheid (robot, tuin en de uitgebreide zwembadkaart) en performance/resource-audit blijven afzonderlijke roadmapstappen, niet impliciet voltooid door de huidige alpha's. De eerder gevonden zwembadstatusrandgevallen moeten eerst tegen de actuele bron worden bevestigd en vervolgens als aparte regressieslice worden opgelost.
 

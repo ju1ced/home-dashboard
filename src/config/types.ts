@@ -92,6 +92,14 @@ export interface RoomConfig {
   camera_entities: EntityReference[];
   power_entities: EntityReference[];
   history_entities: EntityReference[];
+  /** Optional Home Assistant image entity used only as the room's visual header. */
+  image_entity?: EntityReference;
+  /** Explicit recorder source for the embedded temperature trend. */
+  temperature_history_entity?: EntityReference;
+  /** Smart plugs remain explicit, so their measurement and switching scope cannot be inferred. */
+  smart_plugs?: RoomSmartPlugConfig[];
+  /** Transparent configuration for the independently installed LINAK desk card. */
+  desk?: RoomDeskConfig;
   hvac: {
     entity: EntityReference;
     comfort_entities: EntityReference[];
@@ -101,6 +109,20 @@ export interface RoomConfig {
     fan_modes: string[];
     swing_modes: string[];
   };
+}
+
+export interface RoomSmartPlugConfig {
+  key: LogicalKey;
+  name: string;
+  switch_entity: EntityReference;
+  power_entity: EntityReference;
+  energy_entity: EntityReference;
+  voltage_entity: EntityReference;
+}
+
+export interface RoomDeskConfig {
+  card_type: "custom:linak-desk-card";
+  card_config: Record<string, unknown>;
 }
 
 export interface EnergyConfig {
