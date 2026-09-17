@@ -129,7 +129,7 @@ function renderCameras(config: HomeDashboardConfigV1, expandedItems: Set<string>
 
 function visibleRoomControls(room: RoomConfig): string[] {
   if (room.control_entities !== undefined) return room.control_entities;
-  const light = room.control_light_entity ? [room.control_light_entity] : room.light_entities;
+  const light = room.control_light_entity ? [room.control_light_entity] : [...room.light_entities, ...room.light_switch_entities];
   const media = room.control_media_entity ? [room.control_media_entity] : room.media_entities;
   const cover = room.control_cover_entity ? [room.control_cover_entity] : room.cover_entities.filter(entity => entity !== room.control_awning_entity);
   return [...new Set([...light, ...media, ...cover, room.control_awning_entity ?? "", room.hvac.entity].filter(Boolean))];
@@ -162,7 +162,8 @@ function renderRooms(config: HomeDashboardConfigV1, expandedItems: Set<string>):
     <p>Zonder toestemming openen de knoppen alleen Home Assistant-details. Klimaat opent altijd het native detailvenster. Luifelbeveiliging blijft in Home Assistant.</p>
     <label>Scripts (bewaard, max. 2)<select multiple data-collection="rooms" data-index="${index}" data-field="quick_actions">${config.actions.map((action) => `<option value="${escapeHtml(action.key)}" ${roomConfig.quick_actions.includes(action.key) ? "selected" : ""}>${escapeHtml(action.label || action.key)}</option>`).join("")}</select></label>
     <h4>Bronmappings</h4>
-    <label>Verlichting${renderSelector("rooms", index, "light_entities", roomConfig.light_entities, { entity: { domain: "light", multiple: true } })}</label>
+    <label>Lampen${renderSelector("rooms", index, "light_entities", roomConfig.light_entities, { entity: { domain: "light", multiple: true } })}</label>
+    <label>Verlichtingsschakelaars${renderSelector("rooms", index, "light_switch_entities", roomConfig.light_switch_entities, { entity: { domain: "switch", multiple: true } })}</label>
     <label>Covers en openingen${renderSelector("rooms", index, "cover_entities", roomConfig.cover_entities, { entity: { multiple: true } })}</label>
     <label>Media${renderSelector("rooms", index, "media_entities", roomConfig.media_entities, { entity: { domain: "media_player", multiple: true } })}</label>
     <label>Safety${renderSelector("rooms", index, "safety_entities", roomConfig.safety_entities, { entity: { multiple: true } })}</label>
@@ -305,7 +306,7 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
       const room: RoomConfig = {
         key: `room_${this._config.rooms.length + 1}`, name: "", icon: "mdi:sofa", floor_id: "", area_id: "", device_ids: [], capabilities: [], quick_actions: [],
         control_entities: [],
-        light_entities: [], cover_entities: [], media_entities: [], safety_entities: [], camera_entities: [], power_entities: [], history_entities: [],
+        light_entities: [], light_switch_entities: [], cover_entities: [], media_entities: [], safety_entities: [], camera_entities: [], power_entities: [], history_entities: [],
         hvac: { entity: "", comfort_entities: [], history_entities: [], modes: [], presets: [], fan_modes: [], swing_modes: [] }
       };
       this._config.rooms.push(room);

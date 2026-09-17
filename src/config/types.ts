@@ -86,6 +86,8 @@ export interface RoomConfig {
   control_awning_entity?: EntityReference;
   control_media_entity?: EntityReference;
   light_entities: EntityReference[];
+  /** Switches that belong to the lighting scene, such as a DreamView controller. */
+  light_switch_entities: EntityReference[];
   cover_entities: EntityReference[];
   media_entities: EntityReference[];
   safety_entities: EntityReference[];

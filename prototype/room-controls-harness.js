@@ -31,6 +31,7 @@ const put=(domain,key,state,attributes={})=>{const entity=ref(domain,key); state
 const rooms=['Woonkamer','Bureau','Keuken','Terras'].map((name,index)=>({
   key:`room_${index}`,name,area_id:`EXAMPLE_AREA_${index}`,icon:index===3?'mdi:awning-outline':'mdi:sofa',home_favorite:true,controls_enabled:true,
   control_light_entity:put('light',`light_${index}`,index<2?'on':'off',{friendly_name:`${name} lichten`}),
+  light_switch_entities:index===0?[put('switch','dreamview','on',{friendly_name:'DreamView'})]:[],
   control_cover_entity:index<3?put('cover',`cover_${index}`,'open',{friendly_name:`${name} rolluik`,supported_features:11,device_class:'shutter'}):'',
   control_awning_entity:index===0||index===3?put('cover',`awning_${index}`,'closed',{friendly_name:`${name} luifel`,supported_features:11,device_class:'awning'}):'',
   control_media_entity:put('media_player',`radio_${index}`,index<2?'playing':'idle',{friendly_name:`${name} radio`,supported_features:16385}),
