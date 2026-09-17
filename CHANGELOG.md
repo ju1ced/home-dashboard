@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Kamerdetail gebruikt op brede schermen opnieuw een compacte driekolomscompositie: bediening/safety/camera's, comfort/trend/historie en energie/smart plugs/bureau. Mobiel stapelt dezelfde groepen zonder een tweede bedieningspad.
+- Kamerverlichting accepteert nu optionele, expliciete `light_switch_entities`, zodat bijvoorbeeld een DreamView-switch naast lampen rechtstreeks bedienbaar is. Bestaande configuraties zonder die mapping blijven compatibel.
+- [Testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.18.md). Live Home Assistant-acceptatie blijft een afzonderlijke gate; deze release voert geen deployment uit.
+
 - Kamerdetail: bedienbare, expliciet gemapte verlichting, media, klimaat en covers staan rechtstreeks op de pagina. Coverbewegingen vereisen een inline tweede bevestiging; Stop blijft onmiddellijk beschikbaar.
 - Smart plugs tonen status en gemapte energiebronnen; aan- of uitschakelen vereist ontgrendelen en vervolgens een expliciete bevestiging. De detailpagina gebruikt daarvoor beperkte Home Assistant-servicecalls voor het exact gemapte doel.
 - Kamerdetails behouden comfort, veiligheid, camera's, bestaande energiebronnen en historie als read-only statusblokken. Optionele kamerfoto's, native temperatuurgrafieken en een bestaande `custom:linak-desk-card` kunnen per kamer worden gemapt.

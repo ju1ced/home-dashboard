@@ -16,7 +16,7 @@ test("kameroverzicht toont concrete, state-aware apparaatpresentaties", async ()
 
 test("kamerdetail houdt directe bediening begrensd tot expliciete kamerdoelen", async () => {
   const source = await readFile(sourceUrl, "utf8");
-  assert.match(source, /room\.light_entities\.forEach/);
+  assert.match(source, /room\.light_switch_entities \?\? \[\]/);
   assert.match(source, /room\.cover_entities\.forEach/);
   assert.match(source, /room\.media_entities\.forEach/);
   assert.match(source, /actionable\(/);
@@ -31,8 +31,22 @@ test("kamerdetail houdt directe bediening begrensd tot expliciete kamerdoelen", 
 test("kamerdetail maakt bediening en kernstatus onmiddellijk scanbaar", async () => {
   const source = await readFile(sourceUrl, "utf8");
   assert.match(source, /hero-pills/);
+  assert.match(source, /room-layout-primary/);
+  assert.match(source, /room-column/);
   assert.match(source, /direct-controls/);
   assert.match(source, /room-photo/);
+});
+
+test("kamerverlichting accepteert expliciete switch-opties", async () => {
+  const source = await readFile(sourceUrl, "utf8");
+  const types = await readFile(new URL("../src/config/types.ts", import.meta.url), "utf8");
+  const editor = await readFile(new URL("../src/editor/home-dashboard-editor.ts", import.meta.url), "utf8");
+  const schema = await readFile(new URL("../schemas/config.schema.json", import.meta.url), "utf8");
+  assert.match(types, /light_switch_entities/);
+  assert.match(editor, /light_switch_entities/);
+  assert.match(schema, /light_switch_entities/);
+  assert.match(source, /room\.light_switch_entities/);
+  assert.match(source, /"switch" : "light"/);
 });
 
 test("kamerdetail behoudt niet-bedienbare kamerbronnen als zichtbare status", async () => {
