@@ -8,6 +8,8 @@ type HomeAssistantLike = {
   callService?: (domain: string, service: string, data: Record<string, unknown>) => Promise<unknown>;
   floors?: Array<{ floor_id?: string; id?: string; name?: string }> | Record<string, { name?: string }>;
 };
+type LovelaceCardElement = HTMLElement & { hass?: HomeAssistantLike; setConfig?: (config: Record<string, unknown>) => void };
+type CardHelpers = { createCardElement: (config: Record<string, unknown>) => LovelaceCardElement };
 
 interface RoomOverviewConfig {
   type: "custom:home-dashboard-room-overview";
@@ -58,6 +60,9 @@ function roomEntities(room: RoomConfig): string[] {
     ...room.safety_entities,
     ...room.camera_entities,
     ...room.power_entities,
+    room.image_entity ?? "",
+    room.temperature_history_entity ?? "",
+    ...(room.smart_plugs ?? []).flatMap((plug) => [plug.switch_entity, plug.power_entity, plug.energy_entity, plug.voltage_entity]),
     ...room.history_entities,
     ...room.hvac.history_entities
   ].filter(Boolean))];
@@ -102,8 +107,9 @@ function friendlyName(state: StateLike | undefined, fallback: string): string {
   return typeof state?.attributes?.friendly_name === "string" ? state.attributes.friendly_name : fallback;
 }
 
-function showMoreInfo(host: HTMLElement, entity: string): void {
-  host.dispatchEvent(new CustomEvent("hass-more-info", { detail: { entityId: entity }, bubbles: true, composed: true }));
+
+function actionable(state: StateLike | undefined): boolean {
+  return Boolean(state?.state && !["unknown", "unavailable"].includes(state.state));
 }
 
 function entityIcon(entity: string, state?: StateLike): string {
@@ -179,16 +185,6 @@ function devicePresentation(hass: HomeAssistantLike | undefined, entity: string,
   };
 }
 
-function roomDeviceChips(hass: HomeAssistantLike | undefined, room: RoomConfig): DevicePresentation[] {
-  return [
-    room.light_entities[0] ? devicePresentation(hass, room.light_entities[0], "light") : undefined,
-    room.cover_entities[0] ? devicePresentation(hass, room.cover_entities[0], "cover") : undefined,
-    room.hvac.entity ? devicePresentation(hass, room.hvac.entity, "climate") : undefined,
-    room.media_entities[0] ? devicePresentation(hass, room.media_entities[0], "media") : undefined,
-    room.safety_entities[0] ? devicePresentation(hass, room.safety_entities[0], "safety") : undefined,
-    room.power_entities[0] ? devicePresentation(hass, room.power_entities[0], "power") : undefined
-  ].filter((candidate): candidate is DevicePresentation => Boolean(candidate)).slice(0, 4);
-}
 
 export function getRoomMetric(hass: HomeAssistantLike | undefined, room: RoomConfig): string {
   const operationalEntities = [...room.light_entities, ...room.cover_entities, room.hvac.entity, ...room.media_entities, ...room.safety_entities].filter(Boolean);
@@ -206,18 +202,6 @@ export function getRoomMetric(hass: HomeAssistantLike | undefined, room: RoomCon
   return "Normaal";
 }
 
-function roomContext(hass: HomeAssistantLike | undefined, room: RoomConfig): string[] {
-  const presentations = [
-    ...room.safety_entities.map((entity, index) => devicePresentation(hass, entity, "safety", index)),
-    ...room.hvac.comfort_entities.map((entity, index) => devicePresentation(hass, entity, "comfort", index)),
-    ...room.power_entities.map((entity, index) => devicePresentation(hass, entity, "power", index))
-  ];
-  presentations.sort((left, right) => {
-    const priority = { warning: 0, unavailable: 1, active: 2, normal: 3 };
-    return priority[left.tone] - priority[right.tone];
-  });
-  return presentations.slice(0, 3).map((item) => `${item.label}: ${item.value}`);
-}
 
 function resolveFloorName(hass: HomeAssistantLike | undefined, floorId: string, fallbackIndex: number): string {
   if (!floorId) return "Overige ruimtes";
@@ -351,54 +335,113 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
 
   public connectedCallback(): void { this.render(); }
 
-  private entityCard(entity: string, role: DeviceRole, compact = false, index = 0): HTMLButtonElement {
-    const presentation = devicePresentation(this.currentHass, entity, role, index);
+
+  private callService(entity: string, domain: string, service: string, data: Record<string, unknown> = {}): void {
+    if (!actionable(this.currentHass?.states?.[entity]) || !this.currentHass?.callService) return;
+    void this.currentHass.callService(domain, service, { entity_id: entity, ...data }).catch(() => undefined);
+  }
+
+  private command(label: string, entity: string, domain: string, service: string, data: Record<string, unknown> = {}): HTMLButtonElement {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `${compact ? "entity compact" : "entity"} ${presentation.tone}`;
-    button.setAttribute("aria-label", `Open ${presentation.label}: ${presentation.value}`);
-    const entityIconElement = document.createElement("span");
-    entityIconElement.className = "entity-icon";
-    entityIconElement.append(icon(presentation.icon));
-    const copy = document.createElement("span");
-    copy.className = "entity-copy";
-    const name = document.createElement("strong");
-    name.textContent = presentation.label;
-    const value = document.createElement("small");
-    value.textContent = presentation.value;
-    copy.append(name, value);
-    const chevron = icon("mdi:chevron-right");
-    chevron.className = "entity-chevron";
-    button.append(entityIconElement, copy, chevron);
-    button.addEventListener("click", () => showMoreInfo(this, entity));
+    button.className = "command";
+    button.textContent = label;
+    button.disabled = !actionable(this.currentHass?.states?.[entity]) || !this.currentHass?.callService;
+    button.addEventListener("click", () => this.callService(entity, domain, service, data));
     return button;
   }
 
-  private group(titleText: string, subtitleText: string, entities: string[], role: DeviceRole, compact = false, progressive = false): HTMLElement | undefined {
-    const unique = [...new Set(entities.filter(Boolean))];
-    if (unique.length === 0) return undefined;
-    const section = document.createElement(progressive ? "details" : "section") as HTMLElement & { open?: boolean };
-    section.className = progressive ? "group disclosure" : "group";
-    if (progressive) section.open = typeof window === "undefined" || !window.matchMedia?.("(max-width: 600px)").matches;
-    const header = document.createElement(progressive ? "summary" : "header");
-    header.className = "group-heading";
+  private confirmedCommand(label: string, entity: string, domain: string, service: string): HTMLButtonElement {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "command";
+    button.textContent = label;
+    button.disabled = !actionable(this.currentHass?.states?.[entity]) || !this.currentHass?.callService;
+    let armed = false;
+    button.addEventListener("click", () => {
+      if (!armed) {
+        armed = true;
+        button.textContent = `Bevestig ${label.toLowerCase()}`;
+        button.setAttribute("aria-label", `Bevestig ${label.toLowerCase()} ${friendlyName(this.currentHass?.states?.[entity], entity)}`);
+        return;
+      }
+      this.callService(entity, domain, service);
+    });
+    return button;
+  }
+
+  private informationGroup(titleText: string, sources: Array<[string, DeviceRole]>): HTMLElement | undefined {
+    const unique = sources.filter(([entity]) => entity);
+    if (!unique.length) return undefined;
+    const group = document.createElement("section"); group.className = "group";
+    const heading = document.createElement("header"); heading.className = "group-heading";
+    const title = document.createElement("strong"); title.textContent = titleText;
+    heading.append(document.createElement("span"), title);
+    const list = document.createElement("div"); list.className = "info-list";
+    unique.forEach(([entity, role], index) => {
+      const presentation = devicePresentation(this.currentHass, entity, role, index);
+      const row = document.createElement("div"); row.className = `info ${presentation.tone}`;
+      row.setAttribute("aria-label", `${presentation.label}: ${presentation.value}`);
+      row.textContent = `${presentation.label} · ${presentation.value}`;
+      list.append(row);
+    });
+    group.append(heading, list); return group;
+  }
+
+  private directControls(room: RoomConfig): HTMLElement | undefined {
+    const controls = document.createElement("section");
+    controls.className = "direct-controls";
+    const heading = document.createElement("header");
+    heading.className = "group-heading";
     const headingIcon = document.createElement("span");
     headingIcon.className = "group-icon";
-    headingIcon.append(icon({ light: "mdi:lightbulb-group-outline", cover: "mdi:window-shutter", climate: "mdi:thermostat", media: "mdi:speaker-multiple", comfort: "mdi:home-thermometer-outline", safety: "mdi:shield-home-outline", camera: "mdi:cctv", power: "mdi:flash-outline", history: "mdi:chart-timeline-variant" }[role]));
+    headingIcon.append(icon("mdi:gesture-tap-button"));
     const copy = document.createElement("span");
     copy.className = "group-heading-copy";
     const title = document.createElement("strong");
-    title.textContent = titleText;
-    const subtitle = document.createElement("small");
-    subtitle.textContent = subtitleText;
-    copy.append(title, subtitle);
-    header.append(headingIcon, copy);
-    const grid = document.createElement("div");
-    grid.className = compact ? "entity-list" : "entity-grid";
-    unique.forEach((entity, index) => grid.append(this.entityCard(entity, role, compact, index)));
-    section.append(header, grid);
-    return section;
+    title.textContent = "Nu bedienen";
+    copy.append(title); heading.append(headingIcon, copy); controls.append(heading);
+    const grid = document.createElement("div"); grid.className = "direct-grid";
+    const add = (entity: string, label: string, commands: HTMLButtonElement[]): void => {
+      if (!entity) return;
+      const card = document.createElement("section"); card.className = "direct-card";
+      const presentation = devicePresentation(this.currentHass, entity, entity.startsWith("light.") ? "light" : entity.startsWith("cover.") ? "cover" : entity.startsWith("media_player.") ? "media" : "climate");
+      const name = document.createElement("strong"); name.textContent = label || presentation.label;
+      const value = document.createElement("small"); value.textContent = presentation.value;
+      commands.forEach((command) => command.setAttribute("aria-label", `${command.textContent} ${name.textContent}`));
+      const actions = document.createElement("div"); actions.className = "commands"; actions.append(...commands);
+      card.append(name, value, actions); grid.append(card);
+    };
+    room.light_entities.forEach((entity, index) => add(entity, friendlyName(this.currentHass?.states?.[entity], `Licht ${index + 1}`), [this.command(this.currentHass?.states?.[entity]?.state === "on" ? "Uit" : "Aan", entity, "light", this.currentHass?.states?.[entity]?.state === "on" ? "turn_off" : "turn_on")]));
+    room.cover_entities.forEach((entity, index) => add(entity, friendlyName(this.currentHass?.states?.[entity], `Rolluik ${index + 1}`), [this.confirmedCommand("Open", entity, "cover", "open_cover"), this.command("Stop", entity, "cover", "stop_cover"), this.confirmedCommand("Dicht", entity, "cover", "close_cover")]));
+    room.media_entities.forEach((entity, index) => add(entity, friendlyName(this.currentHass?.states?.[entity], `Media ${index + 1}`), [this.command(this.currentHass?.states?.[entity]?.state === "playing" ? "Pauze" : "Speel", entity, "media_player", this.currentHass?.states?.[entity]?.state === "playing" ? "media_pause" : "media_play")]));
+    if (room.hvac.entity) {
+      const target = numberAttribute(this.currentHass?.states?.[room.hvac.entity], "temperature");
+      add(room.hvac.entity, friendlyName(this.currentHass?.states?.[room.hvac.entity], "Klimaat"), target === undefined ? [] : [this.command("− 0,5°", room.hvac.entity, "climate", "set_temperature", { temperature: target - 0.5 }), this.command("+ 0,5°", room.hvac.entity, "climate", "set_temperature", { temperature: target + 0.5 })]);
+    }
+    if (!grid.childElementCount) return undefined;
+    controls.append(grid); return controls;
   }
+
+  private smartPlugCard(plug: NonNullable<RoomConfig["smart_plugs"]>[number]): HTMLElement {
+    const card = document.createElement("section"); card.className = "plug-card";
+    const state = this.currentHass?.states?.[plug.switch_entity];
+    const title = document.createElement("strong"); title.textContent = plug.name || friendlyName(state, "Smart plug");
+    const values = document.createElement("small");
+    values.textContent = [plug.power_entity, plug.energy_entity, plug.voltage_entity].filter(Boolean).map(entity => stateText(this.currentHass?.states?.[entity])).join(" · ") || stateText(state);
+    const lock = document.createElement("button"); lock.type = "button"; lock.className = "plug-lock"; lock.textContent = "Ontgrendel om te schakelen";
+    const confirm = document.createElement("button"); confirm.type = "button"; confirm.className = "command"; confirm.hidden = true;
+    lock.addEventListener("click", () => { confirm.hidden = false; confirm.textContent = state?.state === "on" ? "Bevestig uitschakelen" : "Bevestig inschakelen"; lock.textContent = "Bevestiging vereist"; });
+    confirm.addEventListener("click", () => this.callService(plug.switch_entity, "switch", state?.state === "on" ? "turn_off" : "turn_on"));
+    card.append(title, values, lock, confirm); return card;
+  }
+
+  private async mountCard(host: HTMLElement, config: Record<string, unknown>): Promise<void> {
+    const helpers = await window.loadCardHelpers?.();
+    if (!helpers || !this.isConnected || !host.isConnected) return;
+    const card = helpers.createCardElement(config); card.hass = this.currentHass; host.replaceChildren(card);
+  }
+
 
   private render(): void {
     if (!this.shadowRoot || !this.config) return;
@@ -412,11 +455,9 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     const style = document.createElement("style");
     style.textContent = `
       :host{display:block;min-width:0}.detail{display:grid;gap:22px;width:100%;margin:0 auto}.hero{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:24px;border-radius:22px;background:var(--hd-hero,var(--primary-color,#245c4d));color:var(--hd-hero-text,#fff)}.hero-copy{display:grid;gap:4px}.eyebrow{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.75}.hero h1{margin:0;font-size:1.85rem}.hero p{margin:0;opacity:.75}.hero-pills{display:flex;justify-content:flex-end;gap:7px;flex-wrap:wrap}.hero-pill{padding:7px 10px;border:1px solid color-mix(in srgb,currentColor 28%,transparent);border-radius:999px;font-size:.78rem;font-weight:650}
-      .group{display:grid;gap:10px}.group-heading{display:grid;grid-template-columns:34px minmax(0,1fr);align-items:center;gap:9px;min-height:44px}.group-icon{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:color-mix(in srgb,var(--primary-color) 10%,transparent);color:var(--primary-color)}.group-heading-copy{display:grid}.group-heading-copy>strong{font-size:1.05rem}.group-heading-copy>small{color:var(--secondary-text-color)}.disclosure{border:0}.disclosure>summary{cursor:pointer;list-style:none}.disclosure>summary::-webkit-details-marker{display:none}.disclosure>summary::after{content:"›";justify-self:end;grid-column:3;transform:rotate(90deg);font-size:1.35rem;color:var(--secondary-text-color)}.disclosure:not([open])>summary::after{transform:rotate(0)}.disclosure>summary:focus-visible{outline:2px solid var(--primary-color);outline-offset:3px;border-radius:10px}.disclosure[open]>.entity-grid,.disclosure[open]>.entity-list{margin-top:10px}.room-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}.status{display:grid;gap:5px;min-height:80px;padding:12px;border:1px solid var(--divider-color);border-radius:14px;background:var(--ha-card-background,var(--card-background-color));color:var(--primary-text-color);text-align:left;cursor:pointer}.status ha-icon{width:22px;height:22px;color:var(--primary-color)}.status small{color:var(--secondary-text-color);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.status strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.status.warning{border-color:color-mix(in srgb,var(--error-color,#b3261e) 45%,var(--divider-color));background:color-mix(in srgb,var(--error-color,#b3261e) 7%,var(--card-background-color))}.status.unavailable{opacity:.75}.status:focus-visible{outline:2px solid var(--primary-color);outline-offset:2px}
-      .room-layout-primary{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(280px,.9fr);gap:20px;align-items:start}.room-layout-primary.side-only{grid-template-columns:1fr}.main,.side{display:grid;gap:20px}.entity-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.entity-list{display:grid;gap:8px}.entity{display:grid;grid-template-columns:42px minmax(0,1fr) 22px;align-items:center;gap:10px;min-height:74px;padding:12px;border:1px solid var(--divider-color);border-radius:15px;background:var(--ha-card-background,var(--card-background-color));color:var(--primary-text-color);cursor:pointer;text-align:left}.entity:hover{border-color:var(--primary-color)}.entity:focus-visible{outline:2px solid var(--primary-color);outline-offset:2px}.entity.warning{border-color:color-mix(in srgb,var(--error-color,#b3261e) 45%,var(--divider-color));background:color-mix(in srgb,var(--error-color,#b3261e) 7%,var(--card-background-color))}.entity.unavailable{opacity:.72}.entity.compact{min-height:60px}.entity-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:color-mix(in srgb,var(--primary-color) 12%,transparent);color:var(--primary-color)}.entity.warning .entity-icon{color:var(--error-color,#b3261e);background:color-mix(in srgb,var(--error-color,#b3261e) 12%,transparent)}.entity-copy{display:grid;min-width:0}.entity-copy strong,.entity-copy small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.entity-copy small{color:var(--secondary-text-color)}.entity-chevron{color:var(--secondary-text-color)}
-      .climate{display:grid;grid-template-columns:minmax(210px,.8fr) minmax(0,2fr);gap:12px;padding:16px;border:1px solid var(--divider-color);border-radius:16px;background:var(--ha-card-background,var(--card-background-color))}.climate-main{display:grid;align-content:center;gap:5px}.climate-main span{color:var(--secondary-text-color);font-size:.78rem}.climate-main strong{font-size:2rem}.climate-main button{justify-self:start;min-height:44px;border:0;background:none;color:var(--primary-color);padding:8px 0;cursor:pointer;font:inherit;font-weight:700}.climate-main button:focus-visible{outline:2px solid var(--primary-color);outline-offset:2px;border-radius:6px}.climate-sensors{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.history-note{padding:12px;border-radius:12px;background:var(--secondary-background-color);color:var(--secondary-text-color);font-size:.82rem}
-      @media(max-width:900px){.room-layout-primary{grid-template-columns:1fr}.side{grid-template-columns:repeat(2,minmax(0,1fr))}.climate{grid-template-columns:1fr}}
-      @media(max-width:600px){.detail{gap:18px}.hero{align-items:flex-start;flex-direction:column;padding:18px}.hero h1{font-size:1.55rem}.hero-pills{justify-content:flex-start}.room-summary-grid,.entity-grid,.climate-sensors{grid-template-columns:repeat(2,minmax(0,1fr))}.entity{grid-template-columns:36px minmax(0,1fr);min-height:70px}.entity-chevron{display:none}.entity-icon{width:36px;height:36px}.entity-copy strong{font-size:.88rem}.side{display:grid;grid-template-columns:1fr}.status{min-height:72px}}
+      .group{display:grid;gap:10px}.group-heading{display:grid;grid-template-columns:34px 1fr;align-items:center;gap:9px;min-height:44px}.group-icon{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:color-mix(in srgb,var(--primary-color) 10%,transparent);color:var(--primary-color)}.group-heading-copy{display:grid}.group-heading-copy>small{color:var(--secondary-text-color)}.info-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}.info{padding:10px;border:1px solid var(--divider-color);border-radius:12px;background:var(--ha-card-background,var(--card-background-color));color:var(--primary-text-color)}.info.warning{border-color:var(--error-color,#b3261e)}.info.unavailable{opacity:.72}
+      .direct-controls{display:grid;gap:10px;padding:14px;border:1px solid color-mix(in srgb,var(--primary-color) 30%,var(--divider-color));border-radius:18px;background:color-mix(in srgb,var(--primary-color) 5%,var(--ha-card-background,var(--card-background-color)))}.direct-grid,.plug-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:9px}.direct-card,.plug-card{display:grid;gap:6px;padding:12px;border:1px solid var(--divider-color);border-radius:14px;background:var(--ha-card-background,var(--card-background-color))}.direct-card small,.plug-card small{color:var(--secondary-text-color)}.commands{display:flex;flex-wrap:wrap;gap:7px}.command,.plug-lock{min-height:44px;padding:8px 10px;border:1px solid var(--divider-color);border-radius:10px;background:var(--ha-card-background,var(--card-background-color));color:var(--primary-text-color);font:inherit;cursor:pointer}.command:focus-visible,.plug-lock:focus-visible{outline:2px solid var(--primary-color);outline-offset:2px}.plug-lock{color:var(--primary-color);font-weight:700}.room-photo{width:110px;min-height:96px;border-radius:16px;background:linear-gradient(135deg,color-mix(in srgb,#fff 20%,transparent),transparent),var(--hd-hero);background-size:cover;background-position:center;flex:0 0 auto}.embedded-card{min-height:120px}.embedded-card:empty::before{content:"Grafiek wordt geladen…";display:block;padding:16px;color:var(--secondary-text-color)}
+      @media(max-width:600px){.detail{gap:18px}.hero{align-items:flex-start;flex-direction:column;padding:18px}.hero h1{font-size:1.55rem}.hero-pills{justify-content:flex-start}.room-photo{width:100%;min-height:130px;order:-1}.direct-grid,.plug-grid{grid-template-columns:1fr}}
     `;
     const root = document.createElement("main");
     root.className = "detail";
@@ -434,136 +475,73 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     heroCopy.append(eyebrow, title, subtitle);
     const heroPills = document.createElement("div");
     heroPills.className = "hero-pills";
-    [getRoomMetric(this.currentHass, room), ...roomContext(this.currentHass, room)].slice(0, 3).forEach((value) => {
+    [getRoomMetric(this.currentHass, room)].forEach((value) => {
       const pill = document.createElement("span");
       pill.className = "hero-pill";
       pill.textContent = value;
       heroPills.append(pill);
     });
     hero.append(heroCopy, heroPills);
+    const picture = room.image_entity ? this.currentHass?.states?.[room.image_entity]?.attributes?.entity_picture : undefined;
+    const photo = document.createElement("div");
+    photo.className = "room-photo";
+    photo.setAttribute("role", "img");
+    photo.setAttribute("aria-label", `Foto ${room.name}`);
+    if (typeof picture === "string" && picture) photo.style.backgroundImage = `url("${picture.replaceAll("\\", "\\\\").replaceAll("\"", "\\\"")}")`;
+    hero.append(photo);
     root.append(hero);
 
-    const summaryItems: Array<[string, string, string, DeviceRole]> = [
-      room.hvac.entity ? ["Comfort", room.hvac.entity, "mdi:thermostat", "climate"] : undefined,
-      room.light_entities[0] ? ["Verlichting actief", room.light_entities[0], "mdi:lightbulb-group-outline", "light"] : undefined,
-      room.cover_entities[0] ? ["Openingen", room.cover_entities[0], "mdi:window-shutter", "cover"] : undefined,
-      room.media_entities[0] ? ["Media", room.media_entities[0], "mdi:speaker-multiple", "media"] : undefined,
-      room.hvac.comfort_entities[0] ? ["Ruimtesensor", room.hvac.comfort_entities[0], "mdi:home-thermometer-outline", "comfort"] : undefined,
-      room.safety_entities[0] ? ["Veiligheid", room.safety_entities[0], "mdi:shield-home-outline", "safety"] : undefined
-    ].filter((item): item is [string, string, string, DeviceRole] => Boolean(item));
-    if (summaryItems.length > 0) {
-      const statusGroup = document.createElement("section");
-      statusGroup.className = "group";
-      const header = document.createElement("header");
-      header.className = "group-heading";
-      const statusIcon = document.createElement("span");
-      statusIcon.className = "group-icon";
-      statusIcon.append(icon("mdi:home-heart"));
-      const statusCopy = document.createElement("span");
-      statusCopy.className = "group-heading-copy";
-      const headerTitle = document.createElement("strong");
-      headerTitle.textContent = "Snel overzicht";
-      const headerCopy = document.createElement("small");
-      headerCopy.textContent = "Actuele status en bediening";
-      statusCopy.append(headerTitle, headerCopy);
-      header.append(statusIcon, statusCopy);
-      const grid = document.createElement("div");
-      grid.className = "room-summary-grid";
-      summaryItems.forEach(([labelText, entity, iconName, role], index) => {
-        const presentation = devicePresentation(this.currentHass, entity, role, index);
-        const card = document.createElement("button");
-        card.type = "button";
-        card.className = `status ${presentation.tone}`;
-        card.setAttribute("aria-label", `Open ${presentation.label}: ${presentation.value}`);
-        card.append(icon(iconName));
-        const label = document.createElement("small");
-        label.textContent = labelText;
-        const value = document.createElement("strong");
-        value.textContent = presentation.value;
-        card.append(label, value);
-        card.addEventListener("click", () => showMoreInfo(this, entity));
-        grid.append(card);
-      });
-      statusGroup.append(header, grid);
-      root.append(statusGroup);
+
+    const directControls = this.directControls(room);
+    if (directControls) root.append(directControls);
+
+    [
+      this.informationGroup("Comfort & klimaat", [[room.hvac.entity, "climate"], ...room.hvac.comfort_entities.map((entity): [string, DeviceRole] => [entity, "comfort"])]),
+      this.informationGroup("Veiligheid", room.safety_entities.map((entity): [string, DeviceRole] => [entity, "safety"])),
+      this.informationGroup("Camera's", room.camera_entities.map((entity): [string, DeviceRole] => [entity, "camera"])),
+      this.informationGroup("Apparaten & energie", room.power_entities.map((entity): [string, DeviceRole] => [entity, "power"])),
+      this.informationGroup("Historie", [...room.history_entities, ...room.hvac.history_entities].map((entity): [string, DeviceRole] => [entity, "history"]))
+    ].forEach((group) => { if (group) root.append(group); });
+
+    if ((room.smart_plugs?.length ?? 0) > 0) {
+      const plugGroup = document.createElement("section"); plugGroup.className = "group";
+      const heading = document.createElement("header"); heading.className = "group-heading";
+      const headingIcon = document.createElement("span"); headingIcon.className = "group-icon"; headingIcon.append(icon("mdi:power-socket-eu"));
+      const copy = document.createElement("span"); copy.className = "group-heading-copy";
+      const title = document.createElement("strong"); title.textContent = "Smart plugs & energie";
+      const subtitle = document.createElement("small"); subtitle.textContent = "Verbruik en beveiligd schakelen";
+      copy.append(title, subtitle); heading.append(headingIcon, copy);
+      const grid = document.createElement("div"); grid.className = "plug-grid";
+      room.smart_plugs?.forEach((plug) => grid.append(this.smartPlugCard(plug)));
+      plugGroup.append(heading, grid); root.append(plugGroup);
     }
 
-    const columns = document.createElement("div");
-    columns.className = "room-layout-primary";
-    const main = document.createElement("div");
-    main.className = "main";
-    const lights = this.group("Verlichting", "Lampen en groepen", room.light_entities, "light");
-    const covers = this.group("Covers & openingen", "Gemapte covers en openingen", room.cover_entities, "cover");
-    if (lights) main.append(lights);
-    if (covers) main.append(covers);
-    if (room.hvac.entity || room.hvac.comfort_entities.length > 0) {
-      const climateGroup = document.createElement("section");
-      climateGroup.className = "group";
-      const header = document.createElement("header");
-      header.className = "group-heading";
-      const headerIcon = document.createElement("span");
-      headerIcon.className = "group-icon";
-      headerIcon.append(icon("mdi:thermostat"));
-      const headerText = document.createElement("span");
-      headerText.className = "group-heading-copy";
-      const headerTitle = document.createElement("strong");
-      headerTitle.textContent = "Comfort & klimaat";
-      const headerCopy = document.createElement("small");
-      headerCopy.textContent = "Actueel, doel en omgeving";
-      headerText.append(headerTitle, headerCopy);
-      header.append(headerIcon, headerText);
-      const panel = document.createElement("div");
-      panel.className = "climate";
-      if (room.hvac.entity) {
-        const state = this.currentHass?.states?.[room.hvac.entity];
-        const current = numberAttribute(state, "current_temperature");
-        const target = numberAttribute(state, "temperature");
-        const climateMain = document.createElement("div");
-        climateMain.className = "climate-main";
-        const label = document.createElement("span");
-        label.textContent = friendlyName(state, "Klimaat");
-        const value = document.createElement("strong");
-        value.textContent = current === undefined ? stateText(state) : `${current} °C`;
-        const targetLabel = document.createElement("span");
-        targetLabel.textContent = target === undefined ? "Geen doeltemperatuur" : `Doel ${target} °C · ${state?.state ?? "onbekend"}`;
-        const open = document.createElement("button");
-        open.type = "button";
-        open.textContent = "Open klimaat →";
-        open.addEventListener("click", () => showMoreInfo(this, room.hvac.entity));
-        climateMain.append(label, value, targetLabel, open);
-        panel.append(climateMain);
-      }
-      const sensors = document.createElement("div");
-      sensors.className = "climate-sensors";
-      room.hvac.comfort_entities.forEach((entity, index) => sensors.append(this.entityCard(entity, "comfort", true, index)));
-      if (sensors.childElementCount > 0) panel.append(sensors);
-      climateGroup.append(header, panel);
-      main.append(climateGroup);
+    if (room.temperature_history_entity) {
+      const trend = document.createElement("section"); trend.className = "group";
+      const heading = document.createElement("header"); heading.className = "group-heading";
+      const trendIcon = document.createElement("span"); trendIcon.className = "group-icon"; trendIcon.append(icon("mdi:chart-line"));
+      const copy = document.createElement("span"); copy.className = "group-heading-copy";
+      const title = document.createElement("strong"); title.textContent = "Temperatuurtrend";
+      copy.append(title); heading.append(trendIcon, copy);
+      const graph = document.createElement("div"); graph.className = "embedded-card temperature-graph";
+      trend.append(heading, graph); root.append(trend);
+      void this.mountCard(graph, { type: "statistics-graph", entities: [room.temperature_history_entity], chart_type: "line", days_to_show: 1, period: "hour", title: "Temperatuurtrend" });
     }
-    const power = this.group("Apparaten & energie", "Apparaatstatus", room.power_entities, "power", false, true);
-    if (power) main.append(power);
-    columns.append(main);
-    const side = document.createElement("aside");
-    side.className = "side";
-    const media = this.group("Media", "Spelers en afspeelstatus", room.media_entities, "media", true);
-    const safety = this.group("Veiligheid", "Melders en afwijkingen", room.safety_entities, "safety", true);
-    const cameras = this.group("Camera's", "Beelden via Home Assistant", room.camera_entities, "camera", true, true);
-    if (media) side.append(media);
-    if (safety) side.append(safety);
-    if (cameras) side.append(cameras);
-    if (side.childElementCount > 0) columns.append(side);
-    if (main.childElementCount === 0 && side.childElementCount > 0) columns.classList.add("side-only");
-    if (main.childElementCount > 0 || side.childElementCount > 0) root.append(columns);
 
-    const historyCount = new Set([...room.history_entities, ...room.hvac.history_entities].filter(Boolean)).size;
-    if (historyCount > 0) {
-      const historySources = this.group("Historie", "Bronnen voor de 72-uurs grafiek", [...room.history_entities, ...room.hvac.history_entities], "history", true, true);
-      if (historySources) root.append(historySources);
-      const note = document.createElement("div");
-      note.className = "history-note";
-      note.textContent = `72-uurs historie voor ${historyCount} geselecteerde bron${historyCount === 1 ? "" : "nen"}.`;
-      root.append(note);
+    if (room.desk && Object.keys(room.desk.card_config).length > 0) {
+      const desk = document.createElement("section"); desk.className = "group";
+      const heading = document.createElement("header"); heading.className = "group-heading";
+      const deskIcon = document.createElement("span"); deskIcon.className = "group-icon"; deskIcon.append(icon("mdi:desk"));
+      const copy = document.createElement("span"); copy.className = "group-heading-copy";
+      const title = document.createElement("strong"); title.textContent = "Bureau";
+      const subtitle = document.createElement("small"); subtitle.textContent = "IKEA LINAK / IDÅSEN";
+      copy.append(title, subtitle); heading.append(deskIcon, copy);
+      const card = document.createElement("div"); card.className = "embedded-card desk-card";
+      desk.append(heading, card); root.append(desk);
+      void this.mountCard(card, { ...room.desk.card_config, type: "custom:linak-desk-card" });
     }
+
+
     this.shadowRoot.replaceChildren(style, root);
   }
 }
@@ -572,7 +550,7 @@ export function registerHomeDashboardRoomCards(): void {
   if (typeof customElements === "undefined" || typeof window === "undefined") return;
   const cards: Array<[string, CustomElementConstructor, string, string]> = [
     ["home-dashboard-room-overview", HomeDashboardRoomOverview, "Home Dashboard Room Overview", "Verdiepingsgewijs kameroverzicht met compacte statuskaarten."],
-    ["home-dashboard-room-detail", HomeDashboardRoomDetail, "Home Dashboard Room Detail", "Samenhangend kamerdashboard met status, bediening via HA-detailvensters, comfort, media en veiligheid."]
+    ["home-dashboard-room-detail", HomeDashboardRoomDetail, "Home Dashboard Room Detail", "Kamerdetail met directe bediening en status."]
   ];
   window.customCards ??= [];
   for (const [tag, constructor, name, description] of cards) {

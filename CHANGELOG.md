@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Kamerdetail: bedienbare, expliciet gemapte verlichting, media, klimaat en covers staan rechtstreeks op de pagina. Coverbewegingen vereisen een inline tweede bevestiging; Stop blijft onmiddellijk beschikbaar.
+- Smart plugs tonen status en gemapte energiebronnen; aan- of uitschakelen vereist ontgrendelen en vervolgens een expliciete bevestiging. De detailpagina gebruikt daarvoor beperkte Home Assistant-servicecalls voor het exact gemapte doel.
+- Kamerdetails behouden comfort, veiligheid, camera's, bestaande energiebronnen en historie als read-only statusblokken. Optionele kamerfoto's, native temperatuurgrafieken en een bestaande `custom:linak-desk-card` kunnen per kamer worden gemapt.
+- De LINAK-kaartresource wordt niet meegeleverd of automatisch toegevoegd; de gebruiker beheert deze externe resource zelf.
+
 ## 0.8.0-alpha.16 — 2026-09-15
 
 - Kamers: iedere detailpagina begint met een compact, capability-gedreven operationeel overzicht voor comfort, verlichting, openingen, media, sensoren en veiligheid. Alleen geconfigureerde bronnen worden getoond; warning, missing en unavailable blijven expliciet herkenbaar.
