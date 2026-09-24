@@ -116,7 +116,7 @@ function roomDetailSections(room: RoomConfig | undefined, maxColumns: number, pa
     sections.push(roomDetailSection("Historie", "mdi:chart-line", [{
       type: "history-graph",
       entities: historyEntities,
-      hours_to_show: 72,
+      hours_to_show: 24,
       grid_options: { columns: "full", rows: 5 }
     }], maxColumns));
   }

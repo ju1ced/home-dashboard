@@ -18,7 +18,7 @@ function target(room: RoomConfig, kind: Kind): string { return kind === "climate
 export function roomControlSources(room: RoomConfig, kind: Kind): string[] {
   const explicit = target(room, kind);
   if (explicit) return [explicit];
-  return [...new Set(kind === "light" ? room.light_entities : kind === "media" ? room.media_entities : kind === "cover" ? room.cover_entities.filter(entity => entity !== room.control_awning_entity) : [])];
+  return [...new Set(kind === "light" ? [...room.light_entities, ...(room.light_switch_entities ?? [])] : kind === "media" ? room.media_entities : kind === "cover" ? room.cover_entities.filter(entity => entity !== room.control_awning_entity) : [])];
 }
 function known(state?: State): boolean { return Boolean(state?.state && !["unknown", "unavailable"].includes(state.state)); }
 function shortName(room: RoomConfig, state: State | undefined, kind: Kind): string {
@@ -33,7 +33,7 @@ function shortName(room: RoomConfig, state: State | undefined, kind: Kind): stri
 }
 function kindForEntity(room: RoomConfig, hass: Hass | undefined, entity: string): Kind | undefined {
   const domain = entity.split(".")[0];
-  if (domain === "light") return "light";
+  if (domain === "light" || (domain === "switch" && room.light_switch_entities?.includes(entity))) return "light";
   if (domain === "media_player") return "media";
   if (domain === "climate") return "climate";
   if (domain === "cover") return entity === room.control_awning_entity || hass?.states?.[entity]?.attributes?.device_class === "awning" ? "awning" : "cover";
@@ -51,11 +51,18 @@ export function planRoomControl(room: RoomConfig, hass: Hass | undefined, kind: 
   return planEntityControl(room, hass, target(room, kind), kind, command);
 }
 
-function planEntityControl(room: RoomConfig, hass: Hass | undefined, entity: string, kind: Kind, command: Command = "toggle"): Plan | undefined {
+export function planEntityControl(room: RoomConfig, hass: Hass | undefined, entity: string, kind: Kind, command: Command = "toggle"): Plan | undefined {
   if (!room.controls_enabled || !kinds.includes(kind)) return undefined;
   const state = hass?.states?.[entity];
   if (!entity || !known(state)) return undefined;
-  const domain = kind === "media" ? "media_player" : kind === "awning" ? "cover" : kind;
+  const explicitlyOrdered = room.control_entities?.includes(entity) === true;
+  const mapped = kind === "light"
+    ? entity.startsWith("switch.") ? room.light_switch_entities?.includes(entity) === true : room.light_entities.includes(entity) || room.control_light_entity === entity || explicitlyOrdered
+    : kind === "media" ? room.media_entities.includes(entity) || room.control_media_entity === entity || explicitlyOrdered
+    : kind === "climate" ? room.hvac.entity === entity
+    : room.cover_entities.includes(entity) || room.control_cover_entity === entity || room.control_awning_entity === entity || explicitlyOrdered;
+  if (!mapped) return undefined;
+  const domain = kind === "light" && entity.startsWith("switch.") && room.light_switch_entities?.includes(entity) ? "switch" : kind === "media" ? "media_player" : kind === "awning" ? "cover" : kind;
   if (entity.split(".")[0] !== domain) return undefined;
   const features = Number(state?.attributes?.supported_features ?? 0);
   let service = "";
@@ -173,6 +180,7 @@ export class HomeDashboardRoomControls extends Base {
     this.buttons.forEach((button, kind) => {
       const sources = roomControlSources(room, kind);
       const entity = target(room, kind) || sources[0] || ""; const state = this.currentHass?.states?.[entity];
+      const explicitSwitchFallback = kind === "light" && sources.length === 1 && room.light_switch_entities?.includes(entity) === true;
       const states = sources.map(source => this.currentHass?.states?.[source]);
       const activeCount = states.filter(source => isActive(kind, source)).length;
       const missingCount = states.filter(source => !known(source)).length;
@@ -183,7 +191,7 @@ export class HomeDashboardRoomControls extends Base {
       if (stripLabel) stripLabel.textContent = `${room.name} · ${state?.attributes?.friendly_name ?? labels[kind]}`;
       button.classList.toggle("active", activeCount > 0);
       button.disabled = this.pending.has(kind);
-      const detailOnly = kind === "climate" || !target(room, kind) || !room.controls_enabled || !this.currentHass?.callService || !known(state) || (kind === "light" || kind === "media") && !planRoomControl(room, this.currentHass, kind);
+      const detailOnly = kind === "climate" || (!target(room, kind) && !explicitSwitchFallback) || !room.controls_enabled || !this.currentHass?.callService || !known(state) || (kind === "light" || kind === "media") && !planEntityControl(room, this.currentHass, entity, kind);
       const name = String(state?.attributes?.friendly_name ?? labels[kind]);
       button.title = `${room.name} · ${name}`;
       button.setAttribute("aria-label", `${room.name} · ${labels[kind]} · ${summary || `${name}: ${stateLabel(state)}`}. ${sources.length > 1 ? "Toon apparaten" : detailOnly ? "Open details" : kind === "light" ? state?.state === "on" ? "Uitschakelen" : "Inschakelen" : kind === "media" ? state?.state === "playing" ? "Pauzeren" : "Hervatten" : "Toon bediening"}`);
@@ -221,7 +229,7 @@ export class HomeDashboardRoomControls extends Base {
       article{height:100%;padding:14px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:18px;background:var(--hd-surface,var(--ha-card-background,var(--card-background-color,#fff)));box-shadow:var(--hd-shadow,0 2px 5px #00000009)}
       .room-toggle{display:flex;width:100%;border:0;background:transparent;font:inherit;text-align:left;cursor:pointer}.room-toggle{gap:12px;align-items:center;color:inherit;min-height:54px;padding:2px}.room-toggle>ha-icon:first-child{width:38px;height:38px;padding:8px;border-radius:12px;background:color-mix(in srgb,var(--primary-color,#0784c1) 11%,transparent);color:var(--primary-color,#0784c1)}.copy{display:grid;gap:4px;flex:1;min-width:0}strong{font-size:14px}small{font-size:12px;color:var(--hd-muted,var(--secondary-text-color,#596777));overflow-wrap:anywhere}.warning{color:var(--error-color,#c53b32)}
       [hidden]{display:none!important}.panel{margin-top:10px;padding-top:12px;border-top:1px solid var(--hd-border,var(--divider-color,#dce2e8))}.room-toggle[aria-expanded="true"]>.expand-icon{transform:rotate(180deg)}.expand-icon{transition:transform .16s ease}.full-room{display:inline-flex;align-items:center;width:max-content;min-height:44px;margin-top:8px;padding:8px 4px;color:var(--primary-color,#0784c1);font-size:12px;font-weight:650;text-decoration:none}.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:8px}.control{--control-accent:var(--primary-color,#0784c1);display:flex;align-items:center;gap:9px;min-height:62px;text-align:left;padding:9px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:14px;background:var(--hd-surface-raised,var(--secondary-background-color,#f5f7f9));color:inherit;cursor:pointer}.control.kind-light{--control-accent:var(--state-light-active-color,#b66b00)}.control.kind-climate{--control-accent:var(--state-climate-heat-color,#c95832)}.control.kind-media{--control-accent:var(--state-media-player-active-color,#7155a8)}.control.kind-cover,.control.kind-awning{--control-accent:var(--state-cover-active-color,#087da8)}.control span{display:grid;gap:3px;min-width:0}.control strong{font-size:12px}.control small{line-height:1.25}.control:hover{border-color:var(--control-accent)}.control>ha-icon{width:31px;height:31px;padding:5px;border-radius:9px;background:color-mix(in srgb,var(--control-accent) 13%,transparent);color:var(--control-accent)}.control.active{background:color-mix(in srgb,var(--control-accent) 22%,var(--hd-surface,var(--card-background-color,#fff)));border:2px solid var(--control-accent);box-shadow:inset 4px 0 var(--control-accent)}.control.active small{font-weight:750;color:var(--hd-text,var(--primary-text-color,#17212b))}.control.active>ha-icon{background:var(--control-accent);color:#fff}ha-icon{width:23px;height:23px;flex-shrink:0}
-      button{font:inherit}button:disabled{opacity:.5;cursor:default}button:focus-visible,a:focus-visible{outline:2px solid var(--primary-color,#0088cc);outline-offset:2px}.strip{margin-top:10px;padding:11px;border:1px solid color-mix(in srgb,var(--primary-color,#0088cc) 25%,var(--hd-border,var(--divider-color,#dce2e8)));border-radius:14px;background:color-mix(in srgb,var(--primary-color,#0088cc) 5%,var(--hd-surface,var(--card-background-color,#fff)))}.strip-label{font-size:12px;display:block;margin-bottom:8px}.commands{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px}.commands button{min-height:44px;min-width:0;padding:8px 10px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:10px;background:var(--hd-surface,var(--card-background-color,#fff));color:inherit;cursor:pointer;font-size:12px}.commands button:hover{border-color:var(--primary-color,#0088cc)}.notice{display:block;font-size:12px;line-height:1.4;margin-top:6px}.notice:empty{display:none}@media(max-width:450px){article{padding:12px}.controls{grid-template-columns:repeat(2,minmax(0,1fr))}.commands{grid-template-columns:1fr}}
+      button{font:inherit}button:disabled{opacity:.5;cursor:default}button:focus-visible,a:focus-visible{outline:2px solid var(--primary-color,#0088cc);outline-offset:2px}.strip{margin-top:10px;padding:11px;border:1px solid color-mix(in srgb,var(--primary-color,#0088cc) 25%,var(--hd-border,var(--divider-color,#dce2e8)));border-radius:14px;background:color-mix(in srgb,var(--primary-color,#0088cc) 5%,var(--hd-surface,var(--card-background-color,#fff)))}.strip-label{font-size:12px;display:block;margin-bottom:8px}.commands{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px}.commands button{min-height:44px;min-width:0;padding:8px 10px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:10px;background:var(--hd-surface,var(--card-background-color,#fff));color:inherit;cursor:pointer;font-size:12px}.commands button:hover{border-color:var(--primary-color,#0088cc)}.notice{display:block;font-size:12px;line-height:1.4;margin-top:6px}.notice:empty{display:none}@media(prefers-reduced-motion:reduce){.expand-icon{transition:none}}@media(max-width:450px){article{padding:12px}.controls{grid-template-columns:repeat(2,minmax(0,1fr))}.commands{grid-template-columns:1fr}}
     `;
     const article = document.createElement("article");
     const link = document.createElement("button"); link.type = "button"; link.className = "room-toggle";
@@ -302,13 +310,15 @@ export class HomeDashboardRoomControls extends Base {
       }
       button.addEventListener("click", () => {
         if (sources.length > 1) { this.toggleStrip(strip, button); return; }
-        if (kind === "climate" || !target(room, kind)) { this.moreInfo(sources[0]!); return; }
-        const state = this.currentHass?.states?.[target(room, kind)];
-        if (!room.controls_enabled || !this.currentHass?.callService || !known(state)) { this.moreInfo(target(room, kind)); return; }
+        const entity = target(room, kind) || sources[0] || "";
+        const explicitSwitchFallback = kind === "light" && room.light_switch_entities?.includes(entity) === true;
+        if (kind === "climate" || (!target(room, kind) && !explicitSwitchFallback)) { this.moreInfo(entity); return; }
+        const state = this.currentHass?.states?.[entity];
+        if (!room.controls_enabled || !this.currentHass?.callService || !known(state)) { this.moreInfo(entity); return; }
         if (kind === "cover" || kind === "awning") {
           this.toggleStrip(strip, button);
-        } else if (planRoomControl(room, this.currentHass, kind)) { void this.perform(kind, target(room, kind), kind, notice, "toggle"); }
-        else this.moreInfo(target(room, kind));
+        } else if (planEntityControl(room, this.currentHass, entity, kind)) { void this.perform(kind, entity, kind, notice, "toggle"); }
+        else this.moreInfo(entity);
       });
       const notice = document.createElement("span"); notice.className = "notice"; notice.setAttribute("role", "status");
       panel.append(strip, notice);

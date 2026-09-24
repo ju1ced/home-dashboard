@@ -35,7 +35,7 @@ const rooms=['Woonkamer','Bureau','Keuken','Terras'].map((name,index)=>({
   control_cover_entity:index<3?put('cover',`cover_${index}`,'open',{friendly_name:`${name} rolluik`,supported_features:11,device_class:'shutter'}):'',
   control_awning_entity:index===0||index===3?put('cover',`awning_${index}`,'closed',{friendly_name:`${name} luifel`,supported_features:11,device_class:'awning'}):'',
   control_media_entity:put('media_player',`radio_${index}`,index<2?'playing':'idle',{friendly_name:`${name} radio`,supported_features:16385}),
-  hvac:{entity:index<3?put('climate',`climate_${index}`,'heat',{temperature:21,current_temperature:20,hvac_action:'heating',friendly_name:`${name} klimaat`}):'',comfort_entities:[put('sensor',`temperature_${index}`,String(21-index),{unit_of_measurement:'°C'})]},
+  hvac:{entity:index<3?put('climate',`climate_${index}`,'heat',{temperature:21,current_temperature:20,hvac_action:'heating',friendly_name:`${name} klimaat`,supported_features:1}):'',comfort_entities:[put('sensor',`temperature_${index}`,String(21-index),{unit_of_measurement:'°C'})]},
   image_entity:index===0?put('image',`photo_${index}`,'available',{}):'',
   temperature_history_entity:index<3?ref('sensor',`temperature_${index}`):'',
   smart_plugs:index===0?[{key:'media_plug',name:'Mediahoek',switch_entity:put('switch','media_plug','on',{friendly_name:'Mediahoek'}),power_entity:put('sensor','media_power','176',{unit_of_measurement:'W'}),energy_entity:put('sensor','media_energy','0.6',{unit_of_measurement:'kWh'}),voltage_entity:put('sensor','media_voltage','231',{unit_of_measurement:'V'})}]:[],

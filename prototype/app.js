@@ -55,6 +55,7 @@
     calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18"/>',
     compare: '<path d="M8 4 4 8l4 4M4 8h13M16 20l4-4-4-4M20 16H7"/>'
     ,camera: '<rect x="3" y="6" width="18" height="14" rx="3"/><path d="m8 6 1.5-3h5L16 6"/><circle cx="12" cy="13" r="4"/>'
+    ,printer: '<path d="M7 8V3h10v5M6 17H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="7" rx="1"/><path d="M18 11h.01"/>'
   };
 
   function icon(name, className) {
@@ -152,6 +153,7 @@
       kia: [["Laadstatus", data.status], ["Bereik", data.tone === "unavailable" ? "—" : "312 km"], ["Dataversheid", data.meta.split("·").pop().trim()]],
       robot: [["Huidige taak", data.status], ["Voortgang", data.tone === "warning" ? "Kaart beperkt" : "Woonkamer"], ["Onderhoud", "Geen actie nodig"]],
       garden: [["Droge zones", data.metric], ["Irrigatie", "Uit"], ["Weercontext", "Geen regen vandaag"]],
+      printer: [["Taak", data.status], ["Voortgang", data.metric], ["Materiaal", "Voldoende"]],
       pool: [["Waterkwaliteit", data.status], ["Filter", "Actief"], ["Verwarming", "Stand-by"]]
     };
     return `<div class="detail-list">${rows[key].map(([label, value]) => `<div><span>${label}</span><strong>${value}</strong></div>`).join("")}</div>`;
@@ -181,7 +183,7 @@
       <section class="dashboard-section security-section">${sectionHeading("Beveiliging & privacy", "Veeg door camera’s; privacystand blijft per camera zichtbaar", "Beveiliging", "#")}<div class="camera-carousel">${fixture.cameras.map(cameraCard).join("")}</div><p class="security-note">Privacy uitschakelen is een gevoelige actie en vraagt in de echte kaart altijd een expliciete bevestiging.</p></section>
       <div class="home-columns"><section class="dashboard-section">${sectionHeading("Nu actief", "Alleen wat de normale toestand doorbreekt")}<div class="state-list">${nowItems}</div></section><section class="dashboard-section quick-section">${sectionHeading("Snelle acties", "Klein, expliciet en omkeerbaar")}<div class="quick-grid">${quickAction("moon", "Avondscene", "Rustig licht beneden")}${quickAction("bulb", "Lichten beneden uit", "Beoordeeld script")}</div></section></div>
       <section class="dashboard-section">${sectionHeading("Actieve ruimtes", "Alleen ruimtes die nu relevant zijn", "Alle kamers", withParams("rooms"))}<div class="room-grid">${fixture.rooms.map(roomCard).join("")}</div></section>
-      <section class="dashboard-section">${sectionHeading("Specialisten", "Vier vaste ingangen; details openen het volledige dashboard")}<div class="specialist-grid">${Object.entries(fixture.specialists).map(([key, data]) => specialistCard(data, key, false)).join("")}</div></section>
+      <section class="dashboard-section">${sectionHeading("Specialisten", "Vijf vaste ingangen; details openen het volledige dashboard")}<div class="specialist-grid">${Object.entries(fixture.specialists).map(([key, data]) => specialistCard(data, key, false)).join("")}</div></section>
       <section class="dashboard-section domains-section">${sectionHeading("Verder in huis", "Woningbrede domeinen")}<div class="domain-grid">${domainCard("energy", "Energie & water", "Volledige pagina", withParams("energy"))}${domainCard("thermostat", "Klimaat", "Comfort per zone")}${domainCard("lock", "Beveiliging", "Alarm en openingen")}${domainCard("pool", "Zwembad", "Volledig dashboard", withParams("pool"))}</div></section>`;
   }
 
@@ -214,19 +216,20 @@
   }
 
   function renderIntegrations() {
-    return `<section class="integration-hero"><div><span class="card-eyebrow">Eén samenhangende ervaring</span><h2>Specialistische dashboards</h2><p>De samenvatting leeft in de centrale shell. Een klik opent steeds de volledige, zelfstandige detailcard.</p></div><div class="integration-contract"><span>${icon("shield")}</span><strong>Native shell</strong><small>4 geversioneerde detailcards</small></div></section><div class="integration-grid">${Object.entries(fixture.specialists).map(([key, data]) => specialistCard(data, key, true)).join("")}</div><section class="contract-strip"><div><span>${icon("rooms")}</span><strong>Dezelfde shell</strong><small>Titel, terugpad en spacing</small></div><div><span>${icon("sliders")}</span><strong>Dezelfde semantiek</strong><small>Normaal, actief, waarschuwing en offline</small></div><div><span>${icon("shield")}</span><strong>Eigen veilige logica</strong><small>Confirmations blijven in de broncard</small></div></section>`;
+    return `<section class="integration-hero"><div><span class="card-eyebrow">Eén samenhangende ervaring</span><h2>Specialistische dashboards</h2><p>De samenvatting leeft in de centrale shell. Een klik opent steeds de volledige, zelfstandige detailcard.</p></div><div class="integration-contract"><span>${icon("shield")}</span><strong>Native shell</strong><small>5 geversioneerde detailcards</small></div></section><div class="integration-grid">${Object.entries(fixture.specialists).map(([key, data]) => specialistCard(data, key, true)).join("")}</div><section class="contract-strip"><div><span>${icon("rooms")}</span><strong>Dezelfde shell</strong><small>Titel, terugpad en spacing</small></div><div><span>${icon("sliders")}</span><strong>Dezelfde semantiek</strong><small>Normaal, actief, waarschuwing en offline</small></div><div><span>${icon("shield")}</span><strong>Eigen veilige logica</strong><small>Confirmations blijven in de broncard</small></div></section>`;
   }
 
   function renderSpecialist() {
-    const key = ["kia", "robot", "garden"].includes(params.get("card")) ? params.get("card") : "kia";
+    const key = ["kia", "robot", "garden", "printer"].includes(params.get("card")) ? params.get("card") : "kia";
     const data = fixture.specialists[key];
-    const names = { kia: "Kia Connect-dashboard", robot: "Robotdashboard", garden: "Tuindashboard" };
+    const names = { kia: "Kia Connect-dashboard", robot: "Robotdashboard", garden: "Tuindashboard", printer: "3D-printerdashboard" };
     const panels = {
       kia: [["Batterij", data.metric], ["Bereik", "312 km"], ["Laadvermogen", "3,6 kW"], ["Vertrekklaar", "07:30"]],
       robot: [["Batterij", data.metric], ["Zone", "Woonkamer"], ["Resterend", "31 min"], ["Onderhoud", "In orde"]],
-      garden: [["Droge zones", data.metric], ["Regen", "Niet verwacht"], ["Bewatering", "Uit"], ["Bodem", "Gemengd"]]
+      garden: [["Droge zones", data.metric], ["Regen", "Niet verwacht"], ["Bewatering", "Uit"], ["Bodem", "Gemengd"]],
+      printer: [["Voortgang", data.metric], ["Resterend", "38 min"], ["Laag", "84 / 200"], ["Materiaal", "Voldoende"]]
     };
-    return `<a class="back-link" href="${withParams("integrations")}">${icon("arrow", "back-arrow")}Specialisten</a><section class="specialist-full-hero tone-${data.tone}"><span class="specialist-icon">${icon(data.icon)}</span><div><span class="card-eyebrow">Volledige bestaande custom card</span><h2>${names[key]}</h2><p>De implementatie host hier rechtstreeks de bestaande, geversioneerde kaart uit de bronrepo.</p></div>${statusPill(data.status, data.tone)}</section><section class="full-card-frame"><div class="full-card-title"><div><span class="card-eyebrow">Gesanitiseerde prototypeweergave</span><h3>${data.title}</h3></div><strong>${data.metric}</strong></div><div class="full-card-metrics">${panels[key].map(([label, value]) => `<article><span>${label}</span><strong>${value}</strong></article>`).join("")}</div><div class="full-card-map"><span>${icon(key === "garden" ? "leaf" : key === "robot" ? "rooms" : "car")}</span><div><strong>${key === "kia" ? "Voertuigstatus en laadcontext" : key === "robot" ? "Kaart, zones en schoonmaakhistorie" : "Zones, bodemvocht en irrigatie"}</strong><p>Alle detailfuncties, historie en veilige acties blijven onderdeel van de broncard.</p></div></div><div class="full-card-actions"><button type="button">Overzicht</button><button type="button">Historie</button><button type="button">Instellingen</button></div></section>`;
+    return `<a class="back-link" href="${withParams("integrations")}">${icon("arrow", "back-arrow")}Specialisten</a><section class="specialist-full-hero tone-${data.tone}"><span class="specialist-icon">${icon(data.icon)}</span><div><span class="card-eyebrow">Volledige bestaande custom card</span><h2>${names[key]}</h2><p>De implementatie host hier rechtstreeks de bestaande, geversioneerde kaart uit de bronrepo.</p></div>${statusPill(data.status, data.tone)}</section><section class="full-card-frame"><div class="full-card-title"><div><span class="card-eyebrow">Gesanitiseerde prototypeweergave</span><h3>${data.title}</h3></div><strong>${data.metric}</strong></div><div class="full-card-metrics">${panels[key].map(([label, value]) => `<article><span>${label}</span><strong>${value}</strong></article>`).join("")}</div><div class="full-card-map"><span>${icon(key === "garden" ? "leaf" : key === "robot" ? "rooms" : key === "printer" ? "printer" : "car")}</span><div><strong>${key === "kia" ? "Voertuigstatus en laadcontext" : key === "robot" ? "Kaart, zones en schoonmaakhistorie" : key === "printer" ? "Taak, temperaturen en materiaalstatus" : "Zones, bodemvocht en irrigatie"}</strong><p>Alle detailfuncties, historie en veilige acties blijven onderdeel van de broncard.</p></div></div><div class="full-card-actions"><button type="button">Overzicht</button><button type="button">Historie</button><button type="button">Instellingen</button></div></section>`;
   }
 
   function renderPool() {

@@ -2,13 +2,24 @@
 
 ## Unreleased
 
-- Kamerdetail gebruikt op brede schermen opnieuw een compacte driekolomscompositie: bediening/safety/camera's, comfort/trend/historie en energie/smart plugs/bureau. Mobiel stapelt dezelfde groepen zonder een tweede bedieningspad.
+- Bereidt `v0.8.0-alpha.19` voor met één reproduceerbare browsermatrix voor hoofdviews, kamers, editor, navigatie en alle beschikbare specialistviews inclusief 3D-printer.
+- Verhoogt te kleine camera- en editorbediening naar minimaal 44×44 px en respecteert reduced motion voor camerascroll en kamerchevron.
+- Corrigeert de read-only zwembadsamenvatting tegen het geteste broncontract: vrije tekst bepaalt geen ernst, required unavailable wint van foutsignalen, heater-off is normaal en de zoutsysteemfout gebruikt power plus drempel.
+- Legt Energy-pariteit, zwembadprecedence en de resterende handmatige accessibilitygate vast in privacyveilige kwaliteitsdocumenten.
+- [Testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.19.md). Release, deployment en live test blijven afzonderlijke menselijke gates.
+
+## 0.8.0-alpha.18 — 2026-09-17
+
+- Kamerdetail gebruikt op brede schermen opnieuw een compacte driekolomscompositie: bediening/safety/camera's, comfort/historie en energie/smart plugs/bureau. Tablet geeft de capabilities eerst de volle breedte; mobiel stapelt dezelfde groepen zonder een tweede bedieningspad.
 - Kamerverlichting accepteert nu optionele, expliciete `light_switch_entities`, zodat bijvoorbeeld een DreamView-switch naast lampen rechtstreeks bedienbaar is. Bestaande configuraties zonder die mapping blijven compatibel.
-- [Testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.18.md). Live Home Assistant-acceptatie blijft een afzonderlijke gate; deze release voert geen deployment uit.
+- De bewaakte bundlegrens stijgt beperkt van 212 kB naar 215 kB: `origin/main` bouwt reproduceerbaar tot 211.963 bytes; de extra ruimte is uitsluitend voor fail-closed serviceplanning, herhaalde confirmations, stale-callafhandeling en focusherstel.
+- [Vorige testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.18.md). Live Home Assistant-acceptatie bleef een afzonderlijke gate; die kandidaat is opgevolgd door alpha.19.
+
+## 0.8.0-alpha.17 — 2026-09-17
 
 - Kamerdetail: bedienbare, expliciet gemapte verlichting, media, klimaat en covers staan rechtstreeks op de pagina. Coverbewegingen vereisen een inline tweede bevestiging; Stop blijft onmiddellijk beschikbaar.
 - Smart plugs tonen status en gemapte energiebronnen; aan- of uitschakelen vereist ontgrendelen en vervolgens een expliciete bevestiging. De detailpagina gebruikt daarvoor beperkte Home Assistant-servicecalls voor het exact gemapte doel.
-- Kamerdetails behouden comfort, veiligheid, camera's, bestaande energiebronnen en historie als read-only statusblokken. Optionele kamerfoto's, native temperatuurgrafieken en een bestaande `custom:linak-desk-card` kunnen per kamer worden gemapt.
+- Kamerdetails behouden comfort, veiligheid, camera's en bestaande energiebronnen als read-only statusblokken. Historie opent een native `history-graph`-dialoog; optionele kamerfoto's en een bestaande `custom:linak-desk-card` kunnen per kamer worden gemapt.
 - De LINAK-kaartresource wordt niet meegeleverd of automatisch toegevoegd; de gebruiker beheert deze externe resource zelf.
 
 ## 0.8.0-alpha.16 — 2026-09-15

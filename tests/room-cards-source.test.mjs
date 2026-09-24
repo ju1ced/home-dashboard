@@ -17,8 +17,8 @@ test("kameroverzicht toont concrete, state-aware apparaatpresentaties", async ()
 test("kamerdetail houdt directe bediening begrensd tot expliciete kamerdoelen", async () => {
   const source = await readFile(sourceUrl, "utf8");
   assert.match(source, /room\.light_switch_entities \?\? \[\]/);
-  assert.match(source, /room\.cover_entities\.forEach/);
-  assert.match(source, /room\.media_entities\.forEach/);
+  assert.match(source, /room\.cover_entities\.map/);
+  assert.match(source, /room\.media_entities\.map/);
   assert.match(source, /actionable\(/);
   assert.match(source, /Niet gevonden/);
   assert.match(source, /Niet beschikbaar/);
@@ -33,8 +33,20 @@ test("kamerdetail maakt bediening en kernstatus onmiddellijk scanbaar", async ()
   assert.match(source, /hero-pills/);
   assert.match(source, /room-layout-primary/);
   assert.match(source, /room-column/);
-  assert.match(source, /direct-controls/);
+  assert.match(source, /mushroom-grid/);
   assert.match(source, /room-photo/);
+});
+
+test("kamerdetail gebruikt afzonderlijke mushroom-achtige capabilitykaarten", async () => {
+  const source = await readFile(sourceUrl, "utf8");
+  assert.match(source, /mushroom-grid/);
+  assert.match(source, /mushroom-card/);
+  assert.match(source, /light-card/);
+  assert.match(source, /mushroomCard\(entity, "cover"/);
+  assert.match(source, /mushroomCard\(room\.hvac\.entity, "climate"/);
+  assert.match(source, /smart-plug-card/);
+  assert.match(source, /history-dialog/);
+  assert.doesNotMatch(source, /Nu bedienen/);
 });
 
 test("kamerverlichting accepteert expliciete switch-opties", async () => {
@@ -46,7 +58,12 @@ test("kamerverlichting accepteert expliciete switch-opties", async () => {
   assert.match(editor, /light_switch_entities/);
   assert.match(schema, /light_switch_entities/);
   assert.match(source, /room\.light_switch_entities/);
-  assert.match(source, /"switch" : "light"/);
+  assert.match(source, /planEntityControl/);
+});
+
+test("kamereditor biedt verlichtingsswitches ook als direct kiesbaar doel", async () => {
+  const editor = await readFile(new URL("../src/editor/home-dashboard-editor.ts", import.meta.url), "utf8");
+  assert.match(editor, /domain: \["light", "switch", "cover", "media_player", "climate"\]/);
 });
 
 test("kamerdetail behoudt niet-bedienbare kamerbronnen als zichtbare status", async () => {
@@ -61,16 +78,16 @@ test("kamerdetail behoudt niet-bedienbare kamerbronnen als zichtbare status", as
   assert.match(source, /room\.history_entities/);
 });
 
-test("kamerdetail houdt bediening op de pagina met beveiligde smart plugs en een temperatuurgrafiek", async () => {
+test("kamerdetail houdt bediening op de pagina met beveiligde smart plugs en een historiedialoog", async () => {
   const source = await readFile(sourceUrl, "utf8");
   const types = await readFile(new URL("../src/config/types.ts", import.meta.url), "utf8");
 
-  assert.match(source, /Nu bedienen/);
+  assert.match(source, /mushroom-card/);
   assert.match(source, /Open|Stop|Dicht/);
   assert.match(source, /Smart plugs & energie/);
   assert.match(source, /Ontgrendel om te schakelen/);
-  assert.match(source, /Temperatuurtrend/);
-  assert.match(source, /statistics-graph/);
+  assert.match(source, /temperature_history_entity/);
+  assert.match(source, /history-graph/);
   assert.match(source, /room\.image_entity/);
   assert.match(source, /linak-desk-card/);
   assert.match(source, /\.\.\.room\.desk\.card_config, type: "custom:linak-desk-card"/);
@@ -85,12 +102,21 @@ test("kamerdetail houdt bediening op de pagina met beveiligde smart plugs en een
 test("roominteracties hebben touch-, focus- en mobiele contracts", async () => {
   const source = await readFile(sourceUrl, "utf8");
   const controls = await readFile(new URL("../src/cards/home-dashboard-room-controls.ts", import.meta.url), "utf8");
+  const cameras = await readFile(new URL("../src/cards/home-dashboard-camera-strip.ts", import.meta.url), "utf8");
+  const editor = await readFile(new URL("../src/editor/home-dashboard-editor.ts", import.meta.url), "utf8");
   assert.match(controls, /min-height:44px/);
   assert.match(controls, /button:focus-visible/);
-  assert.match(source, /\.command:focus-visible/);
-  assert.match(source, /\.plug-lock:focus-visible/);
+  assert.match(controls, /prefers-reduced-motion:reduce/);
+  assert.match(cameras, /min-width:44px;min-height:44px/);
+  assert.match(cameras, /\.controls\{display:flex;gap:8px\}/);
+  assert.match(cameras, /prefers-reduced-motion: reduce/);
+  assert.match(editor, /\.toolbar label,\.toolbar button\{[^}]*min-height:44px/);
+  assert.match(editor, /\.item button\{[^}]*min-width:44px;min-height:44px/);
+  assert.match(editor, /\.section-footer button\{[^}]*min-height:44px/);
+  assert.match(source, /button:focus-visible/);
+  assert.match(source, /min-height:44px/);
   assert.match(source, /@media\(max-width:600px\)/);
-  assert.match(source, /\.direct-grid,.plug-grid\{grid-template-columns:1fr\}/);
+  assert.match(source, /\.mushroom-grid,.plug-grid\{grid-template-columns:1fr\}/);
   assert.match(source, /aria-label/);
   assert.match(source, /Bevestig/);
 });

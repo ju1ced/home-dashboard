@@ -5,11 +5,13 @@ const require = createRequire(process.env.HD_BROWSER_PACKAGES ? `${process.env.H
 const { chromium } = require('playwright');
 const browser = await chromium.launch({ headless: true, ...(process.env.HD_BROWSER_CHANNEL ? { channel: process.env.HD_BROWSER_CHANNEL } : {}) });
 const page = await browser.newPage();
+const prototypeUrl = process.env.HD_PROTOTYPE_URL || 'http://127.0.0.1:4173';
+const directory = process.env.HD_RENDER_DIRECTORY || 'generated/navigation';
 const errors = [];
 page.on('pageerror', error => errors.push(error.message));
 // A synthetic HA shell: tests the actual card and its DOM boundary, not a live installation.
 async function mount(mode = 'kiosk', admin = true) {
-  await page.goto('http://127.0.0.1:4173/room-controls.html');
+  await page.goto(`${prototypeUrl}/room-controls.html`);
   await page.waitForFunction(() => window.roomFixture);
   await page.evaluate(async ({ mode, admin }) => {
     await import('/dist/home-dashboard.js');
@@ -116,8 +118,8 @@ try {
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
         assert.equal(await page.locator('nav a,nav button').evaluateAll(nodes => nodes.some(node => { const r = node.getBoundingClientRect(); return r.width < 44 || r.height < 44; })), false);
       }
-      await mkdir('generated/navigation', { recursive: true });
-      await page.screenshot({ path: `generated/navigation/navigation-${width}.png` });
+      await mkdir(directory, { recursive: true });
+      await page.screenshot({ path: `${directory}/navigation-${width}.png` });
     }
     assert.deepEqual(errors, []);
     console.log('Navigation browser checks passed: identical geometry across seven views and three widths; native editor, admin gate, kiosk, edit recovery, escape and disconnect cleanup. Synthetic shell only; live HA acceptance remains required.');

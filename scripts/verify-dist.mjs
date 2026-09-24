@@ -9,15 +9,11 @@ const bundle = await readFile(bundleUrl, "utf8");
 const bundleStats = await stat(bundleUrl);
 const distFiles = await readdir(distDirectory);
 const errors = [];
-// 198_000 -> 212_000: expliciet goedgekeurd door de eigenaar bij het samenvoegen van
-// PR #39 (3D-printerspecialist) en PR #41 (zwembadspecialist) in main. Geen van beide
-// eerder per-PR goedgekeurde cijfers (203_000 voor pool, 205_000 voor printer) dekt de
-// gecombineerde bundel. Reproduceerbare meting: main (vóór deze twee specialisten)
-// bouwt tot 194_883 bytes; met beide specialisten samengevoegd (inclusief de
-// gedeelde home-dashboard-kia-integration.ts-dedup, die nu maar één keer meetelt in
-// plaats van per branch) bouwt de bundel tot 210_486 bytes. 212_000 geeft een kleine
-// marge boven dat gemeten getal.
-const maxBundleBytes = 212_000;
+// 212_000 -> 215_000: goedgekeurd voor de room-card-overhaul nadat origin/main
+// reproduceerbaar 211_963 bytes bleek te bouwen. De extra circa 1,8 kB dekt de
+// fail-closed serviceplanning, herhaalde confirmations, stale-callafhandeling en
+// focusherstel. 215_000 houdt de marge beperkt zonder veiligheidslogica weg te drukken.
+const maxBundleBytes = 215_000;
 
 if (hacs.filename !== "home-dashboard.js") errors.push("hacs.json verwijst niet naar home-dashboard.js");
 if (hacs.homeassistant !== "2026.8.2") errors.push("Onverwachte minimale Home Assistant-versie");

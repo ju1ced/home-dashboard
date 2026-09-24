@@ -36,7 +36,7 @@ Iedere kamer krijgt een Home Assistant-subview met terugpad naar Home. `v0.5.0-a
 5. **Media:** geselecteerde mediaspelers met afspeelstatus en bron/titel waar beschikbaar.
 6. **Veiligheid:** safety-entiteiten en een afzonderlijke camera-ingang.
 7. **Apparaten & energie:** geselecteerde powerbronnen; deze zware lijst start op smalle schermen ingeklapt.
-8. **Historie:** herkenbare broningangen plus gecombineerde kamer- en klimaathistorie over 72 uur; de bronnenlijst start op smalle schermen ingeklapt.
+8. **Historie:** herkenbare broningangen openen per gekozen bron een native `history-graph`-dialoog over de laatste 24 uur; sluiten brengt focus terug naar dezelfde broningang.
 
 Lege onderdelen worden niet gerenderd. Een gemapte maar ontbrekende bron toont `Niet gevonden`; `unknown` en `unavailable` krijgen respectievelijk `Onbekend` en `Niet beschikbaar` zonder een nulwaarde te fabriceren. Apparaatkaarten op het detail openen het standaard Home Assistant-detailvenster. Expliciete actiedoelen worden ook in de passende detailgroepen opgenomen.
 

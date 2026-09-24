@@ -79,7 +79,7 @@ export function validateConfig(config: HomeDashboardConfigV1): ValidationIssue[]
     room.control_entities?.forEach((reference, controlIndex) => {
       if (!reference) return;
       const domain = reference.split(".")[0] ?? "";
-      if (!["light", "cover", "media_player", "climate"].includes(domain)) issues.push(issue(`rooms[${index}].control_entities[${controlIndex}]`, "control_domain", "Dit type is geen kamerbediening."));
+      if (!["light", "cover", "media_player", "climate"].includes(domain) && !(domain === "switch" && room.light_switch_entities?.includes(reference))) issues.push(issue(`rooms[${index}].control_entities[${controlIndex}]`, "control_domain", "Kies een kamerbediening; voeg verlichtingsswitches eerst toe bij Verlichting."));
     });
     for (const [field, domain] of [["control_light_entity", "light"], ["control_cover_entity", "cover"], ["control_awning_entity", "cover"], ["control_media_entity", "media_player"]] as const) {
       const reference = room[field];

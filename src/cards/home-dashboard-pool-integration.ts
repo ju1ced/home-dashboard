@@ -34,10 +34,19 @@ function isOn(state: HassState | undefined): boolean {
   return Boolean(state && ["on", "true"].includes(state.state.toLowerCase()));
 }
 
+function record(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function numberState(state: HassState | undefined): number | undefined {
+  const value = Number(state?.state);
+  return Number.isFinite(value) ? value : undefined;
+}
+
 /**
- * `has_error` en `salt_system_fault` zijn de expliciete foutsignaal-
- * entiteiten die deze zwembadintegratie blootstelt; op de vrije-tekst
- * `status`-waarde zelf wordt bewust niet fuzzy-gematcht.
+ * Vrije statustekst wordt alleen op beschikbaarheid gecontroleerd. De centrale
+ * samenvatting volgt de publiek geteste bronprecedence, maar kopieert geen
+ * tijdvenster- of merkspecifieke automatiseringslogica uit de zelfstandige card.
  */
 export function getPoolPresentation(hass: HassLike | undefined, pool: PoolSpecialistConfig): PoolPresentation {
   const entities = poolEntities(pool);
@@ -46,12 +55,17 @@ export function getPoolPresentation(hass: HassLike | undefined, pool: PoolSpecia
   const targetEntity = entities.target_temperature;
   const ambientEntity = entities.ambient_temperature;
   const heaterPowerEntity = entities.heater_power;
-  const mappingIncomplete = !statusEntity || !waterEntity || !targetEntity || !ambientEntity || !heaterPowerEntity;
+  const mappingIncomplete = !waterEntity || !targetEntity || !ambientEntity || !heaterPowerEntity;
 
-  const statusState = stateFor(hass, statusEntity);
   const errorState = stateFor(hass, entities.has_error);
-  const saltFaultState = stateFor(hass, entities.salt_system_fault);
-  const valuesUnavailable = [statusEntity, waterEntity, targetEntity, ambientEntity].some((entity) => isUnavailableState(stateFor(hass, entity)));
+  const saltSystem = record(pool.card_config.salt_system);
+  const saltSwitchEntity = typeof saltSystem.switch === "string" ? saltSystem.switch : "";
+  const saltPowerEntity = typeof saltSystem.power === "string" ? saltSystem.power : "";
+  const saltThreshold = typeof saltSystem.fault_below_watts === "number" ? saltSystem.fault_below_watts : 15;
+  const saltPower = numberState(stateFor(hass, saltPowerEntity));
+  const saltFault = Boolean(saltSwitchEntity && saltPowerEntity && isOn(stateFor(hass, saltSwitchEntity)) && saltPower !== undefined && saltPower < saltThreshold);
+  const requiredEntities = [waterEntity, targetEntity, ambientEntity, heaterPowerEntity, ...(statusEntity ? [statusEntity] : [])];
+  const valuesUnavailable = requiredEntities.some((entity) => isUnavailableState(stateFor(hass, entity)));
 
   const title = typeof pool.card_config.title === "string" && pool.card_config.title.trim() ? pool.card_config.title : "Zwembad";
 
@@ -60,33 +74,32 @@ export function getPoolPresentation(hass: HassLike | undefined, pool: PoolSpecia
   if (mappingIncomplete) {
     status = "Zwembadstatus onvolledig";
     tone = "warning";
-  } else if (isOn(errorState)) {
-    status = "Warmtepompfout";
-    tone = "error";
-  } else if (isOn(saltFaultState)) {
-    status = "Zoutsysteemfout";
-    tone = "error";
   } else if (valuesUnavailable) {
     status = "Zwembadstatus niet beschikbaar";
     tone = "unavailable";
-  } else if (!isOn(stateFor(hass, heaterPowerEntity))) {
-    status = "Warmtepomp uit";
+  } else if (isOn(errorState)) {
+    status = "Warmtepompfout";
+    tone = "error";
+  } else if (saltFault) {
+    status = "Zoutsysteemfout";
+    tone = "error";
+  } else if ([heaterPowerEntity, entities.compressor, entities.circulate_pump, entities.filter_pump_state, saltSwitchEntity].some((entity) => isOn(stateFor(hass, entity)))) {
+    status = "Installatie actief";
     tone = "normal";
-  } else if (statusState) {
-    status = statusState.state;
+  } else {
+    status = "In orde";
     tone = "normal";
   }
 
   const heaterPowerState = stateFor(hass, heaterPowerEntity);
   const heaterPowerText = isUnavailableState(heaterPowerState) ? "Niet beschikbaar" : isOn(heaterPowerState) ? "Warmtepomp aan" : "Warmtepomp uit";
 
-  const readableValues = valuesUnavailable ? undefined : hass;
   return {
     title,
     status,
-    waterTemperature: stateValue(readableValues, waterEntity),
-    targetTemperature: stateValue(readableValues, targetEntity),
-    ambientTemperature: stateValue(readableValues, ambientEntity),
+    waterTemperature: stateValue(hass, waterEntity),
+    targetTemperature: stateValue(hass, targetEntity),
+    ambientTemperature: stateValue(hass, ambientEntity),
     heaterPowerText,
     tone,
     mappingIncomplete
@@ -166,7 +179,7 @@ function resourceAvailable(cardType: string): boolean {
 
 function hasPoolSummaryMapping(pool: PoolSpecialistConfig): boolean {
   const entities = poolEntities(pool);
-  return Boolean(entities.status && entities.water_temperature && entities.target_temperature && entities.ambient_temperature && entities.heater_power);
+  return Boolean(entities.water_temperature && entities.target_temperature && entities.ambient_temperature && entities.heater_power);
 }
 
 /**
@@ -202,7 +215,7 @@ export function buildPoolDetailSections(pool: PoolSpecialistConfig | undefined, 
     summaryCards.push({
       type: "markdown",
       title: "Zwembadstatus onvolledig",
-      content: "Vul in de geavanceerde zwembad-cardconfiguratie minstens `status`, `water_temperature`, `target_temperature`, `ambient_temperature` en `heater_power` in.",
+      content: "Vul in de geavanceerde zwembad-cardconfiguratie minstens `water_temperature`, `target_temperature`, `ambient_temperature` en `heater_power` in. `status` is optioneel.",
       grid_options: { columns: "full", rows: "auto" }
     });
   }

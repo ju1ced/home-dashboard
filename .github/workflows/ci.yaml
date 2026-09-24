@@ -13,6 +13,8 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      HD_BROWSER_CHANNEL: chromium
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -24,7 +26,11 @@ jobs:
         run: corepack enable
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Install browser
+        run: pnpm exec playwright install --with-deps chromium
       - name: Test and build
         run: pnpm test
+      - name: Run browser regression matrix
+        run: pnpm run test:browser
       - name: Verify committed bundle
         run: git diff --exit-code -- dist/home-dashboard.js

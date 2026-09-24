@@ -1,6 +1,6 @@
 # Home Dashboard — ontwerpvoorstel
 
-Testcandidate **v0.8.0-alpha.10** corrigeert Home bovenop alpha.9: datum, begroeting en de drie statuschips blijven in een gekleurde header zoals Kamers. Datum en begroeting staan gecentreerd; chips staan rechts en stapelen op mobiel binnen dezelfde header. De vaste navigatie erboven blijft ongewijzigd. Zie de [testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.10.md).
+Lokale kandidaat **v0.8.0-alpha.19** combineert de room-cardoverhaul met één browsermatrix, 44×44-touchgates, reduced-motiongedrag, de 3D-printerroute en gecorrigeerde zwembadstatusprecedence. Energy-pariteit en de resterende menselijke accessibilitytest zijn expliciet begrensd. Commit, PR, prerelease en live Home Assistant-acceptatie blijven afzonderlijke gates. Zie de [testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.19.md).
 
 Testcandidate **v0.8.0-alpha.9** gebruikt één navigatiebalk op dezelfde plek en met dezelfde maat in alle views, kiosk zonder extra frontendresource en een beheerderstandwiel voor de native dashboardeditor. Zie de [testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.9.md) en de [volledige testscope en runtimegrenzen](docs/releases/testing-navigation-consistency.md). De onderstaande alpha.8-beschrijving beschrijft de eerdere release.
 
@@ -33,6 +33,11 @@ V1 bevat geen custom panel en geen extra summary-component. De minimale onderste
 - [Integratiestrategie](docs/design/integration-strategy.md)
 - [Multi-agent implementatieplan](docs/design/implementation-plan.md)
 - [Deliveryroadmap: agents, PR's, GUI, HACS en releases](docs/design/delivery-roadmap.md)
+- [Projectkanban en Jira-achtige tickets](docs/planning/kanban.md)
+- [Geconsolideerde browserregressiematrix](docs/quality/browser-regression-matrix.md)
+- [Energy-paritymanifest](docs/quality/energy-parity-manifest.md)
+- [Zwembadstatuscontract](docs/quality/pool-status-contract.md)
+- [Responsive- en accessibility-QA](docs/quality/responsive-accessibility-qa.md)
 - [Grafische configuratie](docs/configuration/gui-overview.md)
 - [Gegenereerde views en read-only contract](docs/configuration/generated-views.md)
 - [Home-configuratie](docs/configuration/home.md)
@@ -64,7 +69,7 @@ Open daarna `http://127.0.0.1:4173/`. De fixtureselector wisselt tussen normaal,
 
 ## HACS-installatie
 
-[`v0.1.0-alpha.1`](https://github.com/ju1ced/home-dashboard/releases/tag/v0.1.0-alpha.1) heeft de volledige HACS-lifecycle doorlopen: installatie, update, verwijdering en herinstallatie. Zie [het geanonimiseerde resultaat](docs/releases/results-v0.1.0-alpha.1.md). De `v0.2`-reeks valideerde de GUI; de `v0.3`-reeks bracht de eerste views; `v0.4.0-alpha.2` verfijnt de cameracarrousel; de `v0.5`-reeks bouwde Home en Kamers uit. `v0.7.0-alpha.2` staat lokaal klaar als herstelcandidate voor Kia bovenop Home, Kamers, Energie en Domeinen; een GitHub-prerelease volgt alleen na expliciete toestemming.
+[`v0.1.0-alpha.1`](https://github.com/ju1ced/home-dashboard/releases/tag/v0.1.0-alpha.1) heeft de volledige HACS-lifecycle doorlopen: installatie, update, verwijdering en herinstallatie. Zie [het geanonimiseerde resultaat](docs/releases/results-v0.1.0-alpha.1.md). De `v0.2`-reeks valideerde de GUI; de `v0.3`-reeks bracht de eerste views; latere alpha's breidden camera's, Home, Kamers en veilige kamerbediening uit. `v0.8.0-alpha.18` is de laatst getagde kandidaat; `v0.8.0-alpha.19` staat uitsluitend lokaal klaar voor de volgende expliciet goed te keuren test- en releasecyclus.
 
 ## Checks
 
@@ -106,4 +111,4 @@ scripts/          lokale preview en repositorychecks
 
 ## Status
 
-v0.8.0-alpha.10 is de testcandidate voor consistente navigatie, lokale kiosk, de configuratie-ingang en de herstelde gekleurde Home-header. De fixtures voeren geen live Home Assistant-write uit; runtime-acceptatie blijft afzonderlijk vereist.
+v0.8.0-alpha.19 is de lokale releasecandidate voor de volgende testcyclus. De geautomatiseerde suite en browsermatrix moeten groen zijn en een onafhankelijke review mag geen open P0/P1 bevatten voordat commit, PR of prerelease wordt voorgesteld. De fixtures voeren geen live Home Assistant-write uit; deployment en runtimeacceptatie vereisen daarna nog de ingevulde menselijke gate uit de testchecklist.

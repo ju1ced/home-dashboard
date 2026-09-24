@@ -98,7 +98,8 @@ export class HomeDashboardCameraStrip extends HTMLElementBase {
 
   private scrollStrip(direction: -1 | 1): void {
     const strip = this.shadowRoot?.querySelector<HTMLElement>(".strip");
-    strip?.scrollBy({ left: direction * strip.clientWidth, behavior: "smooth" });
+    const reducedMotion = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    strip?.scrollBy({ left: direction * strip.clientWidth, behavior: reducedMotion ? "auto" : "smooth" });
   }
 
   private async renderStrip(): Promise<void> {
@@ -114,7 +115,7 @@ export class HomeDashboardCameraStrip extends HTMLElementBase {
     style.textContent = `
       :host{display:block;min-width:0}ha-card{box-sizing:border-box;display:block;max-width:720px;margin:0 auto;padding:10px;border:1px solid var(--divider-color);border-radius:16px;background:var(--ha-card-background,var(--card-background-color));box-shadow:0 1px 2px rgb(20 35 28/.06),0 7px 24px rgb(20 35 28/.035);overflow:hidden}
       .toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 2px 8px}.label{color:var(--secondary-text-color);font-size:.76rem}
-      .controls{display:flex;gap:6px}.controls button{display:grid;place-items:center;width:34px;height:34px;border:0;border-radius:999px;background:var(--secondary-background-color);color:var(--primary-text-color);cursor:pointer}
+      .controls{display:flex;gap:8px}.controls button{display:grid;place-items:center;min-width:44px;min-height:44px;border:0;border-radius:999px;background:var(--secondary-background-color);color:var(--primary-text-color);cursor:pointer}
       .controls button:disabled{opacity:.35;cursor:default}.content{display:grid;grid-template-columns:minmax(0,520px) 150px;justify-content:center;align-items:start;gap:10px}.content.no-privacy{grid-template-columns:minmax(0,520px)}
       .strip{display:flex;overflow-x:auto;overscroll-behavior-inline:contain;scroll-snap-type:inline mandatory;scrollbar-width:none;outline:none;border-radius:12px}.strip::-webkit-scrollbar{display:none}
       .strip:focus-visible{outline:2px solid var(--primary-color);outline-offset:2px}.item{flex:0 0 100%;min-width:0;scroll-snap-align:start;scroll-snap-stop:always}.item>*{display:block;width:100%}
@@ -123,6 +124,7 @@ export class HomeDashboardCameraStrip extends HTMLElementBase {
       .empty{min-height:180px;display:grid;place-items:center;padding:18px;border-radius:12px;background:var(--secondary-background-color);color:var(--secondary-text-color);text-align:center}
       ha-card.compact{height:100%;max-width:none;padding:8px}.compact .toolbar{padding-bottom:6px}.compact .content{grid-template-columns:minmax(0,1fr)}.compact .privacy-rail{display:flex;overflow-x:auto;gap:5px}.compact .privacy-title{display:none}.compact .privacy-chip{flex:0 0 112px;min-height:30px;padding:4px 6px}
       @media(max-width:700px){ha-card{max-width:520px;padding-inline:8px}.content{grid-template-columns:minmax(0,1fr)}.privacy-rail{display:flex;overflow-x:auto}.privacy-title{display:none}.privacy-chip{flex:0 0 128px}}
+      @media (prefers-reduced-motion: reduce){.strip{scroll-behavior:auto}}
     `;
     const card = document.createElement("ha-card");
     if (this._config.compact) card.classList.add("compact");
@@ -162,8 +164,8 @@ export class HomeDashboardCameraStrip extends HTMLElementBase {
       if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
         event.preventDefault();
         this.scrollStrip(event.key === "ArrowLeft" ? -1 : 1);
-      } else if (event.key === "Home") strip.scrollTo({ left: 0, behavior: "smooth" });
-      else if (event.key === "End") strip.scrollTo({ left: strip.scrollWidth, behavior: "smooth" });
+      } else if (event.key === "Home") strip.scrollTo({ left: 0, behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+      else if (event.key === "End") strip.scrollTo({ left: strip.scrollWidth, behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     });
 
     for (const { camera } of visibleCameras) {
