@@ -108,6 +108,26 @@ test('geordende quick actions zijn optioneel en ondersteunen herhaalde types', (
   room.control_entities=[];
   assert.deepEqual(migrateConfig({rooms:[room]}).config.rooms[0].control_entities,[]);
 });
+test('Home accepteert alleen expliciet benoemde verlichtingsswitches', () => {
+  const {room}=setup();
+  const lightSwitch=ref('switch','fixture_lighting');
+  room.control_entities=[lightSwitch];
+  room.light_switch_entities=[lightSwitch];
+  const config=migrateConfig({rooms:[room]}).config;
+  assert.deepEqual(validateConfigSchema(config),[]);
+  assert.equal(validateConfig(config).some(x=>x.code==='control_domain'),false);
+  config.rooms[0].light_switch_entities=[];
+  assert.ok(validateConfig(config).some(x=>x.path==='rooms[0].control_entities[0]'&&x.code==='control_domain'));
+});
+test('legacy Home-fallback toont expliciet gemapte verlichtingsswitches', () => {
+  const {room}=setup();
+  const lightSwitch=ref('switch','fixture_lighting');
+  room.control_entities=undefined;
+  room.control_light_entity='';
+  room.light_entities=[];
+  room.light_switch_entities=[lightSwitch];
+  assert.deepEqual(roomControlSources(room,'light'),[lightSwitch]);
+});
 test('migratie onderscheidt oningestelde legacybediening van een bewust lege actierij', () => {
   const legacy=migrateConfig({rooms:[{key:'legacy',name:'Legacy',area_id:'EXAMPLE_AREA'}]}).config.rooms[0];
   const empty=migrateConfig({rooms:[{key:'empty',name:'Empty',area_id:'EXAMPLE_AREA',control_entities:[]}]}).config.rooms[0];

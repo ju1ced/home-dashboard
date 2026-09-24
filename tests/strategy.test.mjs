@@ -227,7 +227,8 @@ test("Kamers gebruikt een overzichtskaart en een semantisch gegroepeerde detail-
   for (const entity of ["living_lights", "living_hvac", "living_temperature", "living_humidity", "living_media", "living_power", "living_air_quality"]) {
     assert.ok(JSON.stringify(detailCard.room).includes(entity) || entities.includes(entity), `${entity} ontbreekt`);
   }
-  assert.ok(detail.sections.some((section) => section.cards.some((card) => card.type === "history-graph")));
+  const historyGraph = detail.sections.flatMap((section) => section.cards).find((card) => card.type === "history-graph");
+  assert.equal(historyGraph?.hours_to_show, 24);
   assert.equal(getRoomMetric({ states: { living_lights: { state: "on" } } }, config.rooms[0]), "1 lamp aan");
   assert.equal(getRoomMetric({ states: { living_hvac: { state: "heat", attributes: { current_temperature: 21.5 } } } }, config.rooms[0]), "21.5 °C");
   assert.equal(getRoomMetric({ states: { living_media: { state: "unavailable" } } }, config.rooms[0]), "Deels offline");
@@ -502,10 +503,14 @@ test("Zwembad krijgt een stabiele specialistroute, foutdetectie en een zelfstand
         ambient_temperature: "pool_ambient_temperature_primary",
         heater_power: "pool_heater_power_primary",
         has_error: "pool_has_error_primary",
-        salt_system_fault: "pool_salt_fault_primary",
         compressor: "pool_compressor_primary",
         circulate_pump: "pool_circulate_pump_primary",
         filter_pump_state: "pool_filter_pump_primary"
+      },
+      salt_system: {
+        switch: "pool_salt_switch_primary",
+        power: "pool_salt_power_primary",
+        fault_below_watts: 15
       }
     }
   };
@@ -524,7 +529,7 @@ test("Zwembad krijgt een stabiele specialistroute, foutdetectie en een zelfstand
     pool_has_error_primary: { state: "off" },
     pool_salt_fault_primary: { state: "off" }
   } }, config.specialists.pool);
-  assert.equal(heating.status, "heat");
+  assert.equal(heating.status, "Installatie actief");
   assert.equal(heating.waterTemperature, "27.4 °C");
   assert.equal(heating.tone, "normal");
 
@@ -537,7 +542,7 @@ test("Zwembad krijgt een stabiele specialistroute, foutdetectie en een zelfstand
     pool_has_error_primary: { state: "off" },
     pool_salt_fault_primary: { state: "off" }
   } }, config.specialists.pool);
-  assert.equal(heaterOff.status, "Warmtepomp uit");
+  assert.equal(heaterOff.status, "In orde");
   assert.equal(heaterOff.tone, "normal");
 
   const failed = getPoolPresentation({ states: {
@@ -559,10 +564,34 @@ test("Zwembad krijgt een stabiele specialistroute, foutdetectie en een zelfstand
     pool_ambient_temperature_primary: { state: "14.0", attributes: { unit_of_measurement: "°C" } },
     pool_heater_power_primary: { state: "on" },
     pool_has_error_primary: { state: "off" },
-    pool_salt_fault_primary: { state: "on" }
+    pool_salt_switch_primary: { state: "on" },
+    pool_salt_power_primary: { state: "3", attributes: { unit_of_measurement: "W" } }
   } }, config.specialists.pool);
   assert.equal(saltFault.status, "Zoutsysteemfout");
   assert.equal(saltFault.tone, "error");
+
+  const unavailableWins = getPoolPresentation({ states: {
+    pool_status_primary: { state: "heat" },
+    pool_water_temperature_primary: { state: "unavailable" },
+    pool_target_temperature_primary: { state: "28", attributes: { unit_of_measurement: "°C" } },
+    pool_ambient_temperature_primary: { state: "14.0", attributes: { unit_of_measurement: "°C" } },
+    pool_heater_power_primary: { state: "on" },
+    pool_has_error_primary: { state: "on" }
+  } }, config.specialists.pool);
+  assert.equal(unavailableWins.status, "Zwembadstatus niet beschikbaar");
+  assert.equal(unavailableWins.tone, "unavailable");
+  assert.equal(unavailableWins.targetTemperature, "28 °C");
+
+  const freeTextDoesNotEscalate = getPoolPresentation({ states: {
+    pool_status_primary: { state: "fault" },
+    pool_water_temperature_primary: { state: "24.1", attributes: { unit_of_measurement: "°C" } },
+    pool_target_temperature_primary: { state: "28", attributes: { unit_of_measurement: "°C" } },
+    pool_ambient_temperature_primary: { state: "14.0", attributes: { unit_of_measurement: "°C" } },
+    pool_heater_power_primary: { state: "off" },
+    pool_has_error_primary: { state: "off" }
+  } }, config.specialists.pool);
+  assert.equal(freeTextDoesNotEscalate.status, "In orde");
+  assert.equal(freeTextDoesNotEscalate.tone, "normal");
 
   const unavailableResource = await HomeDashboardViewStrategy.generate(specialist.strategy);
   const specialistSection = unavailableResource.sections.find((section) => section.cards.some((card) => card.type === "custom:home-dashboard-pool-summary"));
@@ -634,7 +663,8 @@ test("cameracarrousel rendert één beeldbreedte en een compacte privacyrail", a
 test("visuele cards houden bediening op de kamerpagina naast secundaire HA-details", async () => {
   const bundle = await readFile(new URL("../dist/home-dashboard.js", import.meta.url), "utf8");
   assert.match(bundle, /hass-more-info/);
-  assert.match(bundle, /Nu bedienen/);
+  assert.match(bundle, /mushroom-controls/);
+  assert.match(bundle, /history-dialog/);
   assert.match(bundle, /open_cover/);
   assert.match(bundle, /Ontgrendel om te schakelen/);
   assert.match(bundle, /Samenhangend Home-overzicht/);

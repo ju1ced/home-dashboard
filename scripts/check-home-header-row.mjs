@@ -3,11 +3,13 @@ import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 const require = createRequire(process.env.HD_BROWSER_PACKAGES ? `${process.env.HD_BROWSER_PACKAGES}/package.json` : import.meta.url);
 const { chromium } = require('playwright');
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({ headless: true, ...(process.env.HD_BROWSER_CHANNEL ? { channel: process.env.HD_BROWSER_CHANNEL } : {}) });
 const page = await browser.newPage();
-const directory = 'generated/header-row';
+const prototypeUrl = process.env.HD_PROTOTYPE_URL || 'http://127.0.0.1:4173';
+const directory = process.env.HD_RENDER_DIRECTORY || 'generated/header-row';
 await mkdir(directory, { recursive: true });
 const errors = [];
+let currentCase = 'home-header/startup';
 page.on('pageerror', error => errors.push(error.message));
 await page.addInitScript(() => {
   const RealDate = Date;
@@ -30,8 +32,9 @@ async function layout() {
 }
 try {
   for (const mode of ['integrated', 'kiosk']) {
+    currentCase = `home-header/${mode}/system/1920x1000`;
     await page.setViewportSize({ width:1920, height:1000 });
-    await page.goto(`http://127.0.0.1:4173/room-controls.html?navigation=${mode}`);
+    await page.goto(`${prototypeUrl}/room-controls.html?navigation=${mode}`);
     await page.waitForFunction(() => window.roomFixture);
     await settle();
     const wide = await layout();
@@ -41,6 +44,7 @@ try {
     assert.ok(wide.controls.at(-1).right < wide.intro.x && wide.intro.right < wide.pills.x, 'no collisions');
     assert.equal(wide.overflow, false);
     await page.screenshot({ path:`${directory}/1920-${mode}.png` });
+    currentCase = `home-header/${mode}/system/390x1000`;
     await page.setViewportSize({ width:390, height:1000 });
     await settle();
     const mobile = await layout();
@@ -52,4 +56,6 @@ try {
   }
   assert.deepEqual(errors, []);
   console.log('Home single-row regression passed: wide alignment and mobile stacking.');
+} catch (error) {
+  throw new Error(`${currentCase}: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
 } finally { await browser.close(); }

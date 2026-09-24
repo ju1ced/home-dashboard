@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../prototype");
 const repositoryRoot = path.resolve(root, "..");
 const port = Number.parseInt(process.env.HD_PROTOTYPE_PORT || "4173", 10);
+const healthToken = process.env.HD_PROTOTYPE_TOKEN || "standalone";
 
 const contentTypes = new Map([
   [".html", "text/html; charset=utf-8"],
@@ -18,6 +19,11 @@ const contentTypes = new Map([
 const server = http.createServer(async (request, response) => {
   try {
     const requestUrl = new URL(request.url || "/", "http://localhost");
+    if (requestUrl.pathname === "/__health") {
+      response.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+      response.end(JSON.stringify({ service: "home-dashboard-prototype", token: healthToken }));
+      return;
+    }
     const relative = decodeURIComponent(requestUrl.pathname === "/" ? "/index.html" : requestUrl.pathname);
     const target = relative.startsWith("/dist/")
       ? path.resolve(repositoryRoot, `.${relative}`)

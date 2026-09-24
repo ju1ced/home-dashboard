@@ -1,6 +1,6 @@
 {
   "name": "home-dashboard",
-  "version": "0.8.0-alpha.18",
+  "version": "0.8.0-alpha.19",
   "private": true,
   "type": "module",
   "description": "HACS-installable community dashboard strategy for Home Assistant",
@@ -8,8 +8,10 @@
   "packageManager": "pnpm@11.19.0",
   "scripts": {
     "build": "node scripts/build.mjs",
+    "browser:install": "playwright install chromium",
     "check": "pnpm typecheck && pnpm build && node scripts/verify-dist.mjs && node --check prototype/app.js && node --check prototype/fixtures.js && node --check prototype/editor-harness.js && node scripts/check-repo.mjs",
     "test": "pnpm check && node --test tests/*.test.mjs",
+    "test:browser": "node scripts/check-browser-matrix.mjs",
     "typecheck": "tsc --noEmit",
     "release:assets": "node scripts/create-release-assets.mjs",
     "serve": "node scripts/serve-prototype.mjs"
@@ -20,6 +22,7 @@
   "devDependencies": {
     "@types/node": "^26.4.0",
     "esbuild": "^0.28.2",
+    "playwright": "1.63.0",
     "typescript": "^7.0.2"
   }
 }

@@ -132,6 +132,7 @@ window.HD_FIXTURES = (() => {
     kia: { icon: "car", eyebrow: "Mobiliteit", title: "Kia EV", status: "Laden", metric: "68%", meta: "312 km bereik · 8 min geleden", tone: "active" },
     robot: { icon: "vacuum", eyebrow: "Schoonmaak", title: "Robot", status: "Bezig", metric: "42%", meta: "Woonkamer · 31 min resterend", tone: "active" },
     garden: { icon: "leaf", eyebrow: "Buiten", title: "Tuin", status: "Aandacht", metric: "2 droog", meta: "Irrigatie uit · geen regen", tone: "warning" },
+    printer: { icon: "printer", eyebrow: "Werkplaats", title: "3D-printer", status: "Print actief", metric: "42%", meta: "38 min resterend · laag 84/200", tone: "active" },
     pool: { icon: "pool", eyebrow: "Water", title: "Zwembad", status: "In orde", metric: "27,2°", meta: "pH 7,3 · filter actief", tone: "normal" }
   };
 
@@ -181,6 +182,7 @@ window.HD_FIXTURES = (() => {
         kia: { ...specialistBase.kia, status: "Geparkeerd", metric: "82%", meta: "376 km bereik · 12 min geleden", tone: "normal" },
         robot: { ...specialistBase.robot, status: "Op basis", metric: "100%", meta: "Volgende ronde morgen 10:00", tone: "normal" },
         garden: { ...specialistBase.garden, status: "In orde", metric: "0 droog", meta: "Irrigatie uit · regen verwacht", tone: "normal" },
+        printer: { ...specialistBase.printer, status: "Gereed", metric: "100%", meta: "Laatste taak voltooid", tone: "normal" },
         pool: specialistBase.pool
       },
       energy,
@@ -209,6 +211,7 @@ window.HD_FIXTURES = (() => {
         kia: { ...specialistBase.kia, status: "Niet actueel", metric: "—", meta: "Laatste betrouwbare update 2 uur geleden", tone: "unavailable" },
         robot: { ...specialistBase.robot, status: "Op basis", metric: "100%", meta: "Kaartbron niet beschikbaar", tone: "warning" },
         garden: { ...specialistBase.garden, status: "In orde", metric: "0 droog", meta: "1 optionele zone offline", tone: "normal" },
+        printer: { ...specialistBase.printer, status: "Niet beschikbaar", metric: "—", meta: "Statusbron offline", tone: "unavailable" },
         pool: { ...specialistBase.pool, status: "Deels actueel", meta: "1 optionele sensor offline", tone: "warning" }
       },
       today: {

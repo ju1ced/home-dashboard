@@ -4,9 +4,9 @@
 
 ## Volgende teststap
 
-Testcandidate **v0.8.0-alpha.18** verfijnt de kamerdetailpagina naar drie brede, scanbare kolommen en voegt expliciete verlichtingsswitches toe. Directe bediening, statusblokken en de bestaande veiligheidsbevestigingen blijven behouden. Zie de [versiechecklist](../releases/testing-v0.8.0-alpha.18.md). Live acceptatie blijft een afzonderlijke gate.
+Testcandidate **v0.8.0-alpha.19** bouwt voort op de driekoloms kamerdetailpagina en expliciete verlichtingsswitches met een geconsolideerde browsermatrix, 44×44-touchgates, reduced motion, 3D-printerdekking en bevestigde zwembadstatusprecedence. Zie de [versiechecklist](../releases/testing-v0.8.0-alpha.19.md). Live acceptatie blijft een afzonderlijke gate.
 
-Daarna volgt de bestaande QA-gate: responsive gedrag, toetsenbord/focus, themecontrast en runtimecontrole op het expliciet goedgekeurde testdashboard. Specialistische volledigheid (robot, tuin en de uitgebreide zwembadkaart) en performance/resource-audit blijven afzonderlijke roadmapstappen, niet impliciet voltooid door de huidige alpha's. De eerder gevonden zwembadstatusrandgevallen moeten eerst tegen de actuele bron worden bevestigd en vervolgens als aparte regressieslice worden opgelost.
+De volgende stap is de menselijke QA- en runtimegate: 200% zoom, screenreader, echt themecontrast, Energy-pariteit en runtimecontrole op het expliciet goedgekeurde testdashboard. Specialistische volledigheid (robot, tuin en de uitgebreide zwembadkaart) en performance/resource-audit blijven afzonderlijke roadmapstappen, niet impliciet voltooid door deze alpha.
 
 ## Status en doel
 
