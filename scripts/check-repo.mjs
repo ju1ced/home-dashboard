@@ -160,8 +160,16 @@ for (const [file, expected] of renderSizes) {
 }
 
 // Generated output is intentionally gitignored and may contain local release
-// metadata. Privacy verification covers only tracked source and fixtures.
-const allFiles = (await walk(root)).filter((file) => !path.relative(root, file).startsWith("generated/"));
+// metadata such as a Git commit SHA. Privacy verification covers tracked source
+// and fixtures, not the two generated release sidecars.
+const generatedPrivacyExclusions = new Set([
+  "dist/home-dashboard.js.sha256",
+  "dist/release-manifest.json"
+]);
+const allFiles = (await walk(root)).filter((file) => {
+  const relative = path.relative(root, file).replaceAll("\\", "/");
+  return !relative.startsWith("generated/") && !generatedPrivacyExclusions.has(relative);
+});
 const markdownFiles = allFiles.filter((file) => file.endsWith(".md"));
 const textExtensions = new Set([".md", ".html", ".css", ".js", ".mjs", ".ts", ".json", ".yaml", ".yml"]);
 const textFiles = allFiles.filter((file) => textExtensions.has(path.extname(file).toLowerCase()));

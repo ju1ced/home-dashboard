@@ -26,7 +26,7 @@ const checks = [
   {
     label: "room detail",
     script: "scripts/check-room-detail-browser.mjs",
-    context: "normal/dark/warning/missing/unavailable at 390×844, 1024×900 and 1440×900",
+    context: "normal/dark/warning/missing/unknown/unavailable at 390×844, 1024×900 and 1440×900",
     environment: { HD_RENDER_DIRECTORY: "generated/browser-matrix/room-detail" }
   },
   {

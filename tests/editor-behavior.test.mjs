@@ -262,3 +262,26 @@ test("Vandaag-selectors behouden hun keuze na de echte value-changed plus change
   assert.equal(saved.today.battery_soc_entity, "battery_soc_primary");
   assert.equal(editor.shadowRoot.selectors.find((element) => element.dataset.path === "today.battery_soc_entity").value, "battery_soc_primary");
 });
+
+test("kamereditor beheert geneste Control Deck-items zonder JSON-handwerk", () => {
+  const config = createDefaultConfig();
+  config.rooms.push(room("kitchen"));
+  const editor = new HomeDashboardStrategyEditor();
+  editor.connectedCallback();
+  editor.setConfig(config);
+
+  editor.addRoomNestedItem(0, "light_groups");
+  editor.addRoomNestedItem(0, "cover_controls");
+  editor.addRoomNestedItem(0, "smart_plugs");
+  assert.equal(editor._config.rooms[0].light_groups.length, 1);
+  assert.equal(editor._config.rooms[0].cover_controls.length, 1);
+  assert.equal(editor._config.rooms[0].smart_plugs.length, 1);
+
+  editor.updateRoomNestedItem(0, "light_groups", 0, "name", "Werkblad");
+  editor.updateRoomNestedItem(0, "smart_plugs", 0, "protected", true);
+  assert.equal(editor._config.rooms[0].light_groups[0].name, "Werkblad");
+  assert.equal(editor._config.rooms[0].smart_plugs[0].protected, true);
+
+  editor.removeRoomNestedItem(0, "cover_controls", 0);
+  assert.equal(editor._config.rooms[0].cover_controls.length, 0);
+});

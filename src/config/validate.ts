@@ -29,6 +29,22 @@ function validateEnum(path: string, value: string, allowed: readonly string[]): 
   return allowed.includes(value) ? undefined : issue(path, "enum", `Waarde '${value}' is niet toegestaan.`);
 }
 
+function validateNestedKeys(items: readonly unknown[] | undefined, path: string): ValidationIssue[] {
+  const seen = new Set<string>();
+  const issues: ValidationIssue[] = [];
+  (items ?? []).forEach((item, index) => {
+    if (typeof item !== "object" || item === null || Array.isArray(item) || typeof (item as { key?: unknown }).key !== "string") {
+      issues.push(issue(`${path}[${index}]`, "nested_item_shape", "Ongeldig configuratie-item."));
+      return;
+    }
+    const keyedItem = item as { key: string };
+    if (!LOGICAL_KEY.test(keyedItem.key)) issues.push(issue(`${path}[${index}].key`, "invalid_logical_key", "Gebruik kleine letters, cijfers en underscores; begin met een letter."));
+    if (seen.has(keyedItem.key)) issues.push(issue(`${path}[${index}].key`, "duplicate_nested_key", `Logische sleutel '${keyedItem.key}' komt binnen deze kamer dubbel voor.`));
+    seen.add(keyedItem.key);
+  });
+  return issues;
+}
+
 export function validateConfig(config: HomeDashboardConfigV1): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
   if (config.type !== "custom:home-dashboard") {
@@ -76,6 +92,42 @@ export function validateConfig(config: HomeDashboardConfigV1): ValidationIssue[]
   const actionKeys = new Set(config.actions.map((action) => action.key));
   if (config.rooms.filter(room => room.home_favorite).length > 4) issues.push(issue("rooms", "favorite_limit", "Kies maximaal vier favoriete kamers."));
   config.rooms.forEach((room, index) => {
+    issues.push(...validateNestedKeys(room.light_groups, `rooms[${index}].light_groups`));
+    issues.push(...validateNestedKeys(room.cover_controls, `rooms[${index}].cover_controls`));
+    issues.push(...validateNestedKeys(room.smart_plugs, `rooms[${index}].smart_plugs`));
+    room.light_groups?.forEach((group, groupIndex) => {
+      if (!group || typeof group !== "object") return;
+      if (!group.control_entity.startsWith("light.")) issues.push(issue(`rooms[${index}].light_groups[${groupIndex}].control_entity`, "light_group_domain", "Een lichtgroep gebruikt een light-entiteit als expliciet actiedoel."));
+      if (group.member_entities.length === 0) issues.push(issue(`rooms[${index}].light_groups[${groupIndex}].member_entities`, "light_group_members_required", "Kies minstens één lichtgroeplid."));
+      group.member_entities.forEach((entity, memberIndex) => {
+        if (!entity.startsWith("light.")) issues.push(issue(`rooms[${index}].light_groups[${groupIndex}].member_entities[${memberIndex}]`, "light_group_domain", "Lichtgroepleden moeten light-entiteiten zijn."));
+      });
+    });
+    room.cover_controls?.forEach((cover, coverIndex) => {
+      if (!cover || typeof cover !== "object") return;
+      if (!cover.entity.startsWith("cover.")) issues.push(issue(`rooms[${index}].cover_controls[${coverIndex}].entity`, "cover_domain", "Een opening gebruikt een cover-entiteit."));
+      if (cover.kind === "awning" && cover.confirmation !== "movement") issues.push(issue(`rooms[${index}].cover_controls[${coverIndex}].confirmation`, "awning_confirmation_required", "Een luifel vereist bevestiging bij beweging."));
+    });
+    const plugTargets = new Set<string>();
+    room.smart_plugs?.forEach((plug, plugIndex) => {
+      if (!plug || typeof plug !== "object") return;
+      if (plug.switch_entity && !plug.switch_entity.startsWith("switch.")) issues.push(issue(`rooms[${index}].smart_plugs[${plugIndex}].switch_entity`, "plug_domain", "Een schakelbare plug gebruikt een switch-entiteit."));
+      if (plug.switch_entity && plugTargets.has(plug.switch_entity)) issues.push(issue(`rooms[${index}].smart_plugs[${plugIndex}].switch_entity`, "duplicate_plug_target", "Kies per smart plug een afzonderlijk schakeldoel."));
+      if (plug.switch_entity) plugTargets.add(plug.switch_entity);
+      if (plug.protected && room.light_switch_entities?.includes(plug.switch_entity)) issues.push(issue(`rooms[${index}].smart_plugs[${plugIndex}].switch_entity`, "protected_control_overlap", "Een beveiligde smart plug mag niet tegelijk als verlichtingsswitch bedienbaar zijn."));
+      for (const field of ["power_entity", "energy_entity", "voltage_entity", "energy_day_entity", "energy_month_entity", "energy_year_entity"] as const) {
+        const reference = plug[field];
+        if (reference && !reference.startsWith("sensor.")) issues.push(issue(`rooms[${index}].smart_plugs[${plugIndex}].${field}`, "plug_measurement_domain", "Een plugmeting gebruikt een sensor-entiteit."));
+      }
+      if (plug.protected && !plug.protection_reason?.trim()) issues.push(issue(`rooms[${index}].smart_plugs[${plugIndex}].protection_reason`, "protection_reason_required", "Leg uit waarom deze plug niet bediend kan worden."));
+    });
+    if (room.room_energy) {
+      for (const field of ["power_entity", "day_entity", "month_entity", "year_entity"] as const) {
+        const reference = room.room_energy[field];
+        if (reference && !reference.startsWith("sensor.")) issues.push(issue(`rooms[${index}].room_energy.${field}`, "room_energy_domain", "Een kamerenergiemeting gebruikt een sensor-entiteit."));
+      }
+    }
+    if (room.image_entity && !room.image_entity.startsWith("image.")) issues.push(issue(`rooms[${index}].image_entity`, "legacy_room_image_domain", "Deze bestaande afbeeldingsbron blijft schema-v1-compatibel; kies voor nieuwe configuratie een privacyveilige image-entiteit.", "warning"));
     room.control_entities?.forEach((reference, controlIndex) => {
       if (!reference) return;
       const domain = reference.split(".")[0] ?? "";

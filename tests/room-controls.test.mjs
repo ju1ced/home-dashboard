@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { migrateConfig, favoriteRooms, roomControlSources, planRoomControl, executeRoomControl, validateConfig, validateConfigSchema, getHomeStructureSignature } from '../dist/home-dashboard.js';
+import { migrateConfig, favoriteRooms, roomControlSources, planRoomControl, planEntityControl, executeRoomControl, validateConfig, validateConfigSchema, getHomeStructureSignature, resolveLightGroupState } from '../dist/home-dashboard.js';
 
 const ref = (domain, key) => [domain, key].join('.');
 function setup() {
@@ -35,6 +35,14 @@ test('licht stuurt uitsluitend het expliciet gekozen doel en gebruikt actuele to
   hass.states[room.control_light_entity].state='on';
   await executeRoomControl(room,hass,'light','toggle');
   assert.equal(calls[1][1],'turn_off');
+});
+test('beveiligde smart plug blijft via overlappende lichtmapping fail-closed', () => {
+  const {room,hass}=setup();
+  const protectedTarget=ref('switch','protected_fixture');
+  room.light_switch_entities=[protectedTarget];
+  room.smart_plugs=[{key:'protected_plug',name:'Beveiligd',switch_entity:protectedTarget,power_entity:'',energy_entity:'',voltage_entity:'',protected:true,protection_reason:'Automatisch beheerd.'}];
+  hass.states[protectedTarget]={state:'on'};
+  assert.equal(planEntityControl(room,hass,protectedTarget,'light','toggle'),undefined);
 });
 test('missing unknown unavailable en uitgeschakelde bediening blokkeren calls', async () => {
   for(const state of [undefined,'unknown','unavailable']) {
@@ -143,4 +151,30 @@ test('schema accepteert optionele velden en validator weigert verkeerde of dubbe
   assert.ok(codes.includes('control_domain'));assert.ok(codes.includes('duplicate_control'));
   config.rooms[0].control_entities=[ref('switch','fixture')];
   assert.ok(validateConfig(config).some(x=>x.path==='rooms[0].control_entities[0]'&&x.code==='control_domain'));
+});
+
+test('lichtgroepstatus onderscheidt uit, aan, gedeeltelijk, onbekend en onbeschikbaar', () => {
+  const entities = [ref('light', 'fixture_first'), ref('light', 'fixture_second')];
+  assert.equal(resolveLightGroupState({
+    [entities[0]]: { state: 'off' },
+    [entities[1]]: { state: 'off' }
+  }, entities), 'off');
+  assert.equal(resolveLightGroupState({
+    [entities[0]]: { state: 'on' },
+    [entities[1]]: { state: 'on' }
+  }, entities), 'on');
+  assert.equal(resolveLightGroupState({
+    [entities[0]]: { state: 'on' },
+    [entities[1]]: { state: 'off' }
+  }, entities), 'partial');
+  assert.equal(resolveLightGroupState({
+    [entities[0]]: { state: 'unknown' },
+    [entities[1]]: { state: 'off' }
+  }, entities), 'unknown');
+  assert.equal(resolveLightGroupState({
+    [entities[0]]: { state: 'unavailable' },
+    [entities[1]]: { state: 'off' }
+  }, entities), 'unavailable');
+  assert.equal(resolveLightGroupState({}, entities), 'unknown');
+  assert.equal(resolveLightGroupState({}, []), 'unknown');
 });

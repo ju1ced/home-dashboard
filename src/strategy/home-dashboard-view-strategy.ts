@@ -105,22 +105,11 @@ function roomDetailSection(title: string, icon: string, cards: LovelaceConfig[],
 
 function roomDetailSections(room: RoomConfig | undefined, maxColumns: number, palette?: HomeDashboardConfigV1["general"]["palette"], themeMode?: HomeDashboardConfigV1["general"]["theme_mode"]): LovelaceConfig[] {
   if (!room) return [{ type: "grid", cards: [markdown("Deze kamerconfiguratie ontbreekt.", "Kamer")] }];
-  const sections: Array<LovelaceConfig | undefined> = [{
+  return [{
     type: "grid",
     column_span: maxColumns,
     cards: [{ type: "custom:home-dashboard-room-detail", room, palette, theme_mode: themeMode, grid_options: { columns: "full", rows: "auto" } }]
   }];
-
-  const historyEntities = uniqueEntities([...room.history_entities, ...room.hvac.history_entities]);
-  if (historyEntities.length > 0) {
-    sections.push(roomDetailSection("Historie", "mdi:chart-line", [{
-      type: "history-graph",
-      entities: historyEntities,
-      hours_to_show: 24,
-      grid_options: { columns: "full", rows: 5 }
-    }], maxColumns));
-  }
-  return sections.filter((candidate): candidate is LovelaceConfig => Boolean(candidate));
 }
 
 function moreSections(config: HomeDashboardViewConfig): LovelaceConfig[] {

@@ -2,7 +2,7 @@ import { HomeDashboardRoomControls, planEntityControl } from "./home-dashboard-r
 import type { RoomConfig } from "../config/types";
 import { applyDashboardPalette, type DashboardPalette, type ThemeMode } from "../theme/palettes";
 
-type StateLike = { state?: string; attributes?: Record<string, unknown> };
+type StateLike = { state?: string; attributes?: Record<string, unknown>; last_updated?: string };
 type HomeAssistantLike = {
   states?: Record<string, StateLike>;
   callService?: (domain: string, service: string, data: Record<string, unknown>) => Promise<unknown>;
@@ -38,6 +38,7 @@ type DevicePresentation = { entity: string; icon: string; label: string; value: 
 type DetailKind = "light" | "cover" | "media" | "climate" | "plug";
 type DetailCommand = "toggle" | "open" | "stop" | "close" | "set_temperature";
 type DetailPlan = { entity: string; domain: string; service: string; data: Record<string, unknown> };
+export type LightGroupState = "off" | "on" | "partial" | "unknown" | "unavailable";
 
 declare global {
   interface Window {
@@ -52,13 +53,25 @@ export function roomPath(room: Pick<RoomConfig, "key">): string {
   return `room-${room.key.replaceAll("_", "-")}`;
 }
 
+export function resolveLightGroupState(states: Record<string, StateLike>, entities: readonly string[]): LightGroupState {
+  if (entities.length === 0) return "unknown";
+  const values = entities.map((entity) => states[entity]?.state);
+  if (values.some((value) => value === "unavailable")) return "unavailable";
+  if (values.some((value) => !value || value === "unknown")) return "unknown";
+  if (values.every((value) => value === "on")) return "on";
+  if (values.every((value) => value === "off")) return "off";
+  return "partial";
+}
+
 function roomEntities(room: RoomConfig): string[] {
   return [...new Set([
     ...(room.control_entities ?? []),
     room.control_light_entity ?? "", room.control_cover_entity ?? "", room.control_awning_entity ?? "", room.control_media_entity ?? "",
     ...room.light_entities,
     ...(room.light_switch_entities ?? []),
+    ...(room.light_groups ?? []).flatMap((group) => [group.control_entity, ...group.member_entities]),
     ...room.cover_entities,
+    ...(room.cover_controls ?? []).map((cover) => cover.entity),
     room.hvac.entity,
     ...room.hvac.comfort_entities,
     ...room.media_entities,
@@ -67,7 +80,8 @@ function roomEntities(room: RoomConfig): string[] {
     ...room.power_entities,
     room.image_entity ?? "",
     room.temperature_history_entity ?? "",
-    ...(room.smart_plugs ?? []).flatMap((plug) => [plug.switch_entity, plug.power_entity, plug.energy_entity, plug.voltage_entity]),
+    ...(room.smart_plugs ?? []).flatMap((plug) => [plug.switch_entity, plug.power_entity, plug.energy_entity, plug.voltage_entity, plug.energy_day_entity ?? "", plug.energy_month_entity ?? "", plug.energy_year_entity ?? ""]),
+    room.room_energy?.power_entity ?? "", room.room_energy?.day_entity ?? "", room.room_energy?.month_entity ?? "", room.room_energy?.year_entity ?? "",
     ...room.history_entities,
     ...room.hvac.history_entities
   ].filter(Boolean))];
@@ -114,6 +128,33 @@ function stateText(state: StateLike | undefined): string {
 
 function friendlyName(state: StateLike | undefined, fallback: string): string {
   return typeof state?.attributes?.friendly_name === "string" ? state.attributes.friendly_name : fallback;
+}
+
+function sourceContext(state: StateLike | undefined, fallback: string): string {
+  const source = friendlyName(state, fallback);
+  const updated = state?.last_updated ? new Date(state.last_updated) : undefined;
+  const ageMinutes = updated && Number.isFinite(updated.getTime()) ? Math.max(0, Math.floor((Date.now() - updated.getTime()) / 60_000)) : undefined;
+  const freshness = ageMinutes === undefined ? "versheid onbekend" : ageMinutes < 15 ? "recent" : ageMinutes < 1_440 ? `${Math.floor(ageMinutes / 60)} uur oud` : `${Math.floor(ageMinutes / 1_440)} dagen oud`;
+  const updateText = updated && Number.isFinite(updated.getTime())
+    ? `bijgewerkt ${updated.toLocaleDateString("nl-BE")} ${updated.toLocaleTimeString("nl-BE", { hour: "2-digit", minute: "2-digit" })} · ${freshness}`
+    : "update en versheid onbekend";
+  return `Bron: ${source} · ${updateText}`;
+}
+
+function periodContext(status: "running" | "completed" | undefined, label: string): string {
+  if (status === "running") return `Lopende ${label.toLowerCase()}`;
+  if (status === "completed") return `Afgesloten ${label.toLowerCase()}`;
+  return `Periodestatus voor ${label.toLowerCase()} niet gemapt`;
+}
+
+function energyKwh(state: StateLike | undefined): number | undefined {
+  const value = Number(state?.state);
+  const unit = state?.attributes?.unit_of_measurement;
+  if (!Number.isFinite(value) || typeof unit !== "string") return undefined;
+  if (unit === "Wh") return value / 1000;
+  if (unit === "kWh") return value;
+  if (unit === "MWh") return value * 1000;
+  return undefined;
 }
 
 
@@ -200,7 +241,7 @@ export function getRoomMetric(hass: HomeAssistantLike | undefined, room: RoomCon
   const states = operationalEntities.map((entity) => hass?.states?.[entity]);
   if (states.some((state) => state?.state === "unavailable")) return "Deels offline";
   const openCovers = room.cover_entities.filter((entity) => ["open", "opening"].includes(hass?.states?.[entity]?.state ?? ""));
-  if (openCovers.length > 0) return openCovers.length === 1 ? "1 opening open" : `${openCovers.length} open`;
+  if (openCovers.length > 0) return openCovers.length === 1 ? "1 opening geopend" : `${openCovers.length} openingen geopend`;
   const lightsOn = [...room.light_entities, ...(room.light_switch_entities ?? [])].filter((entity) => hass?.states?.[entity]?.state === "on").length;
   if (lightsOn > 0) return lightsOn === 1 ? "1 lamp aan" : `${lightsOn} lampen aan`;
   const climate = room.hvac.entity ? hass?.states?.[room.hvac.entity] : undefined;
@@ -341,11 +382,21 @@ export class HomeDashboardRoomOverview extends RoomCardBase<RoomOverviewConfig> 
 export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
   private generation = 0;
   private actionSequence = 0;
+  private pendingActions = new Set<string>();
+  private actionFeedback = new Map<string, { tone: "pending" | "success" | "error"; message: string; sequence: number }>();
+  private activeDetailTab: "controls" | "devices" | "energy" | "history" = "controls";
+  private activeEnergyPeriod: "day" | "month" | "year" = "day";
+  private activeCapability: RoomConfig["capabilities"][number] | "devices" | undefined;
 
   public setConfig(config: RoomDetailConfig): void {
     if (!config.room?.key) throw new Error("Kamer ontbreekt.");
     this.disconnectedCallback();
     this.config = config;
+    this.activeDetailTab = "controls";
+    this.activeEnergyPeriod = "day";
+    this.activeCapability = undefined;
+    this.pendingActions.clear();
+    this.actionFeedback.clear();
     applyDashboardPalette(this, config.palette, config.theme_mode);
     this.signature = "";
     this.render();
@@ -362,7 +413,11 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
   }
 
   public connectedCallback(): void { this.render(); }
-  public disconnectedCallback(): void { this.generation++; this.shadowRoot?.querySelectorAll("dialog").forEach(dialog => dialog.remove()); }
+  public disconnectedCallback(): void { this.generation++; this.pendingActions.clear(); this.shadowRoot?.querySelectorAll("dialog").forEach(dialog => dialog.remove()); }
+
+  private actionKey(entity: string, kind: DetailKind, command: DetailCommand): string {
+    return `${kind}:${entity}:${command}`;
+  }
 
   private planAction(entity: string, kind: DetailKind, command: DetailCommand, data: Record<string, unknown> = {}): DetailPlan | undefined {
     const room = this.config?.room;
@@ -376,14 +431,19 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
         : undefined;
     }
     if (kind === "plug") {
-      const mapped = room.smart_plugs?.some(candidate => candidate.switch_entity === entity);
+      const plug = room.smart_plugs?.find(candidate => candidate.switch_entity === entity);
       const state = hass.states?.[entity]?.state;
-      return room.controls_enabled === true && mapped && entity.startsWith("switch.") && command === "toggle" && ["on", "off"].includes(state ?? "")
+      return room.controls_enabled === true && plug && !plug.protected && entity.startsWith("switch.") && command === "toggle" && ["on", "off"].includes(state ?? "")
         ? { entity, domain: "switch", service: state === "on" ? "turn_off" : "turn_on", data }
         : undefined;
     }
     if (command === "set_temperature") return undefined;
-    const plan = planEntityControl(room, hass, entity, kind, command);
+    const controlRoom = kind === "light"
+      ? { ...room, light_entities: [...new Set([...room.light_entities, ...(room.light_groups ?? []).flatMap((groupConfig) => [groupConfig.control_entity, ...groupConfig.member_entities])])] }
+      : kind === "cover"
+        ? { ...room, cover_entities: [...new Set([...room.cover_entities, ...(room.cover_controls ?? []).map((coverConfig) => coverConfig.entity)])] }
+        : room;
+    const plan = planEntityControl(controlRoom, hass, entity, kind, command);
     return plan ? { entity: plan.entity, domain: plan.domain, service: plan.service, data } : undefined;
   }
 
@@ -393,19 +453,27 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     const generation = this.generation;
     const sequence = ++this.actionSequence;
     const roomKey = this.config?.room.key;
-    if (!plan || !hass?.callService) return;
-    this.shadowRoot?.querySelector("[role=alert]")?.remove();
+    const actionKey = this.actionKey(entity, kind, command);
+    if (!plan || !hass?.callService || this.pendingActions.has(actionKey)) return;
+    this.pendingActions.add(actionKey);
+    this.actionFeedback.set(actionKey, { tone: "pending", message: "Bediening wordt uitgevoerd…", sequence });
+    this.render(true);
     let request: Promise<unknown>;
     try {
       request = hass.callService(plan.domain, plan.service, { ...plan.data, entity_id: plan.entity });
     } catch {
       request = Promise.reject();
     }
-    void request.catch(() => {
-      if (generation !== this.generation || sequence !== this.actionSequence || roomKey !== this.config?.room.key || !this.isConnected || this.shadowRoot?.querySelector("[role=alert]")) return;
-      const message = document.createElement("p"); message.setAttribute("role", "alert");
-      message.textContent = "Bediening mislukt. Controleer de toestand en probeer opnieuw.";
-      this.shadowRoot?.querySelector("main")?.prepend(message);
+    void request.then(() => {
+      this.pendingActions.delete(actionKey);
+      if (generation !== this.generation || roomKey !== this.config?.room.key || !this.isConnected) return;
+      this.actionFeedback.set(actionKey, { tone: "success", message: "Bediening bevestigd door Home Assistant.", sequence });
+      this.render(true);
+    }, () => {
+      this.pendingActions.delete(actionKey);
+      if (generation !== this.generation || roomKey !== this.config?.room.key || !this.isConnected) return;
+      this.actionFeedback.set(actionKey, { tone: "error", message: "Bediening mislukt. Controleer de toestand en probeer opnieuw.", sequence });
+      this.render(true);
     });
   }
 
@@ -415,7 +483,7 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     button.className = "command";
     button.textContent = label;
     button.dataset.controlKey = `${kind}:${entity}:${command}`;
-    button.disabled = !this.planAction(entity, kind, command, data);
+    button.disabled = this.pendingActions.has(this.actionKey(entity, kind, command)) || !this.planAction(entity, kind, command, data);
     button.addEventListener("click", () => this.callService(entity, kind, command, data));
     return button;
   }
@@ -426,7 +494,7 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     button.className = "command";
     button.textContent = label;
     button.dataset.controlKey = `cover:${entity}:${command}`;
-    button.disabled = !this.planAction(entity, "cover", command);
+    button.disabled = this.pendingActions.has(this.actionKey(entity, "cover", command)) || !this.planAction(entity, "cover", command);
     let armed = false;
     const reset = (): void => {
       armed = false;
@@ -474,7 +542,7 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     if (toggle) {
       (card as HTMLButtonElement).type = "button";
       card.dataset.controlKey = `light:${entity}:toggle`;
-      (card as HTMLButtonElement).disabled = !this.planAction(entity, "light", "toggle");
+      (card as HTMLButtonElement).disabled = this.pendingActions.has(this.actionKey(entity, "light", "toggle")) || !this.planAction(entity, "light", "toggle");
       card.setAttribute("aria-label", `${presentation.label}: ${presentation.value}. Schakel`);
       card.addEventListener("click", () => this.callService(entity, "light", "toggle"));
     }
@@ -491,34 +559,72 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     return card;
   }
 
+  private lightGroupCard(groupConfig: NonNullable<RoomConfig["light_groups"]>[number]): HTMLElement {
+    const state = resolveLightGroupState(this.currentHass?.states ?? {}, groupConfig.member_entities);
+    const labels: Record<LightGroupState, string> = { off: "Uit", on: "Aan", partial: "Gedeeltelijk aan", unknown: "Onbekend", unavailable: "Niet beschikbaar" };
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = `mushroom-card light-card light-group-card ${state === "on" || state === "partial" ? "active" : state}`;
+    card.dataset.controlKey = `light:${groupConfig.control_entity}:toggle`;
+    card.disabled = state === "unknown" || state === "unavailable" || this.pendingActions.has(this.actionKey(groupConfig.control_entity, "light", "toggle")) || !this.planAction(groupConfig.control_entity, "light", "toggle");
+    card.setAttribute("aria-label", `${groupConfig.name}: ${labels[state]}. Schakel groep van ${groupConfig.member_entities.length} lampen`);
+    card.addEventListener("click", () => this.callService(groupConfig.control_entity, "light", "toggle"));
+    const symbol = element("span", "mushroom-icon"); symbol.append(icon("mdi:lightbulb-group-outline"));
+    const copy = element("span", "mushroom-copy");
+    copy.append(element("strong", "", groupConfig.name), element("small", "status", labels[state]), element("small", "scope", `${groupConfig.member_entities.length} lampen`));
+    card.append(symbol, copy);
+    return card;
+  }
+
+  private coverCard(coverConfig: NonNullable<RoomConfig["cover_controls"]>[number]): HTMLElement {
+    const extendedLabels = coverConfig.kind === "awning" || coverConfig.kind === "screen";
+    const openLabel = extendedLabels ? "Uit" : "Open";
+    const closeLabel = extendedLabels ? "In" : "Dicht";
+    const requiresConfirmation = coverConfig.confirmation === "movement" || coverConfig.kind === "awning";
+    const action = (label: string, command: "open" | "close") => requiresConfirmation
+      ? this.confirmedCommand(label, coverConfig.entity, command)
+      : this.command(label, coverConfig.entity, "cover", command);
+    return this.mushroomCard(coverConfig.entity, "cover", [action(openLabel, "open"), this.command("Stop", coverConfig.entity, "cover", "stop"), action(closeLabel, "close")]);
+  }
+
   private mushroomControls(room: RoomConfig): HTMLElement | undefined {
     const controls = element("div", "mushroom-controls");
-    const add = (title: string, cards: HTMLElement[]): void => {
+    const add = (capability: RoomConfig["capabilities"][number], title: string, cards: HTMLElement[]): void => {
       if (!cards.length) return;
       const grid = element("div", "mushroom-grid"); grid.append(...cards);
-      controls.append(group(title, grid));
+      const section = group(title, grid);
+      section.dataset.capabilitySection = capability;
+      controls.append(section);
     };
-    add("Verlichting", [...room.light_entities, ...(room.light_switch_entities ?? [])].map((entity) => this.mushroomCard(entity, "light", [], true)));
-    add("Openingen", room.cover_entities.map((entity) => this.mushroomCard(entity, "cover", [this.confirmedCommand("Open", entity, "open"), this.command("Stop", entity, "cover", "stop"), this.confirmedCommand("Dicht", entity, "close")] )));
+    const groupTargets = new Set((room.light_groups ?? []).map((groupConfig) => groupConfig.control_entity));
+    add("lights", "Verlichting", [
+      ...(room.light_groups ?? []).map((groupConfig) => this.lightGroupCard(groupConfig)),
+      ...[...room.light_entities, ...(room.light_switch_entities ?? [])].filter((entity) => !groupTargets.has(entity)).map((entity) => this.mushroomCard(entity, "light", [], true))
+    ]);
+    const typedCovers = new Set((room.cover_controls ?? []).map((coverConfig) => coverConfig.entity));
+    add("covers", "Openingen", [
+      ...(room.cover_controls ?? []).map((coverConfig) => this.coverCard(coverConfig)),
+      ...room.cover_entities.filter((entity) => !typedCovers.has(entity)).map((entity) => this.mushroomCard(entity, "cover", [this.confirmedCommand("Open", entity, "open"), this.command("Stop", entity, "cover", "stop"), this.confirmedCommand("Dicht", entity, "close")]))
+    ]);
     if (room.hvac.entity) {
       const target = numberAttribute(this.currentHass?.states?.[room.hvac.entity], "temperature");
-      add("Klimaat", [this.mushroomCard(room.hvac.entity, "climate", target === undefined ? [] : [this.command("− 0,5°", room.hvac.entity, "climate", "set_temperature", { temperature: target - .5 }), this.command("+ 0,5°", room.hvac.entity, "climate", "set_temperature", { temperature: target + .5 })])]);
+      add("climate", "Klimaat", [this.mushroomCard(room.hvac.entity, "climate", target === undefined ? [] : [this.command("− 0,5°", room.hvac.entity, "climate", "set_temperature", { temperature: target - .5 }), this.command("+ 0,5°", room.hvac.entity, "climate", "set_temperature", { temperature: target + .5 })])]);
     }
-    add("Media", room.media_entities.map((entity) => this.mushroomCard(entity, "media", [this.command(this.currentHass?.states?.[entity]?.state === "playing" ? "Pauze" : "Speel", entity, "media", "toggle")] )));
+    add("media", "Media", room.media_entities.map((entity) => this.mushroomCard(entity, "media", [this.command(this.currentHass?.states?.[entity]?.state === "playing" ? "Pauze" : "Speel", entity, "media", "toggle")] )));
     return controls.childElementCount ? controls : undefined;
   }
 
   private smartPlugCard(plug: NonNullable<RoomConfig["smart_plugs"]>[number]): HTMLElement {
-    const card = element("section", "smart-plug-card mushroom-card");
+    const card = element("section", `smart-plug-card mushroom-card${plug.protected ? " protected" : ""}`);
     const state = this.currentHass?.states?.[plug.switch_entity];
     const title = element("strong", "", plug.name || friendlyName(state, "Smart plug"));
     const values = document.createElement("small");
     values.textContent = [plug.power_entity, plug.energy_entity, plug.voltage_entity].filter(Boolean).map(entity => stateText(this.currentHass?.states?.[entity])).join(" · ") || stateText(state);
-    const lock = document.createElement("button"); lock.type = "button"; lock.className = "plug-lock"; lock.textContent = "Ontgrendel om te schakelen";
+    const lock = document.createElement("button"); lock.type = "button"; lock.className = "plug-lock"; lock.textContent = plug.protected ? "Beveiligd apparaat" : "Ontgrendel om te schakelen";
     const confirm = document.createElement("button"); confirm.type = "button"; confirm.className = "command"; confirm.hidden = true;
     lock.dataset.controlKey = `plug:${plug.switch_entity}:unlock`;
     confirm.dataset.controlKey = `plug:${plug.switch_entity}:confirm`;
-    lock.disabled = confirm.disabled = !this.planAction(plug.switch_entity, "plug", "toggle");
+    lock.disabled = confirm.disabled = plug.protected === true || this.pendingActions.has(this.actionKey(plug.switch_entity, "plug", "toggle")) || !this.planAction(plug.switch_entity, "plug", "toggle");
     lock.addEventListener("click", () => { confirm.hidden = false; confirm.textContent = state?.state === "on" ? "Bevestig uitschakelen" : "Bevestig inschakelen"; lock.textContent = "Bevestiging vereist"; });
     confirm.addEventListener("click", () => {
       this.callService(plug.switch_entity, "plug", "toggle");
@@ -526,7 +632,83 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
       lock.textContent = "Ontgrendel om te schakelen";
       lock.focus();
     });
-    card.append(title, values, lock, confirm); return card;
+    card.append(title, values);
+    if (plug.protected) card.append(element("small", "protection-reason", plug.protection_reason || "Bediening is voor dit apparaat uitgeschakeld."));
+    card.append(lock, confirm); return card;
+  }
+
+  private energyPeriodGroup(room: RoomConfig): HTMLElement | undefined {
+    const configured = Boolean(room.room_energy && Object.values(room.room_energy).some(Boolean)) || (room.smart_plugs ?? []).some((plug) => plug.energy_day_entity || plug.energy_month_entity || plug.energy_year_entity);
+    if (!configured) return undefined;
+    const wrapper = element("div", "energy-period energy-period-card");
+    const periods = [["day", "Vandaag"], ["month", "Maand"], ["year", "Jaar"]] as const;
+    const periodLabel = periods.find(([period]) => period === this.activeEnergyPeriod)?.[1] ?? "Periode";
+    const selector = element("div", "period-selector");
+    selector.setAttribute("role", "group");
+    selector.setAttribute("aria-label", "Energieperiode");
+    periods.forEach(([period, label]) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = label;
+      button.setAttribute("aria-pressed", String(this.activeEnergyPeriod === period));
+      button.dataset.controlKey = `energy-period:${period}`;
+      button.addEventListener("click", () => { this.activeEnergyPeriod = period; this.render(true); });
+      selector.append(button);
+    });
+    const grid = element("div", "energy-grid");
+    const roomEntity = this.activeEnergyPeriod === "day" ? room.room_energy?.day_entity : this.activeEnergyPeriod === "month" ? room.room_energy?.month_entity : room.room_energy?.year_entity;
+    const roomPeriod = this.activeEnergyPeriod === "day" ? room.room_energy?.day_period : this.activeEnergyPeriod === "month" ? room.room_energy?.month_period : room.room_energy?.year_period;
+    if (room.room_energy?.power_entity || roomEntity) {
+      const card = element("article", "info energy-card");
+      const roomState = roomEntity ? this.currentHass?.states?.[roomEntity] : undefined;
+      card.append(
+        element("strong", "", `${room.name} totaal`),
+        element("small", "", [room.room_energy?.power_entity ? stateText(this.currentHass?.states?.[room.room_energy.power_entity]) : "", roomEntity ? stateText(roomState) : "Niet geconfigureerd"].filter(Boolean).join(" · ")),
+        element("small", "energy-period-context", periodContext(roomPeriod, periodLabel)),
+        element("small", "energy-source-context", roomEntity ? sourceContext(roomState, `${room.name} energie`) : "Bron: niet geconfigureerd")
+      );
+      grid.append(card);
+    }
+    const comparisons: Array<{ name: string; value: number; source: string }> = [];
+    (room.smart_plugs ?? []).forEach((plug) => {
+      const entity = this.activeEnergyPeriod === "day" ? plug.energy_day_entity : this.activeEnergyPeriod === "month" ? plug.energy_month_entity : plug.energy_year_entity;
+      const plugPeriod = this.activeEnergyPeriod === "day" ? plug.energy_day_period : this.activeEnergyPeriod === "month" ? plug.energy_month_period : plug.energy_year_period;
+      if (!entity) return;
+      const state = this.currentHass?.states?.[entity];
+      const card = element("article", "info energy-card");
+      card.append(
+        element("strong", "", plug.name),
+        element("small", "", stateText(state)),
+        element("small", "energy-period-context", periodContext(plugPeriod, periodLabel)),
+        element("small", "energy-source-context", sourceContext(state, `${plug.name} energie`))
+      );
+      grid.append(card);
+      const value = energyKwh(state);
+      if (value !== undefined) comparisons.push({ name: plug.name, value, source: friendlyName(state, `${plug.name} energie`) });
+    });
+    wrapper.append(selector, grid.childElementCount ? grid : element("p", "info unavailable", "Geen bron voor deze periode geconfigureerd."));
+    if (comparisons.length > 1) {
+      const maximum = Math.max(...comparisons.map((entry) => entry.value), 0);
+      const figure = element("figure", "energy-comparison");
+      figure.setAttribute("role", "img");
+      figure.setAttribute("aria-label", `Apparaatvergelijking voor ${periodLabel.toLowerCase()} in kilowattuur. Schaal nul tot ${maximum.toLocaleString("nl-BE")} kilowattuur. ${comparisons.map((entry) => `${entry.name} ${entry.value.toLocaleString("nl-BE")} kilowattuur`).join("; ")}.`);
+      figure.append(element("figcaption", "", `Apparaatvergelijking · ${periodLabel} · kWh`), element("small", "energy-scale", `Schaal 0–${maximum.toLocaleString("nl-BE")} kWh · periodestatus per bron`));
+      const bars = element("div", "energy-bars");
+      comparisons.forEach((entry) => {
+        const row = element("div", "energy-bar-row");
+        const label = element("span", "energy-bar-label", entry.name);
+        const track = element("span", "energy-bar-track");
+        const bar = element("span", "energy-bar");
+        bar.style.setProperty("--energy-share", `${maximum > 0 ? Math.max((entry.value / maximum) * 100, 2) : 0}%`);
+        track.append(bar);
+        row.append(label, track, element("strong", "energy-bar-value", `${entry.value.toLocaleString("nl-BE")} kWh`));
+        row.title = `Bron: ${entry.source}`;
+        bars.append(row);
+      });
+      figure.append(bars, element("small", "energy-comparison-note", "Vergelijking van afzonderlijk gemapte apparaatbronnen; niet optellen tot een woningtotaal."));
+      wrapper.append(figure);
+    }
+    return group("Kamerenergie", wrapper);
   }
 
   private openHistory(entity: string, controlKey: string): void {
@@ -561,20 +743,20 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     const sourceRoom = this.config.room;
     const selectedControls = sourceRoom.control_entities ?? [];
     const room = { ...sourceRoom,
-      light_entities: [...new Set([...sourceRoom.light_entities, sourceRoom.control_light_entity, ...selectedControls.filter(entity => entity.startsWith("light."))].filter((value): value is string => Boolean(value)))],
+      light_entities: [...new Set([...sourceRoom.light_entities, ...(sourceRoom.light_groups ?? []).flatMap((groupConfig) => [groupConfig.control_entity, ...groupConfig.member_entities]), sourceRoom.control_light_entity, ...selectedControls.filter(entity => entity.startsWith("light."))].filter((value): value is string => Boolean(value)))],
       light_switch_entities: [...new Set(sourceRoom.light_switch_entities ?? [])],
-      cover_entities: [...new Set([...sourceRoom.cover_entities, sourceRoom.control_cover_entity, sourceRoom.control_awning_entity, ...selectedControls.filter(entity => entity.startsWith("cover."))].filter((value): value is string => Boolean(value)))],
+      cover_entities: [...new Set([...sourceRoom.cover_entities, ...(sourceRoom.cover_controls ?? []).map((coverConfig) => coverConfig.entity), sourceRoom.control_cover_entity, sourceRoom.control_awning_entity, ...selectedControls.filter(entity => entity.startsWith("cover."))].filter((value): value is string => Boolean(value)))],
       media_entities: [...new Set([...sourceRoom.media_entities, sourceRoom.control_media_entity, ...selectedControls.filter(entity => entity.startsWith("media_player."))].filter((value): value is string => Boolean(value)))]
     };
     const style = document.createElement("style");
     style.textContent = `
       ${roomStyles}
-      .detail,.room-layout-primary,.room-column,.mushroom-controls,.group{display:grid;gap:18px;min-width:0;align-content:start}.detail{width:100%}.room-layout-primary{grid-template-columns:1.2fr .8fr .7fr}.group{gap:10px}.group-heading{min-height:32px;display:flex;align-items:center}
-      .hero-pills,.commands{display:flex;gap:7px;flex-wrap:wrap}.hero-pill{padding:7px 10px;border:1px solid;border-radius:999px;font-size:.78rem}.info-list,.mushroom-grid,.plug-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:9px}
+      .detail,.control-deck,.room-layout-primary,.room-column,.mushroom-controls,.group,.detail-panel{display:grid;gap:18px;min-width:0;align-content:start}.detail{width:100%}.control-deck{grid-template-columns:minmax(150px,.24fr) minmax(0,1fr);gap:12px}.capability-rail{display:grid;gap:7px;align-content:start}.capability-rail button,.detail-tabs button{min-height:44px;border:1px solid var(--divider-color);border-radius:11px;padding:9px 12px;background:var(--room-surface);color:var(--primary-text-color);font:inherit;text-align:left}.capability-rail button[aria-pressed=true],.detail-tabs button[aria-selected=true]{border-color:var(--primary-color);background:color-mix(in srgb,var(--primary-color) 10%,var(--room-surface));color:var(--primary-color);font-weight:700}.deck-content{display:grid;gap:12px;min-width:0}.detail-tabs{display:flex;gap:7px;overflow-x:auto}.detail-tabs button{flex:1 0 auto;text-align:center}.detail-panel[hidden]{display:none}.room-layout-primary{grid-template-columns:1.2fr .8fr .7fr}.group{gap:10px}.group-heading{min-height:32px;display:flex;align-items:center}
+      .info-list,.mushroom-grid,.plug-grid,.energy-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:9px}.energy-period{display:grid;gap:10px}.period-selector{display:flex;gap:7px;flex-wrap:wrap}.period-selector button{min-height:44px;padding:8px 13px;border:1px solid var(--divider-color);border-radius:999px;background:var(--room-surface);color:inherit}.period-selector button[aria-pressed=true]{border-color:var(--primary-color);background:var(--primary-color);color:var(--text-primary-color,#fff);font-weight:700}.energy-card{display:grid;gap:4px}.energy-comparison{display:grid;gap:9px;margin:0;padding:12px;border:1px solid var(--divider-color);border-radius:12px;background:var(--room-surface)}.energy-comparison figcaption{font-weight:700}.energy-bars{display:grid;gap:8px}.energy-bar-row{display:grid;grid-template-columns:minmax(90px,.7fr) minmax(100px,1.4fr) auto;gap:8px;align-items:center}.energy-bar-track{height:12px;border-radius:999px;background:var(--secondary-background-color);overflow:hidden}.energy-bar{display:block;width:var(--energy-share);height:100%;border-radius:inherit;background:var(--primary-color)}.energy-bar-value{font-variant-numeric:tabular-nums}.action-feedback{margin:0;padding:10px 12px;border:1px solid var(--divider-color);border-radius:12px;background:var(--room-surface)}.action-feedback.pending{border-color:var(--primary-color)}.action-feedback.success{border-color:var(--success-color,#2e7d32)}.action-feedback.error{border-color:var(--error-color,#b3261e)}
       .info,.history-card,.mushroom-card,.command,.plug-lock,.history-dialog{background:var(--room-surface);color:var(--primary-text-color);border:1px solid var(--divider-color);border-radius:12px;padding:10px;font:inherit;overflow-wrap:anywhere}.info,.history-card,.mushroom-card{text-align:left}.warning{border-color:var(--error-color,#b3261e)}.unavailable{opacity:.72}
-      button{cursor:pointer;min-height:44px;min-width:44px}button:disabled{cursor:default}button:focus-visible{outline:2px solid var(--primary-color);outline-offset:2px}.mushroom-card{display:grid;grid-template-columns:40px minmax(0,1fr);gap:10px;align-items:center;min-height:76px;padding:12px;border-radius:16px}.light-card.active{border-color:var(--primary-color);background:color-mix(in srgb,var(--primary-color) 10%,var(--room-surface))}.mushroom-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--secondary-background-color);color:var(--primary-color)}.mushroom-copy{display:grid;gap:2px}small{color:var(--secondary-text-color)}.commands{grid-column:1/-1}.smart-plug-card{grid-template-columns:minmax(0,1fr)}.plug-lock{color:var(--primary-color);font-weight:700}
+      button{cursor:pointer;min-height:44px;min-width:44px}button:disabled{cursor:default;opacity:.48;background:var(--secondary-background-color)}button:focus-visible{outline:2px solid var(--primary-color);outline-offset:2px}.mushroom-card{display:grid;grid-template-columns:40px minmax(0,1fr);gap:10px;align-items:center;min-height:76px;padding:12px;border-radius:16px}.light-card.active{border-color:var(--primary-color);background:color-mix(in srgb,var(--primary-color) 10%,var(--room-surface))}.mushroom-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--secondary-background-color);color:var(--primary-color)}.mushroom-copy{display:grid;gap:2px}small{color:var(--secondary-text-color)}.commands{grid-column:1/-1}.smart-plug-card{grid-template-columns:minmax(0,1fr)}.plug-lock{color:var(--primary-color);font-weight:700}
       .room-photo{width:110px;min-height:96px;border-radius:16px;background:linear-gradient(135deg,#ffffff33,transparent),var(--hd-hero);background-size:cover;background-position:center;flex:none}.embedded-card{min-height:120px}.embedded-card:empty::before{content:"Kaart wordt geladen…"}.history-dialog{box-sizing:border-box;width:min(720px,calc(100% - 32px));padding:16px;border:0;border-radius:18px}.history-dialog::backdrop{background:#0007}
-      @media(max-width:1100px){.room-layout-primary{grid-template-columns:1fr 1fr}.operations{grid-column:1/-1}.energy{grid-column:auto}}@media(max-width:600px){.hero{align-items:flex-start;flex-direction:column}.room-photo{width:100%;min-height:130px;order:-1}.room-layout-primary{grid-template-columns:1fr}.operations,.energy{grid-column:auto}.mushroom-grid,.plug-grid{grid-template-columns:1fr}}
+      @media(max-width:1100px){.control-deck{grid-template-columns:1fr}.capability-rail{display:flex;overflow-x:auto}.capability-rail button{flex:0 0 auto}.room-layout-primary{grid-template-columns:1fr 1fr}.operations{grid-column:1/-1}.energy{grid-column:auto}}@media(max-width:600px){.hero{align-items:flex-start;flex-direction:column}.room-photo{width:100%;min-height:130px;order:-1}.detail-tabs button{min-width:max-content}.room-layout-primary{grid-template-columns:1fr}.operations,.energy{grid-column:auto}.mushroom-grid,.plug-grid{grid-template-columns:1fr}.energy-bar-row{grid-template-columns:minmax(90px,1fr) 1.2fr}.energy-bar-value{grid-column:1/-1}}
     `;
     const root = element("main", "detail");
     const hero = element("section", "hero");
@@ -588,11 +770,85 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     hero.append(heroCopy, heroPills);
     const picture = room.image_entity ? this.currentHass?.states?.[room.image_entity]?.attributes?.entity_picture : undefined;
     const photo = element("div", "room-photo");
-    photo.setAttribute("role", "img");
-    photo.setAttribute("aria-label", `Foto ${room.name}`);
-    if (typeof picture === "string" && picture) photo.style.backgroundImage = `url("${picture.replaceAll("\\", "\\\\").replaceAll("\"", "\\\"")}")`;
+    if (typeof picture === "string" && picture) {
+      photo.setAttribute("role", "img");
+      photo.setAttribute("aria-label", `Foto ${room.name}`);
+      photo.style.backgroundImage = `url("${picture.replaceAll("\\", "\\\\").replaceAll("\"", "\\\"")}")`;
+    } else {
+      photo.setAttribute("aria-hidden", "true");
+    }
     hero.append(photo);
     root.append(hero);
+    [...this.actionFeedback.values()].sort((left, right) => left.sequence - right.sequence).forEach((entry) => {
+      const feedback = element("p", `action-feedback ${entry.tone}`, entry.message);
+      feedback.setAttribute("role", entry.tone === "error" ? "alert" : "status");
+      feedback.setAttribute("aria-live", entry.tone === "error" ? "assertive" : "polite");
+      root.append(feedback);
+    });
+
+    const deck = element("section", "control-deck");
+    const capabilityRail = element("nav", "capability-rail");
+    capabilityRail.setAttribute("aria-label", "Kamerfuncties");
+    const hasEnergy = Boolean(room.room_energy && Object.values(room.room_energy).some(Boolean)) || (room.smart_plugs ?? []).some((plug) => plug.energy_day_entity || plug.energy_month_entity || plug.energy_year_entity);
+    const capabilityLabels: Array<[RoomConfig["capabilities"][number] | "devices", string, "controls" | "devices" | "energy", boolean]> = [
+      ["lights", "Verlichting", "controls", room.light_entities.length > 0 || (room.light_switch_entities?.length ?? 0) > 0 || (room.light_groups?.length ?? 0) > 0],
+      ["covers", "Openingen", "controls", room.cover_entities.length > 0 || (room.cover_controls?.length ?? 0) > 0],
+      ["climate", "Comfort", "controls", Boolean(room.hvac.entity) || room.hvac.comfort_entities.length > 0],
+      ["media", "Media", "controls", room.media_entities.length > 0],
+      ["security", "Veiligheid", "controls", room.safety_entities.length > 0 || room.camera_entities.length > 0],
+      ["devices", "Smart plugs", "devices", (room.smart_plugs?.length ?? 0) > 0],
+      ["power", "Energie", "energy", hasEnergy || room.power_entities.length > 0]
+    ];
+    capabilityLabels.filter(([, , , configured]) => configured).forEach(([capability, label, targetTab]) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = label;
+      button.dataset.controlKey = `capability:${capability}`;
+      button.setAttribute("aria-pressed", String(this.activeCapability === capability));
+      button.addEventListener("click", () => {
+        this.activeCapability = capability;
+        this.activeDetailTab = targetTab;
+        this.render(true);
+        this.shadowRoot?.querySelector<HTMLElement>(`[data-capability-section="${capability}"]`)?.scrollIntoView({ block: "nearest" });
+      });
+      capabilityRail.append(button);
+    });
+    const deckContent = element("div", "deck-content");
+    const tabs = element("div", "detail-tabs");
+    tabs.setAttribute("role", "tablist");
+    tabs.setAttribute("aria-label", "Kamerdetails");
+    const tabDefinitions = [["controls", "Bediening"], ["devices", "Apparaten"], ["energy", "Energie"], ["history", "Historie"]] as const;
+    const panels = new Map<(typeof tabDefinitions)[number][0], HTMLElement>();
+    tabDefinitions.forEach(([key, label], index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.id = `room-tab-${room.key}-${key}`;
+      button.setAttribute("role", "tab");
+      button.setAttribute("aria-selected", String(this.activeDetailTab === key));
+      button.setAttribute("aria-controls", `room-panel-${room.key}-${key}`);
+      button.tabIndex = this.activeDetailTab === key ? 0 : -1;
+      button.textContent = label;
+      button.dataset.controlKey = `tab:${key}`;
+      button.addEventListener("click", () => { this.activeCapability = undefined; this.activeDetailTab = key; this.render(true); });
+      button.addEventListener("keydown", (event) => {
+        if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+        event.preventDefault();
+        const current = tabDefinitions.findIndex(([candidate]) => candidate === key);
+        const target = event.key === "Home" ? 0 : event.key === "End" ? tabDefinitions.length - 1 : (current + (event.key === "ArrowLeft" ? -1 : 1) + tabDefinitions.length) % tabDefinitions.length;
+        const targetKey = tabDefinitions[target]![0];
+        this.activeCapability = undefined;
+        this.activeDetailTab = targetKey;
+        this.render();
+        this.shadowRoot?.querySelector<HTMLElement>(`[data-control-key="tab:${targetKey}"]`)?.focus();
+      });
+      tabs.append(button);
+      const panel = element("section", "detail-panel");
+      panel.id = `room-panel-${room.key}-${key}`;
+      panel.setAttribute("role", "tabpanel");
+      panel.setAttribute("aria-labelledby", button.id);
+      panel.hidden = this.activeDetailTab !== key;
+      panels.set(key, panel);
+    });
 
     const layout = element("div", "room-layout-primary");
     const operations = element("div", "room-column operations");
@@ -607,24 +863,39 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     const safety = this.informationGroup("Veiligheid", room.safety_entities.map((entity): [string, DeviceRole] => [entity, "safety"]));
     const cameras = this.informationGroup("Camera's", room.camera_entities.map((entity): [string, DeviceRole] => [entity, "camera"]));
     const power = this.informationGroup("Apparaten & energie", room.power_entities.map((entity): [string, DeviceRole] => [entity, "power"]));
+    const periodEnergy = this.energyPeriodGroup(room);
     const history = this.informationGroup("Historie", [...room.history_entities, ...room.hvac.history_entities].map((entity): [string, DeviceRole] => [entity, "history"]));
-    if (comfort) climate.append(comfort); if (safety) operations.append(safety); if (cameras) operations.append(cameras); if (power) energy.append(power); if (history) climate.append(history);
+    if (comfort) { comfort.dataset.capabilitySection = "climate"; climate.append(comfort); }
+    if (safety) { safety.dataset.capabilitySection = "security"; operations.append(safety); }
+    if (cameras) { cameras.dataset.capabilitySection = "security"; operations.append(cameras); }
+    if (power) { power.dataset.capabilitySection = "power"; energy.append(power); }
+    if (periodEnergy) { periodEnergy.dataset.capabilitySection = "power"; energy.append(periodEnergy); }
+    if (history) panels.get("history")?.append(history);
 
     if ((room.smart_plugs?.length ?? 0) > 0) {
       const grid = element("div", "plug-grid");
       room.smart_plugs?.forEach((plug) => grid.append(this.smartPlugCard(plug)));
-      energy.append(group("Smart plugs & energie", grid));
+      const plugGroup = group("Smart plugs & energie", grid);
+      plugGroup.dataset.capabilitySection = "devices";
+      panels.get("devices")?.append(plugGroup);
     }
 
-    if (room.temperature_history_entity) climate.append(this.informationGroup("Historie", [[room.temperature_history_entity, "history"]], "Temperatuurhistorie")!);
+    if (room.temperature_history_entity) panels.get("history")?.append(this.informationGroup("Historie", [[room.temperature_history_entity, "history"]], "Temperatuurhistorie")!);
 
     if (room.desk && Object.keys(room.desk.card_config).length > 0) {
       const card = element("div", "embedded-card desk-card");
-      energy.append(group("Bureau", card));
+      panels.get("devices")?.append(group("Bureau", card));
       void this.mountCard(card, { ...room.desk.card_config, type: "custom:linak-desk-card" });
     }
-    [operations, climate, energy].forEach((column) => { if (column.childElementCount) layout.append(column); });
-    if (layout.childElementCount) root.append(layout);
+    [operations, climate].forEach((column) => { if (column.childElementCount) layout.append(column); });
+    if (layout.childElementCount) panels.get("controls")?.append(layout);
+    if (energy.childElementCount) panels.get("energy")?.append(energy);
+    for (const [key, panel] of panels) {
+      if (!panel.childElementCount) panel.append(element("p", "info unavailable", key === "history" ? "Geen historiebronnen geconfigureerd." : "Geen gegevens voor dit onderdeel geconfigureerd."));
+    }
+    deckContent.append(tabs, ...panels.values());
+    deck.append(capabilityRail, deckContent);
+    root.append(deck);
     const previous = this.shadowRoot.querySelector("main");
     if (previous) { previous.replaceWith(root); this.shadowRoot.querySelector("style")?.replaceWith(style); }
     else this.shadowRoot.replaceChildren(style, root);

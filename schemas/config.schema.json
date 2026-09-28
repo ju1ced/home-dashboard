@@ -109,7 +109,34 @@
         "quick_actions": { "type": "array", "maxItems": 2, "uniqueItems": true, "items": { "$ref": "#/$defs/logicalKey" }, "x-editor": "rooms" },
           "light_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "rooms" },
           "light_switch_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "rooms" },
+          "light_groups": {
+            "type": "array", "x-editor": "rooms",
+            "items": {
+              "type": "object", "additionalProperties": false,
+              "required": ["key", "name", "control_entity", "member_entities"],
+              "properties": {
+                "key": { "$ref": "#/$defs/logicalKey", "x-editor": "rooms" },
+                "name": { "type": "string", "minLength": 1, "x-editor": "rooms" },
+                "control_entity": { "$ref": "#/$defs/entityReference", "x-editor": "rooms" },
+                "member_entities": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/entityReference" }, "x-editor": "rooms" }
+              }
+            }
+          },
           "cover_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "rooms" },
+          "cover_controls": {
+            "type": "array", "x-editor": "rooms",
+            "items": {
+              "type": "object", "additionalProperties": false,
+              "required": ["key", "name", "entity", "kind", "confirmation"],
+              "properties": {
+                "key": { "$ref": "#/$defs/logicalKey", "x-editor": "rooms" },
+                "name": { "type": "string", "minLength": 1, "x-editor": "rooms" },
+                "entity": { "$ref": "#/$defs/entityReference", "x-editor": "rooms" },
+                "kind": { "enum": ["shutter", "screen", "awning"], "x-editor": "rooms" },
+                "confirmation": { "enum": ["none", "movement"], "x-editor": "rooms" }
+              }
+            }
+          },
           "media_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "rooms" },
           "safety_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "rooms" },
           "camera_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "rooms" },
@@ -128,8 +155,29 @@
                 "switch_entity": { "$ref": "#/$defs/entityReference", "x-editor": "rooms" },
                 "power_entity": { "$ref": "#/$defs/entityReference", "x-editor": "rooms" },
                 "energy_entity": { "$ref": "#/$defs/entityReference", "x-editor": "rooms" },
-                "voltage_entity": { "$ref": "#/$defs/entityReference", "x-editor": "rooms" }
+                "voltage_entity": { "$ref": "#/$defs/entityReference", "x-editor": "rooms" },
+                "protected": { "type": "boolean", "x-editor": "rooms" },
+                "protection_reason": { "type": "string", "x-editor": "rooms" },
+                "energy_day_entity": { "$ref": "#/$defs/entityReference", "x-editor": "rooms" },
+                "energy_day_period": { "enum": ["running", "completed"], "x-editor": "rooms" },
+                "energy_month_entity": { "$ref": "#/$defs/entityReference", "x-editor": "rooms" },
+                "energy_month_period": { "enum": ["running", "completed"], "x-editor": "rooms" },
+                "energy_year_entity": { "$ref": "#/$defs/entityReference", "x-editor": "rooms" },
+                "energy_year_period": { "enum": ["running", "completed"], "x-editor": "rooms" }
               }
+            }
+          },
+          "room_energy": {
+            "type": "object", "additionalProperties": false, "x-editor": "rooms",
+            "required": ["power_entity", "day_entity", "month_entity", "year_entity"],
+            "properties": {
+              "power_entity": { "$ref": "#/$defs/entityReference", "x-editor": "rooms" },
+              "day_entity": { "$ref": "#/$defs/entityReference", "x-editor": "rooms" },
+              "day_period": { "enum": ["running", "completed"], "x-editor": "rooms" },
+              "month_entity": { "$ref": "#/$defs/entityReference", "x-editor": "rooms" },
+              "month_period": { "enum": ["running", "completed"], "x-editor": "rooms" },
+              "year_entity": { "$ref": "#/$defs/entityReference", "x-editor": "rooms" },
+              "year_period": { "enum": ["running", "completed"], "x-editor": "rooms" }
             }
           },
           "desk": {

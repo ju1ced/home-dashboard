@@ -88,7 +88,11 @@ export interface RoomConfig {
   light_entities: EntityReference[];
   /** Switches that belong to the lighting scene, such as a DreamView controller. */
   light_switch_entities: EntityReference[];
+  /** Named groups with an explicit action target and explicit member scope. */
+  light_groups?: RoomLightGroupConfig[];
   cover_entities: EntityReference[];
+  /** Typed shutters, screens and awnings with an explicit confirmation policy. */
+  cover_controls?: RoomCoverControlConfig[];
   media_entities: EntityReference[];
   safety_entities: EntityReference[];
   camera_entities: EntityReference[];
@@ -100,6 +104,8 @@ export interface RoomConfig {
   temperature_history_entity?: EntityReference;
   /** Smart plugs remain explicit, so their measurement and switching scope cannot be inferred. */
   smart_plugs?: RoomSmartPlugConfig[];
+  /** Explicit room total sources; no period is inferred from another period. */
+  room_energy?: RoomEnergyConfig;
   /** Transparent configuration for the independently installed LINAK desk card. */
   desk?: RoomDeskConfig;
   hvac: {
@@ -113,6 +119,21 @@ export interface RoomConfig {
   };
 }
 
+export interface RoomLightGroupConfig {
+  key: LogicalKey;
+  name: string;
+  control_entity: EntityReference;
+  member_entities: EntityReference[];
+}
+
+export interface RoomCoverControlConfig {
+  key: LogicalKey;
+  name: string;
+  entity: EntityReference;
+  kind: "shutter" | "screen" | "awning";
+  confirmation: "none" | "movement";
+}
+
 export interface RoomSmartPlugConfig {
   key: LogicalKey;
   name: string;
@@ -120,6 +141,24 @@ export interface RoomSmartPlugConfig {
   power_entity: EntityReference;
   energy_entity: EntityReference;
   voltage_entity: EntityReference;
+  protected?: boolean;
+  protection_reason?: string;
+  energy_day_entity?: EntityReference;
+  energy_day_period?: "running" | "completed";
+  energy_month_entity?: EntityReference;
+  energy_month_period?: "running" | "completed";
+  energy_year_entity?: EntityReference;
+  energy_year_period?: "running" | "completed";
+}
+
+export interface RoomEnergyConfig {
+  power_entity: EntityReference;
+  day_entity: EntityReference;
+  day_period?: "running" | "completed";
+  month_entity: EntityReference;
+  month_period?: "running" | "completed";
+  year_entity: EntityReference;
+  year_period?: "running" | "completed";
 }
 
 export interface RoomDeskConfig {

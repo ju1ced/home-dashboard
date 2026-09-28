@@ -48,6 +48,7 @@ Home bevat geen uitgebreide grafieken, inventarislijsten, alle batterijen, alle 
 - Lege of niet-geconfigureerde secties worden niet gerenderd.
 - Operationele `unavailable` krijgt een duidelijke fallback; diagnostische of semantisch normale `unknown` veroorzaakt geen alarm.
 - Area registry is input, maar gecontroleerde mappings ondersteunen area-loze en woningbrede apparatuur.
+- Het kamerdetail is een herbruikbaar, capability-gedreven "Control Deck": vaste header met kernstatus en optionele privacyveilige afbeelding, een capabilityrail en vier tabs (Bediening, Apparaten, Energie, Historie). Dit vervangt de eerdere lichte/zware kamerdetailindeling zonder kamerspecifieke hardcoding; zie [D-051](../design/decision-log.md#d-051--control-deck-vervangt-de-kamerdetailcompositie) en het [Control Deck-contract](../design/control-deck-room-dashboard.md).
 
 ## Interactie en veiligheid
 

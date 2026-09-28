@@ -2,11 +2,16 @@
 
 ## Unreleased
 
-- Bereidt `v0.8.0-alpha.19` voor met één reproduceerbare browsermatrix voor hoofdviews, kamers, editor, navigatie en alle beschikbare specialistviews inclusief 3D-printer.
-- Verhoogt te kleine camera- en editorbediening naar minimaal 44×44 px en respecteert reduced motion voor camerascroll en kamerchevron.
-- Corrigeert de read-only zwembadsamenvatting tegen het geteste broncontract: vrije tekst bepaalt geen ernst, required unavailable wint van foutsignalen, heater-off is normaal en de zoutsysteemfout gebruikt power plus drempel.
-- Legt Energy-pariteit, zwembadprecedence en de resterende handmatige accessibilitygate vast in privacyveilige kwaliteitsdocumenten.
-- [Testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.19.md). Release, deployment en live test blijven afzonderlijke menselijke gates.
+- Bereidt `v0.8.0-alpha.20` voor met het capability-gedreven Control Deck voor kamerdetails: vaste functierail, Bediening/Apparaten/Energie/Historie-tabs en één eigenaar voor historie.
+- Voegt expliciete lichtgroepen, getypeerde rolluiken/screens/luifels, beschermde smart plugs en dag-/maand-/jaarenergie toe zonder area-expansie of impliciete actiedoelen.
+- Breidt schema v1, migratie, semantische validatie en de grafische kamereditor compatibel uit; bestaande mappings blijven opt-in en verliesvrij.
+- De fictieve browsermatrix dekt normal, warning, missing, unknown en unavailable op mobiel, tablet en desktop. De minified bundlegrens stijgt gemeten van 215 kB naar 245 kB; de gereviewde kandidaat gebruikt 244.187 bytes.
+- [Testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.20.md). Release, deployment en live Home Assistant-acceptatie blijven afzonderlijke menselijke gates.
+
+## 0.8.0-alpha.19 — 2026-09-24
+
+- Publiceert de via PR #47 gevalideerde room-detailkandidaat met de compacte brede layout, expliciete verlichtingsswitches en de bijbehorende browser- en releasegates.
+- Behoudt de alpha.18-actionscope en runtimeveiligheid; live Home Assistant-acceptatie bleef een afzonderlijke menselijke gate.
 
 ## 0.8.0-alpha.18 — 2026-09-17
 

@@ -228,8 +228,9 @@ test("Kamers gebruikt een overzichtskaart en een semantisch gegroepeerde detail-
     assert.ok(JSON.stringify(detailCard.room).includes(entity) || entities.includes(entity), `${entity} ontbreekt`);
   }
   const historyGraph = detail.sections.flatMap((section) => section.cards).find((card) => card.type === "history-graph");
-  assert.equal(historyGraph?.hours_to_show, 24);
+  assert.equal(historyGraph, undefined, "historie hoort één eigenaar in de Control Deck-kaart te hebben");
   assert.equal(getRoomMetric({ states: { living_lights: { state: "on" } } }, config.rooms[0]), "1 lamp aan");
+  assert.equal(getRoomMetric({ states: { living_cover: { state: "open" } } }, { ...config.rooms[0], cover_entities: ["living_cover"] }), "1 opening geopend");
   assert.equal(getRoomMetric({ states: { living_hvac: { state: "heat", attributes: { current_temperature: 21.5 } } } }, config.rooms[0]), "21.5 °C");
   assert.equal(getRoomMetric({ states: { living_media: { state: "unavailable" } } }, config.rooms[0]), "Deels offline");
 });

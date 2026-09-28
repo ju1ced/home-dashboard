@@ -18,11 +18,13 @@ export function findPrivacyMatches(source) {
   const matches = [];
   for (const [pattern, label] of PRIVACY_PATTERNS) {
     pattern.lastIndex = 0;
-    const hit = pattern.exec(source);
-    if (!hit) continue;
-    const prefix = source.slice(Math.max(0, hit.index - 40), hit.index);
-    const isJsonServiceAction = label === "mogelijk echte Home Assistant entity-ID" && /(?:["'](?:action|service)["']|\b(?:action|service))\s*:\s*$/.test(prefix);
-    if (!isJsonServiceAction) matches.push({ label, value: hit[0] });
+    let hit;
+    while ((hit = pattern.exec(source)) !== null) {
+      const prefix = source.slice(Math.max(0, hit.index - 40), hit.index);
+      const isJsonServiceAction = label === "mogelijk echte Home Assistant entity-ID" && /(?:["'](?:action|service)["']|\b(?:action|service))\s*:\s*$/.test(prefix);
+      if (!isJsonServiceAction) matches.push({ label, value: hit[0] });
+      if (!pattern.global) break;
+    }
   }
   return matches;
 }

@@ -40,3 +40,8 @@ test("privacyscan laat publieke en fictieve waarden door", () => {
 
   negatives.forEach((source) => assert.deepEqual(findPrivacyMatches(source), [], `Onterechte match: ${source}`));
 });
+
+test("privacyscan zoekt door na een toegestane service-action", () => {
+  const source = `${JSON.stringify({ action: join("light", ".", "toggle") })}\n${JSON.stringify(join("camera", ".", "private_live"))}`;
+  assert.ok(findPrivacyMatches(source).some(({ label }) => label === "mogelijk echte Home Assistant entity-ID"));
+});

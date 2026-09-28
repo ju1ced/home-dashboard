@@ -1,8 +1,12 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile, readdir, stat } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 const root = new URL("../", import.meta.url);
+const rootPath = fileURLToPath(root);
 
 test("HACS manifest points at the versioned dashboard bundle", async () => {
   const hacs = JSON.parse(await readFile(new URL("hacs.json", root), "utf8"));
@@ -23,10 +27,24 @@ test("dist contains exactly one HACS JavaScript runtime artifact", async () => {
 
 test("release assets are deterministic for a given bundle", async () => {
   const bundle = await readFile(new URL("dist/home-dashboard.js", root));
-  // Zie scripts/verify-dist.mjs: 215_000 is goedgekeurd na een reproduceerbare
-  // origin/main-meting van 211_963 bytes en blijft de harde releasegrens.
-  assert.ok(bundle.length <= 215_000);
+  const repositoryCheck = await readFile(new URL("scripts/check-repo.mjs", root), "utf8");
+  const packageJson = JSON.parse(await readFile(new URL("package.json", root), "utf8"));
+  const commit = "01234567".repeat(5);
+  const tag = `v${packageJson.version}`;
+  // Zie scripts/verify-dist.mjs: 245_000 is de gereviewde alpha.20-grens voor
+  // de complete Control Deck-slice en laat minder dan 1 procent marge.
+  assert.ok(bundle.length <= 245_000);
   assert.equal(bundle.includes(Buffer.from("sourceMappingURL")), false);
+  const result = spawnSync(process.execPath, ["scripts/create-release-assets.mjs"], { cwd: rootPath, encoding: "utf8", env: { ...process.env, GITHUB_SHA: commit, RELEASE_TAG: tag } });
+  assert.equal(result.status, 0, result.stderr);
+  const checksum = await readFile(new URL("dist/home-dashboard.js.sha256", root), "utf8");
+  const manifest = JSON.parse(await readFile(new URL("dist/release-manifest.json", root), "utf8"));
+  const sha256 = createHash("sha256").update(bundle).digest("hex");
+  assert.equal(checksum, `${sha256}  home-dashboard.js\n`);
+  assert.deepEqual({ artifact: manifest.artifact, commit: manifest.commit, sha256: manifest.sha256, tag: manifest.tag, version: manifest.version }, { artifact: "home-dashboard.js", commit, sha256, tag, version: packageJson.version });
+  assert.match(repositoryCheck, /generatedPrivacyExclusions/);
+  assert.match(repositoryCheck, /dist\/home-dashboard\.js\.sha256/);
+  assert.match(repositoryCheck, /dist\/release-manifest\.json/);
 });
 
 test("release- en CI-workflows handhaven de browsergate", async () => {

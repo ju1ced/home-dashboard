@@ -119,7 +119,9 @@ export function migrateConfig(input: unknown): MigrationResult {
     control_light_entity: "", control_cover_entity: "", control_awning_entity: "", control_media_entity: "",
     light_entities: [],
     light_switch_entities: [],
+    light_groups: [],
     cover_entities: [],
+    cover_controls: [],
     media_entities: [],
     safety_entities: [],
     camera_entities: [],
@@ -128,6 +130,7 @@ export function migrateConfig(input: unknown): MigrationResult {
     image_entity: "",
     temperature_history_entity: "",
     smart_plugs: [],
+    room_energy: { power_entity: "", day_entity: "", month_entity: "", year_entity: "" },
     desk: { card_type: "custom:linak-desk-card", card_config: {} },
     hvac: {
       entity: "",
@@ -141,6 +144,30 @@ export function migrateConfig(input: unknown): MigrationResult {
   }), warnings, "rooms");
   merged.rooms.forEach((room, index) => {
     const inputRoom = roomInputs[index];
+    room.light_groups = normalizeItems(room.light_groups ?? [], (itemIndex) => ({
+      key: `light_group_${itemIndex + 1}`, name: "", control_entity: "", member_entities: []
+    }), warnings, `rooms[${index}].light_groups`);
+    room.cover_controls = normalizeItems(room.cover_controls ?? [], (itemIndex) => ({
+      key: `cover_${itemIndex + 1}`, name: "", entity: "", kind: "shutter", confirmation: "movement"
+    }), warnings, `rooms[${index}].cover_controls`);
+    room.smart_plugs = normalizeItems(room.smart_plugs ?? [], (itemIndex) => ({
+      key: `plug_${itemIndex + 1}`, name: "", switch_entity: "", power_entity: "", energy_entity: "", voltage_entity: "",
+      protected: false, protection_reason: "", energy_day_entity: "", energy_month_entity: "", energy_year_entity: ""
+    }), warnings, `rooms[${index}].smart_plugs`);
+    const inputPlugs = isObject(inputRoom) && Array.isArray(inputRoom.smart_plugs) ? inputRoom.smart_plugs : [];
+    room.smart_plugs.forEach((plug, plugIndex) => {
+      const inputPlug = inputPlugs[plugIndex];
+      if (!isObject(inputPlug)) return;
+      if (inputPlug.energy_day_period === "running" || inputPlug.energy_day_period === "completed") plug.energy_day_period = inputPlug.energy_day_period;
+      if (inputPlug.energy_month_period === "running" || inputPlug.energy_month_period === "completed") plug.energy_month_period = inputPlug.energy_month_period;
+      if (inputPlug.energy_year_period === "running" || inputPlug.energy_year_period === "completed") plug.energy_year_period = inputPlug.energy_year_period;
+    });
+    const inputRoomEnergy = isObject(inputRoom) && isObject(inputRoom.room_energy) ? inputRoom.room_energy : undefined;
+    if (room.room_energy && inputRoomEnergy) {
+      if (inputRoomEnergy.day_period === "running" || inputRoomEnergy.day_period === "completed") room.room_energy.day_period = inputRoomEnergy.day_period;
+      if (inputRoomEnergy.month_period === "running" || inputRoomEnergy.month_period === "completed") room.room_energy.month_period = inputRoomEnergy.month_period;
+      if (inputRoomEnergy.year_period === "running" || inputRoomEnergy.year_period === "completed") room.room_energy.year_period = inputRoomEnergy.year_period;
+    }
     if (isObject(inputRoom) && Array.isArray(inputRoom.control_entities)) {
       room.control_entities = structuredClone(inputRoom.control_entities) as string[];
     }
