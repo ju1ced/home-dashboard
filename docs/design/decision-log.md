@@ -313,3 +313,12 @@
 - **Besluit:** Home gebruikt in geïntegreerde en kioskmodus één section met één gekleurde header. Bij minstens 1200 px beschikbare kaartbreedte staan navigatie links, datum/begroeting gecentreerd en statuschips rechts op één horizontale rij. Onder die grens stapelen dezelfde onderdelen zonder clipping of overlap.
 - **Compatibiliteit:** native modus behoudt de zelfstandige Home-header. Routes, kioskherstel, editoringang, actie- en autorisatiepaden blijven ongewijzigd; het configuratieschema verandert niet.
 - **Validatie:** de regressiecheck dekt brede uitlijning en mobiele stapeling voor geïntegreerde en kioskmodus. De bestaande browsermatrix blijft normal/warning/missing/unavailable, thema's, focus, overflow en navigatiegedrag controleren.
+
+## D-051 — Control Deck vervangt de kamerdetailcompositie
+
+- **Status:** candidate `v0.8.0-alpha.20`, lokaal geverifieerd op 28 september 2026; geen Home Assistant-write of deployment goedgekeurd. Vastgelegd achteraf op verzoek van de eigenaar, samen met HD-202's documentatiereconciliatie.
+- **Besluit:** het kamerdetail wordt een capability-gedreven Control Deck: een vaste header met kernstatus en optionele privacyveilige afbeelding, een capabilityrail met alleen werkelijk geconfigureerde functies, en vier tabs (Bediening, Apparaten, Energie, Historie). Bediening ondersteunt meerdere lichtgroepen (uit/aan/gedeeltelijk aan via tekst en semantiek), getypeerde openingen (rolluik/screen/luifel) met Open/Stop/Dicht of Uit/Stop/In en confirmationbeleid, en beschermde of gewone smart plugs zonder optimistische apparaatstate.
+- **Energie en historie:** kamer- en apparaatenergie ondersteunen afzonderlijke dag-/maand-/jaarbronnen zonder samengevoegde schaal en zonder dubbeltelling t.o.v. de officiële Energy-totalen; de Historie-tab is de enige eigenaar van de native `history-graph`, ter vervanging van de eerder dubbele strategiegrafiek.
+- **Reden:** dit vervangt de eerdere lichte/zware kamerdetailindeling uit D-028/D-039–D-044 door één herbruikbaar model zonder kamerspecifieke hardcoding, met behoud van de bestaande actionscope-, confirmation- en privacyregels.
+- **Bewijs:** [Control Deck-kamerdashboardcontract](control-deck-room-dashboard.md), [HD-202](../planning/tickets.md#hd-202--control-deck-kamerdashboard-implementeren) en de [versiechecklist](../releases/testing-v0.8.0-alpha.20.md).
+- **Openstaand:** de vierkamer-visuele baselinereview (HD-170), 200%-zoom/screenreader/echte themacontrast en live runtimeacceptatie blijven afzonderlijke gates.
