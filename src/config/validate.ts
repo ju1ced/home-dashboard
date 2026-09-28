@@ -106,6 +106,7 @@ export function validateConfig(config: HomeDashboardConfigV1): ValidationIssue[]
     room.cover_controls?.forEach((cover, coverIndex) => {
       if (!cover || typeof cover !== "object") return;
       if (!cover.entity.startsWith("cover.")) issues.push(issue(`rooms[${index}].cover_controls[${coverIndex}].entity`, "cover_domain", "Een opening gebruikt een cover-entiteit."));
+      if (cover.kind === "awning" && cover.confirmation !== "movement") issues.push(issue(`rooms[${index}].cover_controls[${coverIndex}].confirmation`, "awning_confirmation_required", "Een luifel vereist bevestiging bij beweging."));
     });
     const plugTargets = new Set<string>();
     room.smart_plugs?.forEach((plug, plugIndex) => {

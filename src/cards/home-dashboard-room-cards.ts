@@ -580,7 +580,8 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     const extendedLabels = coverConfig.kind === "awning" || coverConfig.kind === "screen";
     const openLabel = extendedLabels ? "Uit" : "Open";
     const closeLabel = extendedLabels ? "In" : "Dicht";
-    const action = (label: string, command: "open" | "close") => coverConfig.confirmation === "movement"
+    const requiresConfirmation = coverConfig.confirmation === "movement" || coverConfig.kind === "awning";
+    const action = (label: string, command: "open" | "close") => requiresConfirmation
       ? this.confirmedCommand(label, coverConfig.entity, command)
       : this.command(label, coverConfig.entity, "cover", command);
     return this.mushroomCard(coverConfig.entity, "cover", [action(openLabel, "open"), this.command("Stop", coverConfig.entity, "cover", "stop"), action(closeLabel, "close")]);

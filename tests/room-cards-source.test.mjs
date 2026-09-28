@@ -85,6 +85,7 @@ test("Control Deck rendert expliciete lichtgroepen en getypeerde openingen", asy
   assert.match(source, /room\.cover_controls/);
   assert.match(source, /Uit/);
   assert.match(source, /In/);
+  assert.match(source, /coverConfig\.confirmation === "movement" \|\| coverConfig\.kind === "awning"/, "luifels moeten altijd bevestiging vereisen, ongeacht de geconfigureerde confirmation");
 });
 
 test("Control Deck toont beschermde plugs en afzonderlijke dag-, maand- en jaarbronnen", async () => {

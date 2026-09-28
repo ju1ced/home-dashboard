@@ -359,6 +359,16 @@ test("Control Deck-kamercontract migreert groepen, openingen, plugs en drie ener
   assert.deepEqual(parseImportedConfig(serializeConfig(config)), config);
 });
 
+test("Control Deck weigert een luifel zonder bevestiging bij beweging", () => {
+  const entity = (domain, key) => `${domain}.${key}`;
+  const config = migrateConfig({ rooms: [{
+    key: "terrace", name: "Terras", area_id: "EXAMPLE_AREA", capabilities: ["covers"],
+    cover_controls: [{ key: "awning", name: "Luifel", entity: entity("cover", "terrace_awning"), kind: "awning", confirmation: "none" }]
+  }] }).config;
+  const issues = validateConfig(config);
+  assert.ok(issues.some((issue) => issue.code === "awning_confirmation_required"), "awning_confirmation_required ontbreekt");
+});
+
 test("Control Deck-validatie weigert onvolledige groepen, dubbele sleutels en verkeerd gemapte bronnen", () => {
   const entity = (domain, key) => `${domain}.${key}`;
   const config = migrateConfig({ rooms: [{
