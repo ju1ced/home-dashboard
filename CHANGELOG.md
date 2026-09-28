@@ -1,12 +1,13 @@
 # Changelog
 
-## Unreleased
+## 0.8.0-alpha.21 — 2026-09-28
 
-- Bereidt `v0.8.0-alpha.20` voor met het capability-gedreven Control Deck voor kamerdetails: vaste functierail, Bediening/Apparaten/Energie/Historie-tabs en één eigenaar voor historie.
+- Introduceert het capability-gedreven Control Deck voor kamerdetails: vaste functierail, Bediening/Apparaten/Energie/Historie-tabs en één eigenaar voor historie.
 - Voegt expliciete lichtgroepen, getypeerde rolluiken/screens/luifels, beschermde smart plugs en dag-/maand-/jaarenergie toe zonder area-expansie of impliciete actiedoelen.
 - Breidt schema v1, migratie, semantische validatie en de grafische kamereditor compatibel uit; bestaande mappings blijven opt-in en verliesvrij.
-- De fictieve browsermatrix dekt normal, warning, missing, unknown en unavailable op mobiel, tablet en desktop. De minified bundlegrens stijgt gemeten van 215 kB naar 245 kB; de gereviewde kandidaat gebruikt 244.187 bytes.
-- [Testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.20.md). Release, deployment en live Home Assistant-acceptatie blijven afzonderlijke menselijke gates.
+- Fix: een luifel (`kind: "awning"`) kon met `confirmation: "none"` zonder bevestiging openen/sluiten. Bevestiging is nu afgedwongen voor elke luifel, zowel bij het renderen als bij het opslaan van de configuratie (`awning_confirmation_required`). Gevonden tijdens de onafhankelijke pre-mergereview; dit was de reden om alpha.20 niet zelf te taggen en direct door te schuiven naar deze release.
+- De fictieve browsermatrix dekt normal, warning, missing, unknown en unavailable op mobiel, tablet en desktop. De minified bundlegrens stijgt gemeten van 215 kB naar 245 kB; de uitgebrachte kandidaat gebruikt 244.397 bytes (603 bytes marge — zie HD-171 voor het aandachtspunt richting de volgende specialistintegraties).
+- [Testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.21.md). Live Home Assistant-acceptatie blijft een afzonderlijke menselijke gate.
 
 ## 0.8.0-alpha.19 — 2026-09-24
 
