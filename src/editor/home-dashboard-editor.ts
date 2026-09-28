@@ -75,6 +75,15 @@ function setPath(config: HomeDashboardConfigV1, path: string, value: unknown): v
   target[last] = value;
 }
 
+function deletePath(config: HomeDashboardConfigV1, path: string): void {
+  const segments = path.split(".");
+  const last = segments.pop();
+  if (!last) return;
+  let target = config as unknown as MutableRecord;
+  for (const segment of segments) target = target[segment] as MutableRecord;
+  delete target[last];
+}
+
 function selectorMarkup(field: FieldDefinition, value: unknown): string {
   return `<ha-selector class="selector" data-path="${escapeHtml(field.path)}" data-value="${escapeHtml(JSON.stringify(value))}"></ha-selector>`;
 }
@@ -139,6 +148,22 @@ function renderControlOrderRows(controls: readonly string[], roomIndex: number):
   return controls.map((entity, controlIndex) => `<div data-control-order-row><span class="order-index">${controlIndex + 1}</span><code>${escapeHtml(entity)}</code><span class="order-actions"><button type="button" data-room-control-move="up" data-room-index="${roomIndex}" data-control-index="${controlIndex}" aria-label="Verplaats quick action ${controlIndex + 1} omhoog" ${controlIndex === 0 ? "disabled" : ""}>↑</button><button type="button" data-room-control-move="down" data-room-index="${roomIndex}" data-control-index="${controlIndex}" aria-label="Verplaats quick action ${controlIndex + 1} omlaag" ${controlIndex === controls.length - 1 ? "disabled" : ""}>↓</button></span></div>`).join("");
 }
 
+function renderRoomNestedSelector(roomIndex: number, collection: string, itemIndex: number, field: string, value: unknown, selector: Record<string, unknown>): string {
+  return `<ha-selector class="collection-selector" data-room-index="${roomIndex}" data-room-nested-collection="${collection}" data-item-index="${itemIndex}" data-field="${field}" data-selector="${escapeHtml(JSON.stringify(selector))}" data-value="${escapeHtml(JSON.stringify(value))}"></ha-selector>`;
+}
+
+function renderPeriodOptions(value: "running" | "completed" | undefined): string {
+  return `<option value="" ${value ? "" : "selected"}>Niet gemapt</option><option value="running" ${value === "running" ? "selected" : ""}>Lopend</option><option value="completed" ${value === "completed" ? "selected" : ""}>Afgesloten</option>`;
+}
+
+function renderRoomControlDeck(room: RoomConfig, roomIndex: number): string {
+  const lightGroups = (room.light_groups ?? []).map((item, itemIndex) => `<article class="nested-item"><div class="item-toolbar"><strong>${escapeHtml(item.name || item.key)}</strong><button type="button" data-room-nested-remove="light_groups" data-room-index="${roomIndex}" data-item-index="${itemIndex}">Verwijder</button></div><label>Sleutel<input data-room-nested-collection="light_groups" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="key" value="${escapeHtml(item.key)}"></label><label>Naam<input data-room-nested-collection="light_groups" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="name" value="${escapeHtml(item.name)}"></label><label>Actiedoel${renderRoomNestedSelector(roomIndex, "light_groups", itemIndex, "control_entity", item.control_entity, { entity: { domain: "light" } })}</label><label>Expliciete leden${renderRoomNestedSelector(roomIndex, "light_groups", itemIndex, "member_entities", item.member_entities, { entity: { domain: "light", multiple: true } })}</label></article>`).join("");
+  const covers = (room.cover_controls ?? []).map((item, itemIndex) => `<article class="nested-item"><div class="item-toolbar"><strong>${escapeHtml(item.name || item.key)}</strong><button type="button" data-room-nested-remove="cover_controls" data-room-index="${roomIndex}" data-item-index="${itemIndex}">Verwijder</button></div><label>Sleutel<input data-room-nested-collection="cover_controls" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="key" value="${escapeHtml(item.key)}"></label><label>Naam<input data-room-nested-collection="cover_controls" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="name" value="${escapeHtml(item.name)}"></label><label>Cover${renderRoomNestedSelector(roomIndex, "cover_controls", itemIndex, "entity", item.entity, { entity: { domain: "cover" } })}</label><label>Type<select data-room-nested-collection="cover_controls" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="kind">${["shutter", "screen", "awning"].map((value) => `<option value="${value}" ${item.kind === value ? "selected" : ""}>${value}</option>`).join("")}</select></label><label>Bevestiging<select data-room-nested-collection="cover_controls" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="confirmation"><option value="movement" ${item.confirmation === "movement" ? "selected" : ""}>Bij beweging</option><option value="none" ${item.confirmation === "none" ? "selected" : ""}>Geen</option></select></label></article>`).join("");
+  const plugs = (room.smart_plugs ?? []).map((item, itemIndex) => `<article class="nested-item"><div class="item-toolbar"><strong>${escapeHtml(item.name || item.key)}</strong><button type="button" data-room-nested-remove="smart_plugs" data-room-index="${roomIndex}" data-item-index="${itemIndex}">Verwijder</button></div><label>Sleutel<input data-room-nested-collection="smart_plugs" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="key" value="${escapeHtml(item.key)}"></label><label>Naam<input data-room-nested-collection="smart_plugs" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="name" value="${escapeHtml(item.name)}"></label><label>Schakelaar${renderRoomNestedSelector(roomIndex, "smart_plugs", itemIndex, "switch_entity", item.switch_entity, { entity: { domain: "switch" } })}</label><label>Actueel vermogen${renderRoomNestedSelector(roomIndex, "smart_plugs", itemIndex, "power_entity", item.power_entity, { entity: { domain: "sensor" } })}</label><label>Energie totaal${renderRoomNestedSelector(roomIndex, "smart_plugs", itemIndex, "energy_entity", item.energy_entity, { entity: { domain: "sensor" } })}</label><label>Spanning${renderRoomNestedSelector(roomIndex, "smart_plugs", itemIndex, "voltage_entity", item.voltage_entity, { entity: { domain: "sensor" } })}</label><label>Dag${renderRoomNestedSelector(roomIndex, "smart_plugs", itemIndex, "energy_day_entity", item.energy_day_entity ?? "", { entity: { domain: "sensor" } })}</label><label>Dagperiode<select data-room-nested-collection="smart_plugs" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="energy_day_period">${renderPeriodOptions(item.energy_day_period)}</select></label><label>Maand${renderRoomNestedSelector(roomIndex, "smart_plugs", itemIndex, "energy_month_entity", item.energy_month_entity ?? "", { entity: { domain: "sensor" } })}</label><label>Maandperiode<select data-room-nested-collection="smart_plugs" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="energy_month_period">${renderPeriodOptions(item.energy_month_period)}</select></label><label>Jaar${renderRoomNestedSelector(roomIndex, "smart_plugs", itemIndex, "energy_year_entity", item.energy_year_entity ?? "", { entity: { domain: "sensor" } })}</label><label>Jaarperiode<select data-room-nested-collection="smart_plugs" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="energy_year_period">${renderPeriodOptions(item.energy_year_period)}</select></label><label class="check"><input type="checkbox" data-room-nested-collection="smart_plugs" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="protected" ${item.protected ? "checked" : ""}>Beveiligd, niet schakelbaar</label><label>Uitleg<input data-room-nested-collection="smart_plugs" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="protection_reason" value="${escapeHtml(item.protection_reason ?? "")}"></label></article>`).join("");
+  const roomEnergy = room.room_energy ?? { power_entity: "", day_entity: "", month_entity: "", year_entity: "" };
+  return `<h4>Control Deck</h4><label>Privacyveilige kamerafbeelding${renderSelector("rooms", roomIndex, "image_entity", room.image_entity ?? "", { entity: { domain: "image" } })}</label><div class="nested-collection"><h5>Lichtgroepen</h5>${lightGroups}<button type="button" data-room-nested-add="light_groups" data-room-index="${roomIndex}">Lichtgroep toevoegen</button></div><div class="nested-collection"><h5>Getypeerde openingen</h5>${covers}<button type="button" data-room-nested-add="cover_controls" data-room-index="${roomIndex}">Opening toevoegen</button></div><div class="nested-collection"><h5>Smart plugs</h5>${plugs}<button type="button" data-room-nested-add="smart_plugs" data-room-index="${roomIndex}">Smart plug toevoegen</button></div><h5>Kamerenergie</h5><label>Actueel vermogen${renderSelector("rooms", roomIndex, "room_energy.power_entity", roomEnergy.power_entity, { entity: { domain: "sensor" } })}</label><label>Vandaag${renderSelector("rooms", roomIndex, "room_energy.day_entity", roomEnergy.day_entity, { entity: { domain: "sensor" } })}</label><label>Dagperiode<select data-path="rooms.${roomIndex}.room_energy.day_period">${renderPeriodOptions(roomEnergy.day_period)}</select></label><label>Maand${renderSelector("rooms", roomIndex, "room_energy.month_entity", roomEnergy.month_entity, { entity: { domain: "sensor" } })}</label><label>Maandperiode<select data-path="rooms.${roomIndex}.room_energy.month_period">${renderPeriodOptions(roomEnergy.month_period)}</select></label><label>Jaar${renderSelector("rooms", roomIndex, "room_energy.year_entity", roomEnergy.year_entity, { entity: { domain: "sensor" } })}</label><label>Jaarperiode<select data-path="rooms.${roomIndex}.room_energy.year_period">${renderPeriodOptions(roomEnergy.year_period)}</select></label>`;
+}
+
 function renderRooms(config: HomeDashboardConfigV1, expandedItems: Set<string>): string {
   return config.rooms.map((roomConfig, index) => {
     const controls = visibleRoomControls(roomConfig);
@@ -170,6 +195,7 @@ function renderRooms(config: HomeDashboardConfigV1, expandedItems: Set<string>):
     <label>Camera's${renderSelector("rooms", index, "camera_entities", roomConfig.camera_entities, { entity: { domain: "camera", multiple: true } })}</label>
     <label>Apparaten en power${renderSelector("rooms", index, "power_entities", roomConfig.power_entities, { entity: { multiple: true } })}</label>
     <label>Overige historie${renderSelector("rooms", index, "history_entities", roomConfig.history_entities, { entity: { multiple: true } })}</label>
+    ${renderRoomControlDeck(roomConfig, index)}
     <h4>Klimaatdetail</h4>
     <label>Klimaatbron${renderSelector("rooms", index, "hvac.entity", roomConfig.hvac.entity, { entity: { domain: "climate" } })}</label>
     <label>Comfort en luchtkwaliteit${renderSelector("rooms", index, "hvac.comfort_entities", roomConfig.hvac.comfort_entities, { entity: { multiple: true } })}</label>
@@ -277,6 +303,30 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
     this.commit();
   }
 
+  private addRoomNestedItem(roomIndex: number, collection: "light_groups" | "cover_controls" | "smart_plugs"): void {
+    const room = this._config.rooms[roomIndex];
+    if (!room) return;
+    if (collection === "light_groups") (room.light_groups ??= []).push({ key: `light_group_${room.light_groups.length + 1}`, name: "", control_entity: "", member_entities: [] });
+    if (collection === "cover_controls") (room.cover_controls ??= []).push({ key: `cover_${room.cover_controls.length + 1}`, name: "", entity: "", kind: "shutter", confirmation: "movement" });
+    if (collection === "smart_plugs") (room.smart_plugs ??= []).push({ key: `plug_${room.smart_plugs.length + 1}`, name: "", switch_entity: "", power_entity: "", energy_entity: "", voltage_entity: "", protected: false, protection_reason: "", energy_day_entity: "", energy_month_entity: "", energy_year_entity: "" });
+    this.commit();
+  }
+
+  private updateRoomNestedItem(roomIndex: number, collection: "light_groups" | "cover_controls" | "smart_plugs", itemIndex: number, field: string, value: unknown): void {
+    const room = this._config.rooms[roomIndex];
+    const item = room?.[collection]?.[itemIndex] as MutableRecord | undefined;
+    if (!item) return;
+    if (field.endsWith("_period") && value === "") delete item[field];
+    else item[field] = value;
+    this.commit();
+  }
+
+  private removeRoomNestedItem(roomIndex: number, collection: "light_groups" | "cover_controls" | "smart_plugs", itemIndex: number): void {
+    const room = this._config.rooms[roomIndex];
+    room?.[collection]?.splice(itemIndex, 1);
+    this.commit();
+  }
+
   private commit(): void {
     if (this.blocked) {
       this.message = "Configuratie blijft geblokkeerd; er wordt geen v1-configuratie teruggeschreven.";
@@ -306,7 +356,8 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
       const room: RoomConfig = {
         key: `room_${this._config.rooms.length + 1}`, name: "", icon: "mdi:sofa", floor_id: "", area_id: "", device_ids: [], capabilities: [], quick_actions: [],
         control_entities: [],
-        light_entities: [], light_switch_entities: [], cover_entities: [], media_entities: [], safety_entities: [], camera_entities: [], power_entities: [], history_entities: [],
+        light_entities: [], light_switch_entities: [], light_groups: [], cover_entities: [], cover_controls: [], media_entities: [], safety_entities: [], camera_entities: [], power_entities: [], history_entities: [],
+        image_entity: "", temperature_history_entity: "", smart_plugs: [], room_energy: { power_entity: "", day_entity: "", month_entity: "", year_entity: "" },
         hvac: { entity: "", comfort_entities: [], history_entities: [], modes: [], presets: [], fan_modes: [], swing_modes: [] }
       };
       this._config.rooms.push(room);
@@ -377,7 +428,8 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
         let value: unknown = element.value;
         if (element instanceof HTMLInputElement && element.type === "checkbox") value = element.checked;
         if (element instanceof HTMLInputElement && element.type === "number") value = Number(element.value);
-        setPath(this._config, path, value);
+        if (path.endsWith("_period") && value === "") deletePath(this._config, path);
+        else setPath(this._config, path, value);
         this.commit();
       });
     });
@@ -388,6 +440,8 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
         if (path) {
           setPath(this._config, path, value);
           this.commit();
+        } else if (element.dataset.roomNestedCollection) {
+          this.updateRoomNestedItem(Number(element.dataset.roomIndex), element.dataset.roomNestedCollection as "light_groups" | "cover_controls" | "smart_plugs", Number(element.dataset.itemIndex), element.dataset.field ?? "", value);
         } else {
           this.updateCollection(element.dataset.collection ?? "", Number(element.dataset.index), element.dataset.field ?? "", value);
         }
@@ -404,8 +458,18 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
         this.updateCollection(element.dataset.collection ?? "", Number(element.dataset.index), element.dataset.field ?? "", value);
       });
     });
+    this.shadowRoot.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-room-nested-collection]").forEach((element) => {
+      if (element.tagName.toLowerCase() === "ha-selector") return;
+      element.addEventListener("change", () => {
+        let value: unknown = element.value;
+        if (element instanceof HTMLInputElement && element.type === "checkbox") value = element.checked;
+        this.updateRoomNestedItem(Number(element.dataset.roomIndex), element.dataset.roomNestedCollection as "light_groups" | "cover_controls" | "smart_plugs", Number(element.dataset.itemIndex), element.dataset.field ?? "", value);
+      });
+    });
     this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-add]").forEach((controlButton) => controlButton.addEventListener("click", () => this.addItem(controlButton.dataset.add ?? "")));
     this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-remove]").forEach((controlButton) => controlButton.addEventListener("click", () => this.removeItem(controlButton.dataset.remove ?? "", Number(controlButton.dataset.index))));
+    this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-room-nested-add]").forEach((controlButton) => controlButton.addEventListener("click", () => this.addRoomNestedItem(Number(controlButton.dataset.roomIndex), controlButton.dataset.roomNestedAdd as "light_groups" | "cover_controls" | "smart_plugs")));
+    this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-room-nested-remove]").forEach((controlButton) => controlButton.addEventListener("click", () => this.removeRoomNestedItem(Number(controlButton.dataset.roomIndex), controlButton.dataset.roomNestedRemove as "light_groups" | "cover_controls" | "smart_plugs", Number(controlButton.dataset.itemIndex))));
     this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-room-move]").forEach((controlButton) => controlButton.addEventListener("click", () => this.moveItem(this._config.rooms, Number(controlButton.dataset.index), controlButton.dataset.roomMove as "up" | "down")));
     this.bindControlOrderEvents(this.shadowRoot);
     this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-room-control-apply]").forEach((controlButton) => controlButton.addEventListener("click", () => this.commit()));
@@ -544,7 +608,7 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
       .section-panel{min-width:0;border:1px solid var(--divider-color);border-radius:14px;background:var(--card-background-color);overflow:hidden}.section-heading{padding:16px;border-bottom:1px solid var(--divider-color)}.section-heading h3{margin:0;font-size:1.25rem}.section{display:grid;gap:12px;padding:14px}
       .field,label{display:grid;gap:5px}.field{grid-template-columns:minmax(180px,1fr) minmax(220px,1fr);align-items:center;padding:9px 0;border-top:1px solid var(--divider-color)}small{display:block;color:var(--secondary-text-color);margin-top:3px}
       input,select,textarea{width:100%;min-height:44px;padding:10px;border:1px solid var(--divider-color);border-radius:8px;background:var(--secondary-background-color);color:inherit}textarea{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;resize:vertical}input[type=checkbox]{width:22px;height:22px;min-height:22px}.check{display:flex;align-items:center;min-height:44px;gap:8px}
-      .items{display:grid;gap:10px}.item{margin:0;border:1px solid var(--divider-color);border-radius:12px;background:var(--secondary-background-color);overflow:hidden}.item summary{min-height:44px;padding:12px;font-weight:700;cursor:pointer}.item-body{display:grid;gap:10px;padding:0 12px 12px}.item-toolbar{display:flex;justify-content:flex-end}.item-actions,.order-actions{display:flex;gap:8px}.item button{color:var(--error-color);background:transparent;border:0;min-width:44px;min-height:44px;cursor:pointer}.item button[disabled]{opacity:.35;cursor:not-allowed}.order-actions button{border:1px solid var(--divider-color);border-radius:8px;background:var(--secondary-background-color);color:inherit}.order-actions button:hover:not([disabled]){border-color:var(--accent);color:var(--accent)}code{display:block;overflow-wrap:anywhere;color:var(--secondary-text-color)}
+      .items{display:grid;gap:10px}.item{margin:0;border:1px solid var(--divider-color);border-radius:12px;background:var(--secondary-background-color);overflow:hidden}.item summary{min-height:44px;padding:12px;font-weight:700;cursor:pointer}.item-body{display:grid;gap:10px;padding:0 12px 12px}.item-toolbar{display:flex;justify-content:flex-end;align-items:center;gap:8px}.item-toolbar strong{margin-right:auto}.item-actions,.order-actions{display:flex;gap:8px}.item button{color:var(--error-color);background:transparent;border:0;min-width:44px;min-height:44px;cursor:pointer}.item button[disabled]{opacity:.35;cursor:not-allowed}.nested-collection{display:grid;gap:8px;padding:10px;border:1px solid var(--divider-color);border-radius:10px}.nested-collection h5{margin:0}.nested-item{display:grid;gap:8px;padding:10px;border:1px solid var(--divider-color);border-radius:9px;background:var(--card-background-color)}.nested-collection>button{justify-self:start;min-height:44px;padding:8px 12px;border:1px solid var(--accent);border-radius:9px;background:var(--card-background-color);color:var(--accent)}.order-actions button{border:1px solid var(--divider-color);border-radius:8px;background:var(--secondary-background-color);color:inherit}.order-actions button:hover:not([disabled]){border-color:var(--accent);color:var(--accent)}code{display:block;overflow-wrap:anywhere;color:var(--secondary-text-color)}
       fieldset.config{border:0;margin:0;padding:0;min-width:0}.config[disabled]{pointer-events:none;opacity:.72}.order{display:grid;gap:6px}.order>div{display:grid;grid-template-columns:30px minmax(0,1fr) auto;align-items:center;gap:9px;padding:7px 9px;border:1px solid var(--divider-color);border-radius:9px;background:var(--card-background-color)}.order-index{display:grid;place-items:center;width:28px;height:28px;border-radius:8px;background:color-mix(in srgb,var(--accent) 13%,var(--card-background-color));color:var(--accent);font-weight:750}.order code{min-width:0}.order-save{display:flex;align-items:center;justify-content:space-between;gap:10px}.order-save button{min-height:44px;padding:8px 12px;border:1px solid var(--divider-color);border-radius:9px;background:var(--card-background-color);color:inherit}.order-save button.pending{border-color:var(--accent);background:var(--accent);color:#fff;font-weight:700}.fatal{color:var(--error-color);font-weight:700}
       .add{justify-self:start;min-height:44px;padding:9px 12px;border:0;border-radius:9px;background:var(--accent);color:var(--text-primary-color,#fff);cursor:pointer}.guidance{display:grid;gap:8px;padding:12px;border:1px solid color-mix(in srgb,var(--accent) 35%,var(--divider-color));border-radius:12px;background:color-mix(in srgb,var(--accent) 8%,var(--card-background-color))}.guidance button{justify-self:start;min-height:44px;padding:8px 12px;border:1px solid var(--accent);border-radius:9px;background:var(--card-background-color);color:var(--accent);font-weight:700;cursor:pointer}.issues{margin:0;padding-left:20px}.error{color:var(--error-color)}.warning{color:var(--warning-color,#b26a00)}.section-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;border-top:1px solid var(--divider-color)}.section-footer button{min-height:44px;padding:8px 14px;border:1px solid var(--divider-color);border-radius:9px;background:var(--secondary-background-color);color:inherit}.section-footer button[disabled]{opacity:.45}
       @media(max-width:800px){.editor-layout{grid-template-columns:1fr}.section-nav{display:flex;overflow-x:auto;position:sticky;top:0;z-index:2;padding:6px;background:var(--primary-background-color);scrollbar-width:thin}.section-tab{flex:0 0 auto;width:auto}.field{grid-template-columns:1fr}.section{padding-inline:10px}header{padding:12px}.toolbar{align-items:stretch}.toolbar>*{flex:1 1 180px}}

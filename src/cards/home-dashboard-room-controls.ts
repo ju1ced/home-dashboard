@@ -55,6 +55,7 @@ export function planEntityControl(room: RoomConfig, hass: Hass | undefined, enti
   if (!room.controls_enabled || !kinds.includes(kind)) return undefined;
   const state = hass?.states?.[entity];
   if (!entity || !known(state)) return undefined;
+  if (room.smart_plugs?.some((plug) => plug.protected === true && plug.switch_entity === entity)) return undefined;
   const explicitlyOrdered = room.control_entities?.includes(entity) === true;
   const mapped = kind === "light"
     ? entity.startsWith("switch.") ? room.light_switch_entities?.includes(entity) === true : room.light_entities.includes(entity) || room.control_light_entity === entity || explicitlyOrdered

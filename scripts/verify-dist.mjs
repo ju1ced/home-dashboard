@@ -9,11 +9,12 @@ const bundle = await readFile(bundleUrl, "utf8");
 const bundleStats = await stat(bundleUrl);
 const distFiles = await readdir(distDirectory);
 const errors = [];
-// 212_000 -> 215_000: goedgekeurd voor de room-card-overhaul nadat origin/main
-// reproduceerbaar 211_963 bytes bleek te bouwen. De extra circa 1,8 kB dekt de
-// fail-closed serviceplanning, herhaalde confirmations, stale-callafhandeling en
-// focusherstel. 215_000 houdt de marge beperkt zonder veiligheidslogica weg te drukken.
-const maxBundleBytes = 215_000;
+// 215_000 -> 245_000: HD-202 voegt het volledige capability-gedreven Control Deck
+// toe aan dezelfde HACS-bundle: drieperiodenenergie, lichtgroepen, getypeerde
+// openingen, beschermde plugs, tabs, toegankelijke apparaatvergelijking en
+// servicefeedback met pending-lock. De grens laat minder dan 1% marge boven
+// de gereviewde alpha.20-kandidaat en bewaakt verdere groei.
+const maxBundleBytes = 245_000;
 
 if (hacs.filename !== "home-dashboard.js") errors.push("hacs.json verwijst niet naar home-dashboard.js");
 if (hacs.homeassistant !== "2026.8.2") errors.push("Onverwachte minimale Home Assistant-versie");

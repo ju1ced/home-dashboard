@@ -27,6 +27,10 @@ Kamerkaarten gebruiken minimaal 44×44 px knoppen, toetsenbordfocus, tekst naast
 
 ## Kamerdetail
 
+Vanaf `v0.8.0-alpha.20` gebruikt de kamerdetailpagina één capability-gedreven Control Deck. Een vaste functierail en vier toetsenbordbedienbare tabs scheiden **Bediening**, **Apparaten**, **Energie** en **Historie** zonder een tweede servicepad te introduceren. Verlichting kan expliciete groepen én afzonderlijke leden tonen; groepsstatus gebruikt tekst voor uit, aan, gedeeltelijk, unknown en unavailable. Getypeerde rolluiken, screens en luifels behouden featuregating en hun Open/Stop/Dicht- of Uit/Stop/In-labels.
+
+Smart plugs staan onder Apparaten. Een beveiligde plug blijft zichtbaar, is disabled en toont de opgegeven reden. Andere plugs vereisen ontgrendelen en bevestigen. Energie toont uitsluitend expliciet gemapte dag-, maand- en jaarbronnen; een ontbrekende periode wordt niet als nul gepresenteerd. De Historie-tab is de enige eigenaar van de native 24-uurs `history-graph`-dialoog.
+
 Iedere kamer krijgt een Home Assistant-subview met terugpad naar Home. `v0.5.0-alpha.2` gebruikt één samenhangende responsive compositie, zodat secties niet meer als losse technische tilekolommen over het scherm worden verspreid. De beschikbare bronmappings bepalen welke onderdelen verschijnen:
 
 1. **Ruimtestatus:** comfort- en relevante safetystatussen; warnings blijven ook op mobiel buiten ingeklapte inhoud zichtbaar.

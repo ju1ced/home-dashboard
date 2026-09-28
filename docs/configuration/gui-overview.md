@@ -10,7 +10,7 @@ De editor heeft tien onderdelen:
 2. **Vandaag:** weer, forecast, afval, thuisbatterij-SoC, afzonderlijk batterij laden en ontladen, zonnepanelenopbrengst, huisverbruik zonder batterijladen, maandelijkse vermogenspiek en optionele extra energiecontext.
 3. **Personen:** personselectie, label, privacyveilige toegestane zones, thuis/zone/andere locatie, freshness en batterijen.
 4. **Security:** alarm en een vrij aantal camera's met privacyinstelling, actie, fallback en bevestiging.
-5. **Kamers:** logische sleutel, naam, icon, floor, area, extra devices, capabilities, maximaal twee quick actions en expliciete bronnen voor licht, covers/openingen, media, safety, camera, power, historie en volledige klimaatdetails.
+5. **Kamers:** logische sleutel, naam, icon, floor, area, extra devices, capabilities, maximaal twee quick actions, kamerbeeld, expliciete bronnen en geneste Control Deck-configuratie voor lichtgroepen, getypeerde openingen, smart plugs en kamerverbruik.
 6. **Energie:** volledige bronselectie voor elektriciteit, zon, batterij, gas, water, apparaten, capaciteitspiek, EV, UPS en fases.
 7. **Acties:** native HA action selector, expliciete targetscope, risicoklasse, bevestiging, hold en verplichte resultaatcontrole.
 8. **Specialisten:** Kia, robot, tuin en zwembad met vaste cardtypes, minimumversie en logische mappingkeys.
@@ -30,6 +30,8 @@ Kiosk is presentatie, geen autorisatie. De adapter gebruikt de DOM-structuur van
 De volgorde van kamerknoppen verandert lokaal met pijlen. Pas na **Volgorde toepassen** verstuurt de editor één configuratiewijziging, zodat Home Assistant niet na iedere tussenstap het volledige dashboard herbouwt.
 
 Herhaalbare items zoals personen, camera's, kamers en acties zijn inklapbaar. Een geopend item blijft na een geldige of ongeldige veldwijziging open; een nieuw item opent onmiddellijk voor invoer.
+
+Binnen iedere kamer beheert de editor herhaalbare lichtgroepen, openingen en smart plugs zonder handgeschreven JSON. Groepen vereisen een logische sleutel, groepsdoel en expliciete leden. Openingen kiezen hun type en confirmationbeleid. Smart plugs kunnen als beveiligd worden gemarkeerd en koppelen dag-, maand- en jaarverbruik afzonderlijk. Kamerenergie gebruikt dezelfde drie perioden en een optionele actuele vermogensbron.
 
 ## Opslaan en validatie
 

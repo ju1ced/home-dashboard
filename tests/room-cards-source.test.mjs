@@ -17,7 +17,7 @@ test("kameroverzicht toont concrete, state-aware apparaatpresentaties", async ()
 test("kamerdetail houdt directe bediening begrensd tot expliciete kamerdoelen", async () => {
   const source = await readFile(sourceUrl, "utf8");
   assert.match(source, /room\.light_switch_entities \?\? \[\]/);
-  assert.match(source, /room\.cover_entities\.map/);
+  assert.match(source, /room\.cover_entities\.filter/);
   assert.match(source, /room\.media_entities\.map/);
   assert.match(source, /actionable\(/);
   assert.match(source, /Niet gevonden/);
@@ -35,6 +35,21 @@ test("kamerdetail maakt bediening en kernstatus onmiddellijk scanbaar", async ()
   assert.match(source, /room-column/);
   assert.match(source, /mushroom-grid/);
   assert.match(source, /room-photo/);
+});
+
+test("kamerdetail gebruikt de capability-gedreven Control Deck-compositie", async () => {
+  const source = await readFile(sourceUrl, "utf8");
+  assert.match(source, /control-deck/);
+  assert.match(source, /capability-rail/);
+  assert.match(source, /detail-tabs/);
+  assert.match(source, /role", "tablist"/);
+  assert.match(source, /aria-selected/);
+  assert.match(source, /activeCapability/);
+  assert.match(source, /capability:/);
+  assert.match(source, /data-capability-section/);
+  for (const label of ["Bediening", "Apparaten", "Energie", "Historie"]) {
+    assert.ok(source.includes(label), `${label} ontbreekt`);
+  }
 });
 
 test("kamerdetail gebruikt afzonderlijke mushroom-achtige capabilitykaarten", async () => {
@@ -61,9 +76,42 @@ test("kamerverlichting accepteert expliciete switch-opties", async () => {
   assert.match(source, /planEntityControl/);
 });
 
+test("Control Deck rendert expliciete lichtgroepen en getypeerde openingen", async () => {
+  const source = await readFile(sourceUrl, "utf8");
+  assert.match(source, /room\.light_groups/);
+  assert.match(source, /resolveLightGroupState/);
+  assert.match(source, /member_entities/);
+  assert.match(source, /state === "unknown" \|\| state === "unavailable"/);
+  assert.match(source, /room\.cover_controls/);
+  assert.match(source, /Uit/);
+  assert.match(source, /In/);
+});
+
+test("Control Deck toont beschermde plugs en afzonderlijke dag-, maand- en jaarbronnen", async () => {
+  const source = await readFile(sourceUrl, "utf8");
+  assert.match(source, /plug\.protected/);
+  assert.match(source, /protection_reason/);
+  assert.match(source, /energy_day_entity/);
+  assert.match(source, /energy_month_entity/);
+  assert.match(source, /energy_year_entity/);
+  assert.match(source, /Vandaag/);
+  assert.match(source, /Maand/);
+  assert.match(source, /Jaar/);
+});
+
 test("kamereditor biedt verlichtingsswitches ook als direct kiesbaar doel", async () => {
   const editor = await readFile(new URL("../src/editor/home-dashboard-editor.ts", import.meta.url), "utf8");
   assert.match(editor, /domain: \["light", "switch", "cover", "media_player", "climate"\]/);
+});
+
+test("Control Deck-editor dekt alle plugmetingen en privacyveilige afbeeldingen", async () => {
+  const editor = await readFile(new URL("../src/editor/home-dashboard-editor.ts", import.meta.url), "utf8");
+  const fields = await readFile(new URL("../src/editor/fields.ts", import.meta.url), "utf8");
+  assert.match(editor, /itemIndex, "energy_entity"/);
+  assert.match(editor, /itemIndex, "voltage_entity"/);
+  assert.match(editor, /domain: "image"/);
+  assert.match(fields, /rooms\[\]\.smart_plugs\[\]/);
+  assert.match(fields, /rooms\[\]\.room_energy/);
 });
 
 test("kamerdetail behoudt niet-bedienbare kamerbronnen als zichtbare status", async () => {
@@ -114,6 +162,7 @@ test("roominteracties hebben touch-, focus- en mobiele contracts", async () => {
   assert.match(editor, /\.item button\{[^}]*min-width:44px;min-height:44px/);
   assert.match(editor, /\.section-footer button\{[^}]*min-height:44px/);
   assert.match(source, /button:focus-visible/);
+  assert.match(source, /button:disabled\{[^}]*opacity:/);
   assert.match(source, /min-height:44px/);
   assert.match(source, /@media\(max-width:600px\)/);
   assert.match(source, /\.mushroom-grid,.plug-grid\{grid-template-columns:1fr\}/);

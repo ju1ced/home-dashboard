@@ -1,6 +1,6 @@
 # Home Dashboard — ontwerpvoorstel
 
-Lokale kandidaat **v0.8.0-alpha.19** combineert de room-cardoverhaul met één browsermatrix, 44×44-touchgates, reduced-motiongedrag, de 3D-printerroute en gecorrigeerde zwembadstatusprecedence. Energy-pariteit en de resterende menselijke accessibilitytest zijn expliciet begrensd. Commit, PR, prerelease en live Home Assistant-acceptatie blijven afzonderlijke gates. Zie de [testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.19.md).
+Lokale kandidaat **v0.8.0-alpha.20** introduceert het capability-gedreven Control Deck voor kamerdetails met lichtgroepen, getypeerde openingen, beschermde smart plugs en expliciete dag-/maand-/jaarenergie. Schema, GUI, runtime, fictieve fixtures en browsermatrix worden samen geleverd. Commit, PR, prerelease en live Home Assistant-acceptatie blijven afzonderlijke gates. Zie de [testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.20.md).
 
 Testcandidate **v0.8.0-alpha.9** gebruikt één navigatiebalk op dezelfde plek en met dezelfde maat in alle views, kiosk zonder extra frontendresource en een beheerderstandwiel voor de native dashboardeditor. Zie de [testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.9.md) en de [volledige testscope en runtimegrenzen](docs/releases/testing-navigation-consistency.md). De onderstaande alpha.8-beschrijving beschrijft de eerdere release.
 
@@ -30,6 +30,7 @@ V1 bevat geen custom panel en geen extra summary-component. De minimale onderste
 - [Conceptscorecard](docs/design/concept-scorecard.md)
 - [Informatiearchitectuur](docs/design/information-architecture.md)
 - [Designsysteem](docs/design/design-system.md)
+- [Control Deck-kamercontract](docs/design/control-deck-room-dashboard.md)
 - [Integratiestrategie](docs/design/integration-strategy.md)
 - [Multi-agent implementatieplan](docs/design/implementation-plan.md)
 - [Deliveryroadmap: agents, PR's, GUI, HACS en releases](docs/design/delivery-roadmap.md)
@@ -69,7 +70,7 @@ Open daarna `http://127.0.0.1:4173/`. De fixtureselector wisselt tussen normaal,
 
 ## HACS-installatie
 
-[`v0.1.0-alpha.1`](https://github.com/ju1ced/home-dashboard/releases/tag/v0.1.0-alpha.1) heeft de volledige HACS-lifecycle doorlopen: installatie, update, verwijdering en herinstallatie. Zie [het geanonimiseerde resultaat](docs/releases/results-v0.1.0-alpha.1.md). De `v0.2`-reeks valideerde de GUI; de `v0.3`-reeks bracht de eerste views; latere alpha's breidden camera's, Home, Kamers en veilige kamerbediening uit. `v0.8.0-alpha.18` is de laatst getagde kandidaat; `v0.8.0-alpha.19` staat uitsluitend lokaal klaar voor de volgende expliciet goed te keuren test- en releasecyclus.
+[`v0.1.0-alpha.1`](https://github.com/ju1ced/home-dashboard/releases/tag/v0.1.0-alpha.1) heeft de volledige HACS-lifecycle doorlopen: installatie, update, verwijdering en herinstallatie. Zie [het geanonimiseerde resultaat](docs/releases/results-v0.1.0-alpha.1.md). De `v0.2`-reeks valideerde de GUI; de `v0.3`-reeks bracht de eerste views; latere alpha's breidden camera's, Home, Kamers en veilige kamerbediening uit. `v0.8.0-alpha.19` is de laatst getagde kandidaat; `v0.8.0-alpha.20` staat lokaal klaar voor de volgende expliciet goed te keuren validatiecyclus.
 
 ## Checks
 
@@ -111,4 +112,4 @@ scripts/          lokale preview en repositorychecks
 
 ## Status
 
-v0.8.0-alpha.19 is de lokale releasecandidate voor de volgende testcyclus. De geautomatiseerde suite en browsermatrix moeten groen zijn en een onafhankelijke review mag geen open P0/P1 bevatten voordat commit, PR of prerelease wordt voorgesteld. De fixtures voeren geen live Home Assistant-write uit; deployment en runtimeacceptatie vereisen daarna nog de ingevulde menselijke gate uit de testchecklist.
+v0.8.0-alpha.20 is de lokale Control Deck-releasecandidate voor de volgende testcyclus. De geautomatiseerde suite en browsermatrix moeten groen zijn en een onafhankelijke review mag geen open P0/P1 bevatten voordat commit, PR of prerelease wordt voorgesteld. De fixtures voeren geen live Home Assistant-write uit; deployment en runtimeacceptatie vereisen daarna nog de ingevulde menselijke gate uit de testchecklist.

@@ -327,6 +327,93 @@ test("runtime JSON Schema weigert decimalen en dubbele referenties", () => {
   assert.throws(() => parseImportedConfig(serializeConfig(duplicate)), /Dubbele lijstitems/);
 });
 
+test("Control Deck-kamercontract migreert groepen, openingen, plugs en drie energieperioden verliesvrij", () => {
+  const entity = (domain, key) => `${domain}.${key}`;
+  const input = {
+    rooms: [{
+      key: "kitchen", name: "Keuken", area_id: "EXAMPLE_AREA", capabilities: ["lights", "covers", "power"],
+      light_groups: [{ key: "worktop", name: "Werkblad", control_entity: entity("light", "kitchen_worktop"), member_entities: [entity("light", "kitchen_left"), entity("light", "kitchen_right")] }],
+      cover_controls: [{ key: "screen", name: "Screen", entity: entity("cover", "kitchen_screen"), kind: "screen", confirmation: "movement" }],
+      smart_plugs: [{
+        key: "coffee", name: "Koffiemachine", switch_entity: entity("switch", "kitchen_coffee"), power_entity: entity("sensor", "kitchen_coffee_power"),
+        energy_entity: entity("sensor", "kitchen_coffee_energy"), voltage_entity: entity("sensor", "kitchen_coffee_voltage"), protected: true,
+        protection_reason: "Wordt automatisch beheerd.", energy_day_entity: entity("sensor", "kitchen_coffee_day"), energy_day_period: "running",
+        energy_month_entity: entity("sensor", "kitchen_coffee_month"), energy_month_period: "running",
+        energy_year_entity: entity("sensor", "kitchen_coffee_year"), energy_year_period: "completed"
+      }],
+      room_energy: {
+        power_entity: entity("sensor", "kitchen_power"), day_entity: entity("sensor", "kitchen_energy_day"), day_period: "running",
+        month_entity: entity("sensor", "kitchen_energy_month"), month_period: "running",
+        year_entity: entity("sensor", "kitchen_energy_year"), year_period: "completed"
+      }
+    }]
+  };
+  const config = migrateConfig(input).config;
+  const room = config.rooms[0];
+  assert.deepEqual(room.light_groups, input.rooms[0].light_groups);
+  assert.deepEqual(room.cover_controls, input.rooms[0].cover_controls);
+  assert.deepEqual(room.smart_plugs, input.rooms[0].smart_plugs);
+  assert.deepEqual(room.room_energy, input.rooms[0].room_energy);
+  assert.deepEqual(validateConfigSchema(config), []);
+  assert.equal(validateConfig(config).filter((issue) => issue.severity === "error").length, 0);
+  assert.deepEqual(parseImportedConfig(serializeConfig(config)), config);
+});
+
+test("Control Deck-validatie weigert onvolledige groepen, dubbele sleutels en verkeerd gemapte bronnen", () => {
+  const entity = (domain, key) => `${domain}.${key}`;
+  const config = migrateConfig({ rooms: [{
+    key: "office", name: "Bureau", area_id: "EXAMPLE_AREA", capabilities: ["lights", "covers", "power"],
+    light_groups: [
+      { key: "desk", name: "Bureau", control_entity: entity("cover", "wrong"), member_entities: [entity("light", "office_desk")] },
+      { key: "desk", name: "Dubbel", control_entity: entity("light", "office_other"), member_entities: [] }
+    ],
+    cover_controls: [{ key: "blind", name: "Rolluik", entity: entity("light", "wrong"), kind: "shutter", confirmation: "none" }],
+    smart_plugs: [
+      { key: "desk", name: "Scherm", switch_entity: entity("light", "wrong"), power_entity: entity("cover", "wrong_power"), energy_entity: "", voltage_entity: "", protected: true, protection_reason: "" },
+      { key: "desk", name: "Dock", switch_entity: entity("switch", "office_dock"), power_entity: "", energy_entity: "", voltage_entity: "" }
+    ]
+  }] }).config;
+  config.rooms[0].image_entity = entity("camera", "legacy_room_image");
+  config.rooms[0].room_energy = { power_entity: entity("switch", "wrong"), day_entity: entity("person", "wrong"), month_entity: entity("camera", "wrong"), year_entity: entity("sensor", "office_year") };
+  const issues = validateConfig(config);
+  const schemaIssues = validateConfigSchema(config);
+  assert.ok(schemaIssues.some((issue) => issue.path.includes("member_entities")), "schema minItems ontbreekt");
+  assert.ok(!schemaIssues.some((issue) => issue.path.includes("image_entity")), "legacy camera-afbeelding moet schema-v1-compatibel blijven");
+  for (const code of ["duplicate_nested_key", "light_group_domain", "light_group_members_required", "cover_domain", "plug_domain", "plug_measurement_domain", "room_energy_domain", "protection_reason_required", "legacy_room_image_domain"]) {
+    assert.ok(issues.some((issue) => issue.code === code), `${code} ontbreekt`);
+  }
+});
+
+test("Control Deck blokkeert dubbele plugdoelen en beveiligde overlap zonder schema-v1-afbeeldingen te vernauwen", () => {
+  const entity = (domain, key) => `${domain}.${key}`;
+  const shared = entity("switch", "shared_fixture");
+  const config = migrateConfig({ rooms: [{
+    key: "utility", name: "Techniek", area_id: "EXAMPLE_AREA", light_switch_entities: [shared],
+    image_entity: entity("media_player", "legacy_artwork"),
+    smart_plugs: [
+      { key: "protected", name: "Beveiligd", switch_entity: shared, power_entity: "", energy_entity: "", voltage_entity: "", protected: true, protection_reason: "Automatisch beheerd." },
+      { key: "duplicate", name: "Dubbel", switch_entity: shared, power_entity: "", energy_entity: "", voltage_entity: "" }
+    ]
+  }] }).config;
+  assert.deepEqual(validateConfigSchema(config), []);
+  const issues = validateConfig(config);
+  assert.ok(issues.some((candidate) => candidate.code === "protected_control_overlap"));
+  assert.ok(issues.some((candidate) => candidate.code === "duplicate_plug_target"));
+  assert.ok(issues.some((candidate) => candidate.code === "legacy_room_image_domain" && candidate.severity === "warning"));
+  assert.doesNotThrow(() => parseImportedConfig(serializeConfig({ ...config, rooms: [{ ...config.rooms[0], light_switch_entities: [], smart_plugs: [] }] })));
+});
+
+test("malformed geneste Control Deck-items worden veilig genormaliseerd", async () => {
+  const result = migrateConfig({ rooms: [{ key: "office", name: "Bureau", area_id: "EXAMPLE_AREA", light_groups: [null], cover_controls: [null], smart_plugs: [null] }] });
+  assert.equal(result.config.rooms[0].light_groups.length, 1);
+  assert.equal(result.config.rooms[0].cover_controls.length, 1);
+  assert.equal(result.config.rooms[0].smart_plugs.length, 1);
+  assert.ok(result.warnings.some((warning) => warning.includes("rooms[0].light_groups[0]")));
+  assert.doesNotThrow(() => validateConfig(result.config));
+  const generated = await HomeDashboardStrategy.generate({ rooms: [{ key: "office", name: "Bureau", area_id: "EXAMPLE_AREA", light_groups: [null] }] });
+  assert.match(generated.views[0].sections[0].cards[0].content, /configuratiefout/);
+});
+
 test("area-loze room met expliciet device is in schema en semantiek geldig", () => {
   const config = createDefaultConfig();
   config.rooms.push({

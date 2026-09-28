@@ -30,6 +30,7 @@ const states={};
 const put=(domain,key,state,attributes={})=>{const entity=ref(domain,key); states[entity]={state,attributes,last_updated:'2020-01-01T00:00:00Z'};return entity;};
 const rooms=['Woonkamer','Bureau','Keuken','Terras'].map((name,index)=>({
   key:`room_${index}`,name,area_id:`EXAMPLE_AREA_${index}`,icon:index===3?'mdi:awning-outline':'mdi:sofa',home_favorite:true,controls_enabled:true,
+  capabilities:index===0?['lights','covers','climate','media','security','power']:index<3?['lights','covers','climate','media']:['lights','covers','media'],
   control_light_entity:put('light',`light_${index}`,index<2?'on':'off',{friendly_name:`${name} lichten`}),
   light_switch_entities:index===0?[put('switch','dreamview','on',{friendly_name:'DreamView'})]:[],
   control_cover_entity:index<3?put('cover',`cover_${index}`,'open',{friendly_name:`${name} rolluik`,supported_features:11,device_class:'shutter'}):'',
@@ -41,6 +42,39 @@ const rooms=['Woonkamer','Bureau','Keuken','Terras'].map((name,index)=>({
   smart_plugs:index===0?[{key:'media_plug',name:'Mediahoek',switch_entity:put('switch','media_plug','on',{friendly_name:'Mediahoek'}),power_entity:put('sensor','media_power','176',{unit_of_measurement:'W'}),energy_entity:put('sensor','media_energy','0.6',{unit_of_measurement:'kWh'}),voltage_entity:put('sensor','media_voltage','231',{unit_of_measurement:'V'})}]:[],
   desk:index===1?{card_type:'custom:linak-desk-card',card_config:{entity:put('number','desk_height','0.72',{unit_of_measurement:'m'})}}:undefined
 }));
+const loungeAccent=put('light','lounge_accent','off',{friendly_name:'Leeslamp'});
+rooms[0].light_groups=[{key:'living_lights',name:'Woonverlichting',control_entity:rooms[0].control_light_entity,member_entities:[rooms[0].control_light_entity,loungeAccent]}];
+rooms[0].cover_controls=[
+  {key:'front_shutter',name:'Voorste rolluik',entity:rooms[0].control_cover_entity,kind:'shutter',confirmation:'movement'},
+  {key:'terrace_awning',name:'Terrasluifel',entity:rooms[0].control_awning_entity,kind:'awning',confirmation:'movement'}
+];
+rooms[0].smart_plugs[0].energy_day_entity=rooms[0].smart_plugs[0].energy_entity;
+rooms[0].smart_plugs[0].energy_day_period='running';
+rooms[0].smart_plugs[0].energy_month_entity=put('sensor','media_energy_month','18.4',{unit_of_measurement:'kWh'});
+rooms[0].smart_plugs[0].energy_month_period='running';
+rooms[0].smart_plugs[0].energy_year_entity=put('sensor','media_energy_year','143',{unit_of_measurement:'kWh'});
+rooms[0].smart_plugs[0].energy_year_period='running';
+rooms[0].smart_plugs.push({
+  key:'network_plug',name:'Netwerkhoek',switch_entity:put('switch','network_plug','on',{friendly_name:'Netwerkhoek'}),
+  power_entity:put('sensor','network_power','34',{unit_of_measurement:'W'}),energy_entity:put('sensor','network_energy','0.2',{unit_of_measurement:'kWh'}),
+  voltage_entity:put('sensor','network_voltage','230',{unit_of_measurement:'V'}),
+  energy_day_entity:put('sensor','network_energy_day','0.2',{friendly_name:'Netwerkhoek vandaag',unit_of_measurement:'kWh'}),
+  energy_day_period:'running',
+  energy_month_entity:put('sensor','network_energy_month','6.1',{friendly_name:'Netwerkhoek maand',unit_of_measurement:'kWh'}),
+  energy_month_period:'running',
+  energy_year_entity:put('sensor','network_energy_year','52',{friendly_name:'Netwerkhoek jaar',unit_of_measurement:'kWh'}),
+  energy_year_period:'completed',
+  protected:true,protection_reason:'Beheer via de netwerkautomatisering.'
+});
+rooms[0].room_energy={
+  power_entity:put('sensor','living_power','420',{unit_of_measurement:'W'}),
+  day_entity:put('sensor','living_energy_day','0.6',{unit_of_measurement:'kWh'}),
+  day_period:'running',
+  month_entity:put('sensor','living_energy_month','24.8',{unit_of_measurement:'kWh'}),
+  month_period:'running',
+  year_entity:put('sensor','living_energy_year','143',{unit_of_measurement:'kWh'}),
+  year_period:'completed'
+};
 const config=migrateConfig({rooms,today:{enabled:true,weather_entity:put('weather','weather','cloudy',{temperature:19,temperature_unit:'°C'}),forecast_days:3,
   battery_soc_entity:put('sensor','battery','42',{unit_of_measurement:'%'}),battery_charge_power_entity:put('sensor','charge','0',{unit_of_measurement:'W'}),battery_discharge_power_entity:put('sensor','discharge','0',{unit_of_measurement:'W'}),solar_power_entity:put('sensor','solar','320',{unit_of_measurement:'W'}),home_consumption_entity:put('sensor','consumption','860',{unit_of_measurement:'W'}),monthly_capacity_peak_entity:put('sensor','peak','4.2',{unit_of_measurement:'kW'}),
   waste_entities:['GFT','Restafval','Papier','PMD'].map((name,i)=>put('sensor',`waste_${i}`,`2026-09-${i<2?'09':'16'}`,{friendly_name:name}))},
@@ -52,6 +86,7 @@ config.rooms.push(migrateConfig({rooms:[{key:'hall',name:'Hal',area_id:'EXAMPLE_
 const variant=params.get('fixture')||'normal';
 if(variant==='warning') states[ref('binary_sensor','safety')].state='unsafe';
 if(variant==='missing') { delete states[config.rooms[0].control_light_entity]; delete states[config.today.waste_entities[0]]; }
+if(variant==='unknown') states[loungeAccent].state='unknown';
 if(variant==='unavailable') { states[config.rooms[0].control_cover_entity].state='unavailable'; states[config.today.battery_soc_entity].state='unavailable'; }
 const calls=[];
 const hass={states,connection:{subscribeMessage:async callback=>{queueMicrotask(()=>callback({forecast:[{datetime:'2026-09-08',condition:'cloudy',temperature:22,templow:14},{datetime:'2026-09-09',condition:'sunny',temperature:24,templow:15},{datetime:'2026-09-10',condition:'cloudy',temperature:21,templow:13}]}));return ()=>{};}},
