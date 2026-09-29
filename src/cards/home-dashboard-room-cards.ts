@@ -36,7 +36,8 @@ interface CustomCardMetadata {
 type DeviceRole = "light" | "cover" | "climate" | "media" | "comfort" | "safety" | "camera" | "power" | "history";
 type DevicePresentation = { entity: string; icon: string; label: string; value: string; tone: "normal" | "active" | "warning" | "unavailable" };
 type DetailKind = "light" | "cover" | "media" | "climate" | "plug";
-type DetailCommand = "toggle" | "open" | "stop" | "close" | "set_temperature";
+type DetailCommand = "toggle" | "open" | "stop" | "close" | "set_temperature" | "set_brightness";
+type RoomCapabilityStage = "lighting" | "covers" | "comfort" | "plugs" | "energy";
 type DetailPlan = { entity: string; domain: string; service: string; data: Record<string, unknown> };
 export type LightGroupState = "off" | "on" | "partial" | "unknown" | "unavailable";
 
@@ -384,17 +385,17 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
   private actionSequence = 0;
   private pendingActions = new Set<string>();
   private actionFeedback = new Map<string, { tone: "pending" | "success" | "error"; message: string; sequence: number }>();
-  private activeDetailTab: "controls" | "devices" | "energy" | "history" = "controls";
+  private activeDetailTab: "devices" | "energy" | "history" = "devices";
   private activeEnergyPeriod: "day" | "month" | "year" = "day";
-  private activeCapability: RoomConfig["capabilities"][number] | "devices" | undefined;
+  private selectedCapability: RoomCapabilityStage | undefined;
 
   public setConfig(config: RoomDetailConfig): void {
     if (!config.room?.key) throw new Error("Kamer ontbreekt.");
     this.disconnectedCallback();
     this.config = config;
-    this.activeDetailTab = "controls";
+    this.activeDetailTab = "devices";
     this.activeEnergyPeriod = "day";
-    this.activeCapability = undefined;
+    this.selectedCapability = undefined;
     this.pendingActions.clear();
     this.actionFeedback.clear();
     applyDashboardPalette(this, config.palette, config.theme_mode);
@@ -437,7 +438,14 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
         ? { entity, domain: "switch", service: state === "on" ? "turn_off" : "turn_on", data }
         : undefined;
     }
-    if (command === "set_temperature") return undefined;
+    if (kind === "light" && command === "set_brightness") {
+      const brightnessPct = data.brightness_pct;
+      if (typeof brightnessPct !== "number" || !Number.isFinite(brightnessPct) || brightnessPct < 0 || brightnessPct > 100) return undefined;
+      if (!entity.startsWith("light.")) return undefined;
+      // Reuse the toggle plan purely to validate mapping, controls_enabled and known state; the service call itself differs.
+      return this.planAction(entity, "light", "toggle") ? { entity, domain: "light", service: "turn_on", data: { brightness_pct: brightnessPct } } : undefined;
+    }
+    if (command === "set_temperature" || command === "set_brightness") return undefined;
     const controlRoom = kind === "light"
       ? { ...room, light_entities: [...new Set([...room.light_entities, ...(room.light_groups ?? []).flatMap((groupConfig) => [groupConfig.control_entity, ...groupConfig.member_entities])])] }
       : kind === "cover"
@@ -564,7 +572,7 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     const labels: Record<LightGroupState, string> = { off: "Uit", on: "Aan", partial: "Gedeeltelijk aan", unknown: "Onbekend", unavailable: "Niet beschikbaar" };
     const card = document.createElement("button");
     card.type = "button";
-    card.className = `mushroom-card light-card light-group-card ${state === "on" || state === "partial" ? "active" : state}`;
+    card.className = `mushroom-card light-card light-group-card ${state === "on" ? "active" : state === "partial" ? "mixed" : state}`;
     card.dataset.controlKey = `light:${groupConfig.control_entity}:toggle`;
     card.disabled = state === "unknown" || state === "unavailable" || this.pendingActions.has(this.actionKey(groupConfig.control_entity, "light", "toggle")) || !this.planAction(groupConfig.control_entity, "light", "toggle");
     card.setAttribute("aria-label", `${groupConfig.name}: ${labels[state]}. Schakel groep van ${groupConfig.member_entities.length} lampen`);
@@ -587,39 +595,178 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     return this.mushroomCard(coverConfig.entity, "cover", [action(openLabel, "open"), this.command("Stop", coverConfig.entity, "cover", "stop"), action(closeLabel, "close")]);
   }
 
-  private mushroomControls(room: RoomConfig): HTMLElement | undefined {
-    const controls = element("div", "mushroom-controls");
-    const add = (capability: RoomConfig["capabilities"][number], title: string, cards: HTMLElement[]): void => {
-      if (!cards.length) return;
-      const grid = element("div", "mushroom-grid"); grid.append(...cards);
-      const section = group(title, grid);
-      section.dataset.capabilitySection = capability;
-      controls.append(section);
-    };
+  /** Individual dimmable lights: a toggle mushroom-card plus an independent brightness slider next to it. */
+  private lightDeviceCard(entity: string): HTMLElement {
+    const wrapper = element("div", "light-card-wrapper");
+    const toggle = this.mushroomCard(entity, "light", [], true);
+    wrapper.append(toggle);
+    const state = this.currentHass?.states?.[entity];
+    const brightnessPercent = percentAttribute(state, "brightness") ?? 0;
+    const row = element("div", "range-row");
+    const label = document.createElement("label");
+    const inputId = `light-brightness-${entity.replaceAll(".", "-")}`;
+    label.setAttribute("for", inputId);
+    label.textContent = "Helderheid";
+    const input = document.createElement("input");
+    input.type = "range";
+    input.id = inputId;
+    input.min = "0";
+    input.max = "100";
+    input.value = String(brightnessPercent);
+    input.dataset.controlKey = `light:${entity}:set_brightness`;
+    const output = document.createElement("output");
+    // The range input already announces its own value; suppress the output's implicit role="status" so it
+    // never competes with the shared action-feedback live region for assistive-technology attention.
+    output.setAttribute("aria-hidden", "true");
+    output.textContent = `${brightnessPercent}%`;
+    input.disabled = !actionable(state) || !this.planAction(entity, "light", "set_brightness", { brightness_pct: brightnessPercent });
+    input.addEventListener("input", () => { output.textContent = `${input.value}%`; });
+    input.addEventListener("change", () => this.callService(entity, "light", "set_brightness", { brightness_pct: Number(input.value) }));
+    row.append(label, input, output);
+    wrapper.append(row);
+    return wrapper;
+  }
+
+  /** Appends a read-only position bar around an already-built cover card; never touches its confirmation logic. */
+  private withPositionTrack(card: HTMLElement, entity: string): HTMLElement {
+    const state = this.currentHass?.states?.[entity];
+    const position = numberAttribute(state, "current_position") ?? (state?.state === "open" ? 100 : state?.state === "closed" ? 0 : undefined);
+    const track = element("div", "position-track");
+    const fill = element("div", "position-fill");
+    fill.style.width = `${position ?? 0}%`;
+    track.append(fill);
+    card.append(track);
+    return card;
+  }
+
+  private lightingStage(room: RoomConfig): HTMLElement {
+    const stage = element("div", "stage-body");
     const groupTargets = new Set((room.light_groups ?? []).map((groupConfig) => groupConfig.control_entity));
-    add("lights", "Verlichting", [
-      ...(room.light_groups ?? []).map((groupConfig) => this.lightGroupCard(groupConfig)),
-      ...[...room.light_entities, ...(room.light_switch_entities ?? [])].filter((entity) => !groupTargets.has(entity)).map((entity) => this.mushroomCard(entity, "light", [], true))
-    ]);
+    const groups = (room.light_groups ?? []).map((groupConfig) => this.lightGroupCard(groupConfig));
+    if (groups.length) {
+      const heading = element("div", "section-heading");
+      heading.append(element("h4", "", "Lichtgroepen"), element("span", "", `${groups.length} groepen`));
+      const grid = element("div", "group-grid mushroom-grid"); grid.append(...groups);
+      stage.append(heading, grid);
+    }
+    const individualEntities = [...room.light_entities, ...(room.light_switch_entities ?? [])].filter((entity) => !groupTargets.has(entity));
+    if (individualEntities.length) {
+      const heading = element("div", "section-heading");
+      heading.append(element("h4", "", "Individuele lampen"), element("span", "", `${individualEntities.length} apparaten`));
+      const grid = element("div", "device-grid mushroom-grid");
+      individualEntities.forEach((entity) => grid.append(entity.startsWith("switch.") ? this.mushroomCard(entity, "light", [], true) : this.lightDeviceCard(entity)));
+      stage.append(heading, grid);
+    }
+    return stage;
+  }
+
+  private coversStage(room: RoomConfig): HTMLElement {
+    const stage = element("div", "stage-body");
     const typedCovers = new Set((room.cover_controls ?? []).map((coverConfig) => coverConfig.entity));
-    add("covers", "Openingen", [
-      ...(room.cover_controls ?? []).map((coverConfig) => this.coverCard(coverConfig)),
-      ...room.cover_entities.filter((entity) => !typedCovers.has(entity)).map((entity) => this.mushroomCard(entity, "cover", [this.confirmedCommand("Open", entity, "open"), this.command("Stop", entity, "cover", "stop"), this.confirmedCommand("Dicht", entity, "close")]))
-    ]);
+    const untyped = room.cover_entities.filter((entity) => !typedCovers.has(entity));
+    const allEntities = [...(room.cover_controls ?? []).map((coverConfig) => coverConfig.entity), ...untyped];
+    const classify = (entity: string): "open" | "partial" | "closed" | "unknown" => {
+      const state = this.currentHass?.states?.[entity];
+      const position = numberAttribute(state, "current_position");
+      if (position !== undefined) return position >= 100 ? "open" : position <= 0 ? "closed" : "partial";
+      if (state?.state === "open") return "open";
+      if (state?.state === "closed") return "closed";
+      return "unknown";
+    };
+    if (allEntities.length) {
+      const classes = allEntities.map(classify);
+      const summary = element("div", "summary-strip");
+      const metric = (value: string, label: string): HTMLElement => { const item = element("div", "summary-metric"); item.append(element("strong", "", value), element("span", "", label)); return item; };
+      summary.append(
+        metric(String(allEntities.length), "bedieningen"),
+        metric(String(classes.filter((c) => c === "open").length), "volledig open"),
+        metric(String(classes.filter((c) => c === "partial").length), "gedeeltelijk"),
+        metric(String(classes.filter((c) => c === "closed").length), "gesloten / in")
+      );
+      stage.append(summary);
+    }
+    const grid = element("div", "cover-grid mushroom-grid");
+    (room.cover_controls ?? []).forEach((coverConfig) => grid.append(this.withPositionTrack(this.coverCard(coverConfig), coverConfig.entity)));
+    untyped.forEach((entity) => grid.append(this.withPositionTrack(this.mushroomCard(entity, "cover", [this.confirmedCommand("Open", entity, "open"), this.command("Stop", entity, "cover", "stop"), this.confirmedCommand("Dicht", entity, "close")]), entity)));
+    if (grid.childElementCount) stage.append(grid);
+    return stage;
+  }
+
+  private comfortStage(room: RoomConfig): HTMLElement {
+    const stage = element("div", "stage-body");
     if (room.hvac.entity) {
       const target = numberAttribute(this.currentHass?.states?.[room.hvac.entity], "temperature");
-      add("climate", "Klimaat", [this.mushroomCard(room.hvac.entity, "climate", target === undefined ? [] : [this.command("− 0,5°", room.hvac.entity, "climate", "set_temperature", { temperature: target - .5 }), this.command("+ 0,5°", room.hvac.entity, "climate", "set_temperature", { temperature: target + .5 })])]);
+      const grid = element("div", "comfort-grid mushroom-grid");
+      grid.append(this.mushroomCard(room.hvac.entity, "climate", target === undefined ? [] : [this.command("− 0,5°", room.hvac.entity, "climate", "set_temperature", { temperature: target - .5 }), this.command("+ 0,5°", room.hvac.entity, "climate", "set_temperature", { temperature: target + .5 })]));
+      stage.append(grid);
     }
-    add("media", "Media", room.media_entities.map((entity) => this.mushroomCard(entity, "media", [this.command(this.currentHass?.states?.[entity]?.state === "playing" ? "Pauze" : "Speel", entity, "media", "toggle")] )));
-    return controls.childElementCount ? controls : undefined;
+    const comfort = this.informationGroup("Comfort & klimaat", room.hvac.comfort_entities.map((entity): [string, DeviceRole] => [entity, "comfort"]));
+    const mediaCards = room.media_entities.map((entity) => this.mushroomCard(entity, "media", [this.command(this.currentHass?.states?.[entity]?.state === "playing" ? "Pauze" : "Speel", entity, "media", "toggle")]));
+    let media: HTMLElement | undefined;
+    if (mediaCards.length) { const grid = element("div", "mushroom-grid"); grid.append(...mediaCards); media = group("Media", grid); }
+    const safety = this.informationGroup("Veiligheid", room.safety_entities.map((entity): [string, DeviceRole] => [entity, "safety"]));
+    const cameras = this.informationGroup("Camera's", room.camera_entities.map((entity): [string, DeviceRole] => [entity, "camera"]));
+    [comfort, media, safety, cameras].forEach((section) => { if (section) stage.append(section); });
+    if (room.desk && Object.keys(room.desk.card_config).length > 0) {
+      const card = element("div", "embedded-card desk-card");
+      stage.append(group("Bureau", card));
+      void this.mountCard(card, { ...room.desk.card_config, type: "custom:linak-desk-card" });
+    }
+    return stage;
+  }
+
+  private plugsStage(room: RoomConfig): HTMLElement {
+    const stage = element("div", "stage-body");
+    const plugs = room.smart_plugs ?? [];
+    if (!plugs.length) return stage;
+    const wattEntries = plugs.map((plug) => this.currentHass?.states?.[plug.power_entity]).map((state) => ({ value: Number(state?.state), unit: state?.attributes?.unit_of_measurement }));
+    const validWatts = wattEntries.filter((entry) => Number.isFinite(entry.value) && (entry.unit === "W" || entry.unit === "kW"));
+    const totalWatts = validWatts.reduce((sum, entry) => sum + (entry.unit === "kW" ? entry.value * 1000 : entry.value), 0);
+    const activeCount = plugs.filter((plug) => this.currentHass?.states?.[plug.switch_entity]?.state === "on").length;
+    const sumPeriod = (key: "energy_day_entity" | "energy_month_entity"): number | undefined => {
+      const values = plugs.map((plug) => plug[key] ? energyKwh(this.currentHass?.states?.[plug[key]!]) : undefined).filter((value): value is number => value !== undefined);
+      return values.length ? values.reduce((sum, value) => sum + value, 0) : undefined;
+    };
+    const dayTotal = sumPeriod("energy_day_entity");
+    const monthTotal = sumPeriod("energy_month_entity");
+    const summary = element("div", "summary-strip");
+    const metric = (value: string, label: string): HTMLElement => { const item = element("div", "summary-metric"); item.append(element("strong", "", value), element("span", "", label)); return item; };
+    summary.append(
+      metric(validWatts.length ? `${Math.round(totalWatts)} W` : "—", "huidig vermogen"),
+      metric(String(activeCount), "actieve plugs"),
+      metric(dayTotal === undefined ? "—" : `${dayTotal.toFixed(2).replace(".", ",")} kWh`, "vandaag"),
+      metric(monthTotal === undefined ? "—" : `${monthTotal.toFixed(1).replace(".", ",")} kWh`, "deze maand")
+    );
+    stage.append(summary);
+    const grid = element("div", "plug-grid mushroom-grid");
+    plugs.forEach((plug) => grid.append(this.smartPlugCard(plug)));
+    stage.append(grid);
+    return stage;
+  }
+
+  private energyStage(room: RoomConfig): HTMLElement {
+    const stage = element("div", "stage-body");
+    const power = this.informationGroup("Apparaten & energie", room.power_entities.map((entity): [string, DeviceRole] => [entity, "power"]));
+    const periodEnergy = this.energyPeriodGroup(room);
+    if (power) stage.append(power);
+    if (periodEnergy) stage.append(periodEnergy);
+    if (!stage.childElementCount) stage.append(element("p", "info unavailable", "Geen verbruiksgegevens geconfigureerd voor deze kamer."));
+    return stage;
   }
 
   private smartPlugCard(plug: NonNullable<RoomConfig["smart_plugs"]>[number]): HTMLElement {
-    const card = element("section", `smart-plug-card mushroom-card${plug.protected ? " protected" : ""}`);
     const state = this.currentHass?.states?.[plug.switch_entity];
+    const card = element("section", `smart-plug-card mushroom-card${plug.protected ? " protected" : ""}${state?.state === "on" ? " active" : ""}`);
     const title = element("strong", "", plug.name || friendlyName(state, "Smart plug"));
     const values = document.createElement("small");
     values.textContent = [plug.power_entity, plug.energy_entity, plug.voltage_entity].filter(Boolean).map(entity => stateText(this.currentHass?.states?.[entity])).join(" · ") || stateText(state);
+    const metrics = element("div", "plug-metrics");
+    const metricValue = (entity: string | undefined, digits: number): string => {
+      const value = entity ? energyKwh(this.currentHass?.states?.[entity]) : undefined;
+      return value === undefined ? "—" : `${value.toFixed(digits).replace(".", ",")} kWh`;
+    };
+    const metric = (entity: string | undefined, digits: number, label: string): HTMLElement => { const item = element("div", "plug-metric"); item.append(element("strong", "", metricValue(entity, digits)), element("span", "", label)); return item; };
+    metrics.append(metric(plug.energy_day_entity, 2, "dag"), metric(plug.energy_month_entity, 1, "maand"), metric(plug.energy_year_entity, 0, "jaar"));
     const lock = document.createElement("button"); lock.type = "button"; lock.className = "plug-lock"; lock.textContent = plug.protected ? "Beveiligd apparaat" : "Ontgrendel om te schakelen";
     const confirm = document.createElement("button"); confirm.type = "button"; confirm.className = "command"; confirm.hidden = true;
     lock.dataset.controlKey = `plug:${plug.switch_entity}:unlock`;
@@ -632,7 +779,7 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
       lock.textContent = "Ontgrendel om te schakelen";
       lock.focus();
     });
-    card.append(title, values);
+    card.append(title, values, metrics);
     if (plug.protected) card.append(element("small", "protection-reason", plug.protection_reason || "Bediening is voor dit apparaat uitgeschakeld."));
     card.append(lock, confirm); return card;
   }
@@ -751,12 +898,18 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     const style = document.createElement("style");
     style.textContent = `
       ${roomStyles}
-      .detail,.control-deck,.room-layout-primary,.room-column,.mushroom-controls,.group,.detail-panel{display:grid;gap:18px;min-width:0;align-content:start}.detail{width:100%}.control-deck{grid-template-columns:minmax(150px,.24fr) minmax(0,1fr);gap:12px}.capability-rail{display:grid;gap:7px;align-content:start}.capability-rail button,.detail-tabs button{min-height:44px;border:1px solid var(--divider-color);border-radius:11px;padding:9px 12px;background:var(--room-surface);color:var(--primary-text-color);font:inherit;text-align:left}.capability-rail button[aria-pressed=true],.detail-tabs button[aria-selected=true]{border-color:var(--primary-color);background:color-mix(in srgb,var(--primary-color) 10%,var(--room-surface));color:var(--primary-color);font-weight:700}.deck-content{display:grid;gap:12px;min-width:0}.detail-tabs{display:flex;gap:7px;overflow-x:auto}.detail-tabs button{flex:1 0 auto;text-align:center}.detail-panel[hidden]{display:none}.room-layout-primary{grid-template-columns:1.2fr .8fr .7fr}.group{gap:10px}.group-heading{min-height:32px;display:flex;align-items:center}
-      .info-list,.mushroom-grid,.plug-grid,.energy-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:9px}.energy-period{display:grid;gap:10px}.period-selector{display:flex;gap:7px;flex-wrap:wrap}.period-selector button{min-height:44px;padding:8px 13px;border:1px solid var(--divider-color);border-radius:999px;background:var(--room-surface);color:inherit}.period-selector button[aria-pressed=true]{border-color:var(--primary-color);background:var(--primary-color);color:var(--text-primary-color,#fff);font-weight:700}.energy-card{display:grid;gap:4px}.energy-comparison{display:grid;gap:9px;margin:0;padding:12px;border:1px solid var(--divider-color);border-radius:12px;background:var(--room-surface)}.energy-comparison figcaption{font-weight:700}.energy-bars{display:grid;gap:8px}.energy-bar-row{display:grid;grid-template-columns:minmax(90px,.7fr) minmax(100px,1.4fr) auto;gap:8px;align-items:center}.energy-bar-track{height:12px;border-radius:999px;background:var(--secondary-background-color);overflow:hidden}.energy-bar{display:block;width:var(--energy-share);height:100%;border-radius:inherit;background:var(--primary-color)}.energy-bar-value{font-variant-numeric:tabular-nums}.action-feedback{margin:0;padding:10px 12px;border:1px solid var(--divider-color);border-radius:12px;background:var(--room-surface)}.action-feedback.pending{border-color:var(--primary-color)}.action-feedback.success{border-color:var(--success-color,#2e7d32)}.action-feedback.error{border-color:var(--error-color,#b3261e)}
+      .detail,.control-deck,.room-layout-primary,.room-column,.mushroom-controls,.group,.detail-panel,.stage,.stage-body{display:grid;gap:18px;min-width:0;align-content:start}.detail{width:100%}.control-deck{grid-template-columns:minmax(150px,.24fr) minmax(0,1fr);gap:12px}.capability-rail{display:grid;gap:7px;align-content:start}.capability-rail button,.detail-tabs button{min-height:44px;border:1px solid var(--divider-color);border-radius:11px;padding:9px 12px;background:var(--room-surface);color:var(--primary-text-color);font:inherit;text-align:left}.capability-rail button[aria-selected=true],.detail-tabs button[aria-selected=true]{border-color:var(--primary-color);background:color-mix(in srgb,var(--primary-color) 10%,var(--room-surface));color:var(--primary-color);font-weight:700}.deck-content{display:grid;gap:12px;min-width:0}.detail-tabs{display:flex;gap:7px;overflow-x:auto}.detail-tabs button{flex:1 0 auto;text-align:center}.detail-panel[hidden]{display:none}.room-layout-primary{grid-template-columns:1.2fr .8fr .7fr}.group{gap:10px}.group-heading{min-height:32px;display:flex;align-items:center}.details-card{display:grid}
+      .info-list,.mushroom-grid,.plug-grid,.energy-grid,.group-grid,.device-grid,.cover-grid,.comfort-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:9px}.energy-period{display:grid;gap:10px}.period-selector{display:flex;gap:7px;flex-wrap:wrap}.period-selector button{min-height:44px;padding:8px 13px;border:1px solid var(--divider-color);border-radius:999px;background:var(--room-surface);color:inherit}.period-selector button[aria-pressed=true]{border-color:var(--primary-color);background:var(--primary-color);color:var(--text-primary-color,#fff);font-weight:700}.energy-card{display:grid;gap:4px}.energy-comparison{display:grid;gap:9px;margin:0;padding:12px;border:1px solid var(--divider-color);border-radius:12px;background:var(--room-surface)}.energy-comparison figcaption{font-weight:700}.energy-bars{display:grid;gap:8px}.energy-bar-row{display:grid;grid-template-columns:minmax(90px,.7fr) minmax(100px,1.4fr) auto;gap:8px;align-items:center}.energy-bar-track{height:12px;border-radius:999px;background:var(--secondary-background-color);overflow:hidden}.energy-bar{display:block;width:var(--energy-share);height:100%;border-radius:inherit;background:var(--primary-color)}.energy-bar-value{font-variant-numeric:tabular-nums}.action-feedback{margin:0;padding:10px 12px;border:1px solid var(--divider-color);border-radius:12px;background:var(--room-surface)}.action-feedback.pending{border-color:var(--primary-color)}.action-feedback.success{border-color:var(--success-color,#2e7d32)}.action-feedback.error{border-color:var(--error-color,#b3261e)}
       .info,.history-card,.mushroom-card,.command,.plug-lock,.history-dialog{background:var(--room-surface);color:var(--primary-text-color);border:1px solid var(--divider-color);border-radius:12px;padding:10px;font:inherit;overflow-wrap:anywhere}.info,.history-card,.mushroom-card{text-align:left}.warning{border-color:var(--error-color,#b3261e)}.unavailable{opacity:.72}
-      button{cursor:pointer;min-height:44px;min-width:44px}button:disabled{cursor:default;opacity:.48;background:var(--secondary-background-color)}button:focus-visible{outline:2px solid var(--primary-color);outline-offset:2px}.mushroom-card{display:grid;grid-template-columns:40px minmax(0,1fr);gap:10px;align-items:center;min-height:76px;padding:12px;border-radius:16px}.light-card.active{border-color:var(--primary-color);background:color-mix(in srgb,var(--primary-color) 10%,var(--room-surface))}.mushroom-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--secondary-background-color);color:var(--primary-color)}.mushroom-copy{display:grid;gap:2px}small{color:var(--secondary-text-color)}.commands{grid-column:1/-1}.smart-plug-card{grid-template-columns:minmax(0,1fr)}.plug-lock{color:var(--primary-color);font-weight:700}
+      button{cursor:pointer;min-height:44px;min-width:44px}button:disabled{cursor:default;opacity:.48;background:var(--secondary-background-color)}button:focus-visible{outline:2px solid var(--primary-color);outline-offset:2px}.mushroom-card{display:grid;grid-template-columns:40px minmax(0,1fr);gap:10px;align-items:center;min-height:76px;padding:12px;border-radius:16px}.light-card.active,.light-group-card.active{border-color:var(--primary-color);background:color-mix(in srgb,var(--primary-color) 10%,var(--room-surface))}.light-group-card.mixed{border-color:color-mix(in srgb,var(--primary-color) 45%,var(--divider-color));background:color-mix(in srgb,var(--primary-color) 5%,var(--room-surface))}.mushroom-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--secondary-background-color);color:var(--primary-color)}.mushroom-copy{display:grid;gap:2px}small{color:var(--secondary-text-color)}.commands{grid-column:1/-1}.smart-plug-card{grid-template-columns:minmax(0,1fr)}.smart-plug-card.active{border-color:var(--primary-color)}.plug-lock{color:var(--primary-color);font-weight:700}
       .room-photo{width:110px;min-height:96px;border-radius:16px;background:linear-gradient(135deg,#ffffff33,transparent),var(--hd-hero);background-size:cover;background-position:center;flex:none}.embedded-card{min-height:120px}.embedded-card:empty::before{content:"Kaart wordt geladen…"}.history-dialog{box-sizing:border-box;width:min(720px,calc(100% - 32px));padding:16px;border:0;border-radius:18px}.history-dialog::backdrop{background:#0007}
-      @media(max-width:1100px){.control-deck{grid-template-columns:1fr}.capability-rail{display:flex;overflow-x:auto}.capability-rail button{flex:0 0 auto}.room-layout-primary{grid-template-columns:1fr 1fr}.operations{grid-column:1/-1}.energy{grid-column:auto}}@media(max-width:600px){.hero{align-items:flex-start;flex-direction:column}.room-photo{width:100%;min-height:130px;order:-1}.detail-tabs button{min-width:max-content}.room-layout-primary{grid-template-columns:1fr}.operations,.energy{grid-column:auto}.mushroom-grid,.plug-grid{grid-template-columns:1fr}.energy-bar-row{grid-template-columns:minmax(90px,1fr) 1.2fr}.energy-bar-value{grid-column:1/-1}}
+      .stage{padding:2px}.stage-body{gap:14px}.section-heading{display:flex;align-items:baseline;justify-content:space-between;gap:10px}.section-heading h4{margin:0;font-size:.95rem}.section-heading span{color:var(--secondary-text-color);font-size:.78rem}
+      .summary-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--divider-color);border-radius:14px;overflow:hidden;background:var(--room-surface)}.summary-metric{min-height:70px;display:grid;align-content:center;gap:2px;padding:10px 12px;border-right:1px solid var(--divider-color)}.summary-metric:last-child{border-right:0}.summary-metric strong{font-size:1.05rem;font-variant-numeric:tabular-nums}.summary-metric span{color:var(--secondary-text-color);font-size:.72rem}
+      .light-card-wrapper{display:grid;gap:8px}.range-row{display:grid;grid-template-columns:auto minmax(0,1fr) 42px;gap:9px;align-items:center}.range-row label,.range-row output{color:var(--secondary-text-color);font-size:.75rem;font-weight:680}input[type="range"]{width:100%;min-height:44px;accent-color:var(--primary-color)}
+      .position-track{height:8px;overflow:hidden;border-radius:999px;background:var(--secondary-background-color)}.position-fill{height:100%;border-radius:inherit;background:var(--primary-color)}
+      .plug-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow:hidden;border:1px solid var(--divider-color);border-radius:10px}.plug-metric{padding:7px;border-right:1px solid var(--divider-color)}.plug-metric:last-child{border-right:0}.plug-metric strong,.plug-metric span{display:block}.plug-metric strong{font-size:.82rem;font-variant-numeric:tabular-nums}.plug-metric span{color:var(--secondary-text-color);font-size:.64rem}
+      .comfort-card{display:grid;gap:8px}
+      @media(max-width:1100px){.control-deck{grid-template-columns:1fr}.capability-rail{display:flex;overflow-x:auto}.capability-rail button{flex:0 0 auto}.room-layout-primary{grid-template-columns:1fr 1fr}.operations{grid-column:1/-1}.energy{grid-column:auto}}@media(max-width:600px){.hero{align-items:flex-start;flex-direction:column}.room-photo{width:100%;min-height:130px;order:-1}.detail-tabs button{min-width:max-content}.room-layout-primary{grid-template-columns:1fr}.operations,.energy{grid-column:auto}.mushroom-grid,.plug-grid{grid-template-columns:1fr}.cover-grid,.comfort-grid,.group-grid,.device-grid,.summary-strip{grid-template-columns:1fr}.energy-bar-row{grid-template-columns:minmax(90px,1fr) 1.2fr}.energy-bar-value{grid-column:1/-1}}
     `;
     const root = element("main", "detail");
     const hero = element("section", "hero");
@@ -787,39 +940,65 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     });
 
     const deck = element("section", "control-deck");
-    const capabilityRail = element("nav", "capability-rail");
-    capabilityRail.setAttribute("aria-label", "Kamerfuncties");
+    const rail = element("nav", "capability-rail");
+    rail.setAttribute("aria-label", "Kamerfuncties");
+    rail.setAttribute("role", "tablist");
     const hasEnergy = Boolean(room.room_energy && Object.values(room.room_energy).some(Boolean)) || (room.smart_plugs ?? []).some((plug) => plug.energy_day_entity || plug.energy_month_entity || plug.energy_year_entity);
-    const capabilityLabels: Array<[RoomConfig["capabilities"][number] | "devices", string, "controls" | "devices" | "energy", boolean]> = [
-      ["lights", "Verlichting", "controls", room.light_entities.length > 0 || (room.light_switch_entities?.length ?? 0) > 0 || (room.light_groups?.length ?? 0) > 0],
-      ["covers", "Openingen", "controls", room.cover_entities.length > 0 || (room.cover_controls?.length ?? 0) > 0],
-      ["climate", "Comfort", "controls", Boolean(room.hvac.entity) || room.hvac.comfort_entities.length > 0],
-      ["media", "Media", "controls", room.media_entities.length > 0],
-      ["security", "Veiligheid", "controls", room.safety_entities.length > 0 || room.camera_entities.length > 0],
-      ["devices", "Smart plugs", "devices", (room.smart_plugs?.length ?? 0) > 0],
-      ["power", "Energie", "energy", hasEnergy || room.power_entities.length > 0]
+    const hasLighting = room.light_entities.length > 0 || (room.light_switch_entities?.length ?? 0) > 0 || (room.light_groups?.length ?? 0) > 0;
+    const hasCovers = room.cover_entities.length > 0 || (room.cover_controls?.length ?? 0) > 0;
+    const hasComfort = Boolean(room.hvac.entity) || room.hvac.comfort_entities.length > 0 || room.media_entities.length > 0 || room.safety_entities.length > 0 || room.camera_entities.length > 0 || Boolean(room.desk && Object.keys(room.desk.card_config).length > 0);
+    const hasPlugs = (room.smart_plugs?.length ?? 0) > 0;
+    const hasEnergyStage = hasEnergy || room.power_entities.length > 0;
+    const isAwningRoom = (room.cover_controls ?? []).some((coverConfig) => coverConfig.kind === "awning");
+    const railDefinitions: Array<[RoomCapabilityStage, string, boolean]> = [
+      ["lighting", "Verlichting", hasLighting],
+      ["covers", isAwningRoom ? "Luifel & screens" : "Rolluiken", hasCovers],
+      ["comfort", "Comfort", hasComfort],
+      ["plugs", "Smart plugs", hasPlugs],
+      ["energy", "Verbruik", hasEnergyStage]
     ];
-    capabilityLabels.filter(([, , , configured]) => configured).forEach(([capability, label, targetTab]) => {
+    const configuredCapabilities = railDefinitions.filter(([, , configured]) => configured).map(([key]) => key);
+    if (!this.selectedCapability || !configuredCapabilities.includes(this.selectedCapability)) this.selectedCapability = configuredCapabilities[0];
+    railDefinitions.filter(([, , configured]) => configured).forEach(([key, label]) => {
       const button = document.createElement("button");
       button.type = "button";
+      button.id = `room-rail-${room.key}-${key}`;
+      button.setAttribute("role", "tab");
+      button.setAttribute("aria-selected", String(this.selectedCapability === key));
+      button.setAttribute("aria-controls", `room-stage-${room.key}`);
+      button.tabIndex = this.selectedCapability === key ? 0 : -1;
       button.textContent = label;
-      button.dataset.controlKey = `capability:${capability}`;
-      button.setAttribute("aria-pressed", String(this.activeCapability === capability));
-      button.addEventListener("click", () => {
-        this.activeCapability = capability;
-        this.activeDetailTab = targetTab;
-        this.render(true);
-        this.shadowRoot?.querySelector<HTMLElement>(`[data-capability-section="${capability}"]`)?.scrollIntoView({ block: "nearest" });
-      });
-      capabilityRail.append(button);
+      button.dataset.controlKey = `capability:${key}`;
+      button.addEventListener("click", () => { this.selectedCapability = key; this.render(true); });
+      button.addEventListener("keydown", (event) => this.handleRovingKeydown(event, configuredCapabilities, key, (next) => { this.selectedCapability = next as RoomCapabilityStage; }, (next) => `[data-control-key="capability:${next}"]`));
+      rail.append(button);
     });
+    const stage = element("div", "stage");
+    stage.id = `room-stage-${room.key}`;
+    stage.setAttribute("role", "tabpanel");
+    if (this.selectedCapability) {
+      stage.setAttribute("aria-labelledby", `room-rail-${room.key}-${this.selectedCapability}`);
+      const stageContent = this.selectedCapability === "lighting" ? this.lightingStage(room)
+        : this.selectedCapability === "covers" ? this.coversStage(room)
+          : this.selectedCapability === "comfort" ? this.comfortStage(room)
+            : this.selectedCapability === "plugs" ? this.plugsStage(room)
+              : this.energyStage(room);
+      stage.append(stageContent);
+    } else {
+      stage.append(element("p", "info unavailable", "Geen functies geconfigureerd voor deze kamer."));
+    }
+    deck.append(rail, stage);
+    root.append(deck);
+
+    const detailsCard = element("section", "details-card");
     const deckContent = element("div", "deck-content");
     const tabs = element("div", "detail-tabs");
     tabs.setAttribute("role", "tablist");
     tabs.setAttribute("aria-label", "Kamerdetails");
-    const tabDefinitions = [["controls", "Bediening"], ["devices", "Apparaten"], ["energy", "Energie"], ["history", "Historie"]] as const;
+    const tabDefinitions = [["devices", "Apparaten"], ["energy", "Energie"], ["history", "Historie"]] as const;
     const panels = new Map<(typeof tabDefinitions)[number][0], HTMLElement>();
-    tabDefinitions.forEach(([key, label], index) => {
+    const tabKeys = tabDefinitions.map(([key]) => key);
+    tabDefinitions.forEach(([key, label]) => {
       const button = document.createElement("button");
       button.type = "button";
       button.id = `room-tab-${room.key}-${key}`;
@@ -829,18 +1008,8 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
       button.tabIndex = this.activeDetailTab === key ? 0 : -1;
       button.textContent = label;
       button.dataset.controlKey = `tab:${key}`;
-      button.addEventListener("click", () => { this.activeCapability = undefined; this.activeDetailTab = key; this.render(true); });
-      button.addEventListener("keydown", (event) => {
-        if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
-        event.preventDefault();
-        const current = tabDefinitions.findIndex(([candidate]) => candidate === key);
-        const target = event.key === "Home" ? 0 : event.key === "End" ? tabDefinitions.length - 1 : (current + (event.key === "ArrowLeft" ? -1 : 1) + tabDefinitions.length) % tabDefinitions.length;
-        const targetKey = tabDefinitions[target]![0];
-        this.activeCapability = undefined;
-        this.activeDetailTab = targetKey;
-        this.render();
-        this.shadowRoot?.querySelector<HTMLElement>(`[data-control-key="tab:${targetKey}"]`)?.focus();
-      });
+      button.addEventListener("click", () => { this.activeDetailTab = key; this.render(true); });
+      button.addEventListener("keydown", (event) => this.handleRovingKeydown(event, tabKeys, key, (next) => { this.activeDetailTab = next as typeof this.activeDetailTab; }, (next) => `[data-control-key="tab:${next}"]`));
       tabs.append(button);
       const panel = element("section", "detail-panel");
       panel.id = `room-panel-${room.key}-${key}`;
@@ -850,56 +1019,50 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
       panels.set(key, panel);
     });
 
-    const layout = element("div", "room-layout-primary");
-    const operations = element("div", "room-column operations");
-    const climate = element("div", "room-column climate");
     const energy = element("div", "room-column energy");
-
-
-    const capabilityCards = this.mushroomControls(room);
-    if (capabilityCards) operations.append(capabilityCards);
-
-    const comfort = this.informationGroup("Comfort & klimaat", [[room.hvac.entity, "climate"], ...room.hvac.comfort_entities.map((entity): [string, DeviceRole] => [entity, "comfort"])]);
-    const safety = this.informationGroup("Veiligheid", room.safety_entities.map((entity): [string, DeviceRole] => [entity, "safety"]));
-    const cameras = this.informationGroup("Camera's", room.camera_entities.map((entity): [string, DeviceRole] => [entity, "camera"]));
     const power = this.informationGroup("Apparaten & energie", room.power_entities.map((entity): [string, DeviceRole] => [entity, "power"]));
     const periodEnergy = this.energyPeriodGroup(room);
     const history = this.informationGroup("Historie", [...room.history_entities, ...room.hvac.history_entities].map((entity): [string, DeviceRole] => [entity, "history"]));
-    if (comfort) { comfort.dataset.capabilitySection = "climate"; climate.append(comfort); }
-    if (safety) { safety.dataset.capabilitySection = "security"; operations.append(safety); }
-    if (cameras) { cameras.dataset.capabilitySection = "security"; operations.append(cameras); }
-    if (power) { power.dataset.capabilitySection = "power"; energy.append(power); }
-    if (periodEnergy) { periodEnergy.dataset.capabilitySection = "power"; energy.append(periodEnergy); }
+    if (power) energy.append(power);
+    if (periodEnergy) energy.append(periodEnergy);
     if (history) panels.get("history")?.append(history);
 
     if ((room.smart_plugs?.length ?? 0) > 0) {
-      const grid = element("div", "plug-grid");
-      room.smart_plugs?.forEach((plug) => grid.append(this.smartPlugCard(plug)));
-      const plugGroup = group("Smart plugs & energie", grid);
-      plugGroup.dataset.capabilitySection = "devices";
-      panels.get("devices")?.append(plugGroup);
+      const list = element("div", "info-list");
+      room.smart_plugs?.forEach((plug) => {
+        const plugState = this.currentHass?.states?.[plug.switch_entity];
+        const row = element("div", plug.protected ? "info protected-plug-row" : "info");
+        const detail = plug.power_entity ? stateText(this.currentHass?.states?.[plug.power_entity]) : stateText(plugState);
+        row.textContent = `${plug.name || friendlyName(plugState, "Smart plug")} · ${detail}`;
+        list.append(row);
+      });
+      panels.get("devices")?.append(group("Smart plugs & energie", list));
     }
 
     if (room.temperature_history_entity) panels.get("history")?.append(this.informationGroup("Historie", [[room.temperature_history_entity, "history"]], "Temperatuurhistorie")!);
 
-    if (room.desk && Object.keys(room.desk.card_config).length > 0) {
-      const card = element("div", "embedded-card desk-card");
-      panels.get("devices")?.append(group("Bureau", card));
-      void this.mountCard(card, { ...room.desk.card_config, type: "custom:linak-desk-card" });
-    }
-    [operations, climate].forEach((column) => { if (column.childElementCount) layout.append(column); });
-    if (layout.childElementCount) panels.get("controls")?.append(layout);
     if (energy.childElementCount) panels.get("energy")?.append(energy);
     for (const [key, panel] of panels) {
       if (!panel.childElementCount) panel.append(element("p", "info unavailable", key === "history" ? "Geen historiebronnen geconfigureerd." : "Geen gegevens voor dit onderdeel geconfigureerd."));
     }
     deckContent.append(tabs, ...panels.values());
-    deck.append(capabilityRail, deckContent);
-    root.append(deck);
+    detailsCard.append(deckContent);
+    root.append(detailsCard);
     const previous = this.shadowRoot.querySelector("main");
     if (previous) { previous.replaceWith(root); this.shadowRoot.querySelector("style")?.replaceWith(style); }
     else this.shadowRoot.replaceChildren(style, root);
     if (focusKey) Array.from(this.shadowRoot.querySelectorAll<HTMLElement>("[data-control-key]")).find(control => control.dataset.controlKey === focusKey)?.focus();
+  }
+
+  private handleRovingKeydown(event: KeyboardEvent, keys: readonly string[], current: string, apply: (next: string) => void, focusSelector: (next: string) => string): void {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const index = keys.indexOf(current);
+    const target = event.key === "Home" ? 0 : event.key === "End" ? keys.length - 1 : (index + (event.key === "ArrowLeft" ? -1 : 1) + keys.length) % keys.length;
+    const nextKey = keys[target]!;
+    apply(nextKey);
+    this.render();
+    this.shadowRoot?.querySelector<HTMLElement>(focusSelector(nextKey))?.focus();
   }
 }
 

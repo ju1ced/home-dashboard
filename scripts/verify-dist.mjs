@@ -12,9 +12,14 @@ const errors = [];
 // 215_000 -> 245_000: HD-202 voegt het volledige capability-gedreven Control Deck
 // toe aan dezelfde HACS-bundle: drieperiodenenergie, lichtgroepen, getypeerde
 // openingen, beschermde plugs, tabs, toegankelijke apparaatvergelijking en
-// servicefeedback met pending-lock. De grens laat minder dan 1% marge boven
-// de gereviewde alpha.20-kandidaat en bewaakt verdere groei.
-const maxBundleBytes = 245_000;
+// servicefeedback met pending-lock.
+// 245_000 -> 254_000 (D-052): HD-204 herstructureert de Control Deck naar de
+// afgetikte v3-rail (rail als hoofdnavigatie, dimsliders, samenvattingsstrips,
+// geconsolideerde Comfort-stage). Gemeten kandidaat: 251.696 bytes. Bewust iets
+// ruimere marge dan voorheen (± 2,3 kB) na HD-171's waarschuwing dat de vorige
+// grens (603 bytes marge) de eerstvolgende specialistintegratie direct zou
+// blokkeren; HD-171 blijft de plek waar dit structureel wordt opgelost.
+const maxBundleBytes = 254_000;
 
 if (hacs.filename !== "home-dashboard.js") errors.push("hacs.json verwijst niet naar home-dashboard.js");
 if (hacs.homeassistant !== "2026.8.2") errors.push("Onverwachte minimale Home Assistant-versie");
