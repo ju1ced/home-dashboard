@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.0-alpha.22 — 2026-09-29
+
+- Herstructureert het Control Deck-kamerdetail naar de op 24 september 2026 afgetikte v3-ontwerpstudie: de capabilityrail (Verlichting, Rolluiken/Luifel & screens, Comfort, Smart plugs, Verbruik) is nu de hoofdnavigatie en toont telkens één geïsoleerde stage. De "Bediening"-tab uit alpha.21 verdwijnt; het Details-blok (Apparaten/Energie/Historie) blijft eronder.
+- Individuele lampen krijgen een dimslider (bevestigd op `change`, niet bij elke sleepbeweging); lichtgroepen tonen visueel onderscheid tussen actief/gedeeltelijk/uit.
+- Openingen krijgen een samenvattingsstrip en een positiebalk per item; smart plugs krijgen een samenvattingsstrip en een dag/maand/jaar-metricsgrid. De awning-confirmation- en plug-tweestapsbevestigingslogica zijn ongewijzigd (byte-identiek aan alpha.21).
+- Comfort consolideert klimaat, media, veiligheid, camera's en de bureaukaart in één stage, zonder capabiliteitsverlies. Verbruik hergebruikt de bestaande energieweergave in plaats van een nieuwe, dubbele samenvatting; Historie behoudt voorlopig de native `history-graph`-fallback.
+- De minified bundlegrens stijgt van 245 kB naar 254 kB (D-052); de uitgebrachte kandidaat gebruikt 251.696 bytes.
+- [Testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.22.md). Live Home Assistant-acceptatie blijft een afzonderlijke menselijke gate.
+
 ## 0.8.0-alpha.21 — 2026-09-28
 
 - Introduceert het capability-gedreven Control Deck voor kamerdetails: vaste functierail, Bediening/Apparaten/Energie/Historie-tabs en één eigenaar voor historie.
