@@ -37,19 +37,20 @@ test("kamerdetail maakt bediening en kernstatus onmiddellijk scanbaar", async ()
   assert.match(source, /room-photo/);
 });
 
-test("kamerdetail gebruikt de capability-gedreven Control Deck-compositie", async () => {
+test("kamerdetail gebruikt de capability-gedreven Control Deck-compositie waarbij de rail de stage isoleert", async () => {
   const source = await readFile(sourceUrl, "utf8");
   assert.match(source, /control-deck/);
   assert.match(source, /capability-rail/);
   assert.match(source, /detail-tabs/);
   assert.match(source, /role", "tablist"/);
   assert.match(source, /aria-selected/);
-  assert.match(source, /activeCapability/);
+  assert.match(source, /selectedCapability/);
   assert.match(source, /capability:/);
-  assert.match(source, /data-capability-section/);
-  for (const label of ["Bediening", "Apparaten", "Energie", "Historie"]) {
+  assert.match(source, /element\("div", "stage"\)/);
+  for (const label of ["Apparaten", "Energie", "Historie"]) {
     assert.ok(source.includes(label), `${label} ontbreekt`);
   }
+  assert.doesNotMatch(source, /\["controls", "Bediening"\]/, "de Bediening-tab moet verwijderd zijn ten voordele van de rail-stages");
 });
 
 test("kamerdetail gebruikt afzonderlijke mushroom-achtige capabilitykaarten", async () => {
@@ -86,6 +87,36 @@ test("Control Deck rendert expliciete lichtgroepen en getypeerde openingen", asy
   assert.match(source, /Uit/);
   assert.match(source, /In/);
   assert.match(source, /coverConfig\.confirmation === "movement" \|\| coverConfig\.kind === "awning"/, "luifels moeten altijd bevestiging vereisen, ongeacht de geconfigureerde confirmation");
+});
+
+test("v3-rail: verlichtingsstage toont dimslider per lamp en onderscheidt actieve/gedeeltelijke groepen", async () => {
+  const source = await readFile(sourceUrl, "utf8");
+  assert.match(source, /type = "range"/);
+  assert.match(source, /set_brightness/);
+  assert.match(source, /brightness_pct/);
+  assert.match(source, /range-row/);
+  assert.match(source, /state === "on" \? "active" : state === "partial" \? "mixed" : state/, "lichtgroepen moeten actief/gedeeltelijk/uit visueel onderscheiden");
+});
+
+test("v3-rail: openingen- en plugsstage tonen een samenvattingsstrip en positie-/verbruiksdetails", async () => {
+  const source = await readFile(sourceUrl, "utf8");
+  assert.match(source, /summary-strip/);
+  assert.match(source, /summary-metric/);
+  assert.match(source, /position-track/);
+  assert.match(source, /position-fill/);
+  assert.match(source, /plug-metrics/);
+  assert.match(source, /plug-metric/);
+  assert.match(source, /comfort-grid/);
+});
+
+test("v3-rail: verbruikstage hergebruikt de bestaande energyPeriodGroup in plaats van een eigen totaalberekening", async () => {
+  const source = await readFile(sourceUrl, "utf8");
+  const energyStageMatch = source.match(/private energyStage\(room: RoomConfig\): HTMLElement \{[\s\S]*?\n  \}/);
+  assert.ok(energyStageMatch, "energyStage methode niet gevonden");
+  const energyStageBody = energyStageMatch[0];
+  assert.match(energyStageBody, /this\.energyPeriodGroup\(room\)/, "energyStage moet de bestaande energyPeriodGroup hergebruiken");
+  assert.doesNotMatch(energyStageBody, /sumPlugPeriod/, "energyStage mag geen eigen periodetotaal meer optellen");
+  assert.doesNotMatch(energyStageBody, /Volledige verbruiksgrafiek per dag volgt in een latere update\./, "de placeholdertekst is vervangen door de echte energyPeriodGroup-content");
 });
 
 test("Control Deck toont beschermde plugs en afzonderlijke dag-, maand- en jaarbronnen", async () => {

@@ -31,9 +31,9 @@ test("release assets are deterministic for a given bundle", async () => {
   const packageJson = JSON.parse(await readFile(new URL("package.json", root), "utf8"));
   const commit = "01234567".repeat(5);
   const tag = `v${packageJson.version}`;
-  // Zie scripts/verify-dist.mjs: 245_000 is de gereviewde alpha.20-grens voor
-  // de complete Control Deck-slice en laat minder dan 1 procent marge.
-  assert.ok(bundle.length <= 245_000);
+  // Zie scripts/verify-dist.mjs en D-052: 254_000 is de gereviewde grens na
+  // de v3-railherstructurering (HD-204), gemeten op 251.696 bytes.
+  assert.ok(bundle.length <= 254_000);
   assert.equal(bundle.includes(Buffer.from("sourceMappingURL")), false);
   const result = spawnSync(process.execPath, ["scripts/create-release-assets.mjs"], { cwd: rootPath, encoding: "utf8", env: { ...process.env, GITHUB_SHA: commit, RELEASE_TAG: tag } });
   assert.equal(result.status, 0, result.stderr);
