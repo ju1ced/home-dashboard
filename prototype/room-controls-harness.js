@@ -82,12 +82,16 @@ const config=migrateConfig({rooms,today:{enabled:true,weather_entity:put('weathe
   persons:['Bewoner A','Bewoner B'].map((label,i)=>({key:`person_${i}`,label,entity:put('person',`person_${i}`,'home')})),specialists:{kia:{enabled:true},robot:{enabled:true},garden:{enabled:true}}
 }).config;
 // Include non-favorite safety to prove warnings do not depend on Home selection.
+// HD-206: a room whose only energy source is a smart plug's period sensor (no room_energy, no power_entities),
+// used to prove the stage-head badge degrades correctly when that plug sensor is unavailable instead of
+// fabricating a "Beschikbaar" reading from an incomplete entity check.
+config.rooms.push(migrateConfig({rooms:[{key:'plugs_only_energy',name:'Alleen plugs',area_id:'EXAMPLE_PLUGS_ONLY',smart_plugs:[{key:'lone_plug',name:'Losse plug',switch_entity:put('switch','plugs_only_switch','off',{friendly_name:'Losse plug'}),power_entity:put('sensor','plugs_only_power','0',{unit_of_measurement:'W'}),energy_month_entity:put('sensor','plugs_only_energy_month','12',{unit_of_measurement:'kWh'})}]}]}).config.rooms[0]);
 config.rooms.push(migrateConfig({rooms:[{key:'hall',name:'Hal',area_id:'EXAMPLE_HALL',safety_entities:[put('binary_sensor','safety','off',{friendly_name:'Veiligheid hal'})]}]}).config.rooms[0]);
 const variant=params.get('fixture')||'normal';
 if(variant==='warning') states[ref('binary_sensor','safety')].state='unsafe';
 if(variant==='missing') { delete states[config.rooms[0].control_light_entity]; delete states[config.today.waste_entities[0]]; }
 if(variant==='unknown') states[loungeAccent].state='unknown';
-if(variant==='unavailable') { states[config.rooms[0].control_cover_entity].state='unavailable'; states[config.today.battery_soc_entity].state='unavailable'; }
+if(variant==='unavailable') { states[config.rooms[0].control_cover_entity].state='unavailable'; states[config.today.battery_soc_entity].state='unavailable'; states[config.rooms.find(r=>r.key==='plugs_only_energy').smart_plugs[0].energy_month_entity].state='unavailable'; }
 const calls=[];
 const hass={states,connection:{subscribeMessage:async callback=>{queueMicrotask(()=>callback({forecast:[{datetime:'2026-09-08',condition:'cloudy',temperature:22,templow:14},{datetime:'2026-09-09',condition:'sunny',temperature:24,templow:15},{datetime:'2026-09-10',condition:'cloudy',temperature:21,templow:13}]}));return ()=>{};}},
   callService:async(domain,service,data)=>{calls.push({domain,service,data});if(window.fixtureReject)throw Error('fixture refusal');}
