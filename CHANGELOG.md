@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.0-alpha.23 — 2026-09-30
+
+- Voegt de omkadering rond de Control Deck-rail toe die alpha.22 oversloeg: een deck-head boven de rail (kamernaam + telling van werkelijk geconfigureerde lampen/openingen/plugs), een gedeelde stage-head bovenaan elke functie (titel, omschrijving, statusbadge), iconen en een statusregel per rail-knop, en een rijkere hero met meerdere statuspillen plus een neutrale placeholder-illustratie zonder kamerfoto.
+- De statusbadge heeft drie tonen — Beschikbaar, Aandacht (hergebruikt de bestaande waarschuwingslogica) en Deels niet beschikbaar — en verdwijnt volledig in plaats van een verzonnen "Beschikbaar" te tonen wanneer een functie wel geconfigureerd is maar niets controleerbaars heeft.
+- Twee reviewrondes losten op: een vals-positieve badge bij een energiebron buiten de gecontroleerde lijst, de ontbrekende Aandacht-toon, een stilzwijgend wisselend cijfer in de energie-rail-samenvatting bij een unavailable bron, en rail-tellingen die unavailable apparaten als "uit" telden. Awning-confirmation, plug-tweestapsbevestiging en toetsenbordnavigatie zijn ongewijzigd (byte-identiek aan alpha.22).
+- De minified bundlegrens stijgt van 254 kB naar 258 kB (D-053); de uitgebrachte kandidaat gebruikt 256.821 bytes. Drie kleine, niet-blokkerende hiaten (plugs-energiebadge, lege deck-head-telling bij comfort/energie-only kamers, screenshot-volgorde) staan als HD-207 in de backlog.
+- [Testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.23.md). Live Home Assistant-acceptatie blijft een afzonderlijke menselijke gate.
+
 ## 0.8.0-alpha.22 — 2026-09-29
 
 - Herstructureert het Control Deck-kamerdetail naar de op 24 september 2026 afgetikte v3-ontwerpstudie: de capabilityrail (Verlichting, Rolluiken/Luifel & screens, Comfort, Smart plugs, Verbruik) is nu de hoofdnavigatie en toont telkens één geïsoleerde stage. De "Bediening"-tab uit alpha.21 verdwijnt; het Details-blok (Apparaten/Energie/Historie) blijft eronder.
