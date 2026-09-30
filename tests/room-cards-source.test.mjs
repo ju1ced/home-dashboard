@@ -202,6 +202,83 @@ test("roominteracties hebben touch-, focus- en mobiele contracts", async () => {
   assert.match(source, /Bevestig/);
 });
 
+test("HD-206: deck-head toont een niet-gefabriceerde telling boven de rail", async () => {
+  const source = await readFile(sourceUrl, "utf8");
+  assert.match(source, /"section-heading deck-head"/);
+  assert.match(source, /individuele bediening/);
+  assert.match(source, /individualLightEntities\(room\)\.length/);
+  assert.match(source, /countParts\.push/);
+  assert.match(source, /lightCount > 0/);
+  assert.match(source, /coverCount > 0/);
+  assert.match(source, /plugCount > 0/);
+});
+
+test("HD-206: elke stage krijgt een gedeelde stageHead met eyebrow, titel, beschrijving en een op echte status gebaseerde badge met drie tonen", async () => {
+  const source = await readFile(sourceUrl, "utf8");
+  assert.match(source, /private stageHead\(room: RoomConfig, key: RoomCapabilityStage, title: string\)/);
+  assert.match(source, /capabilityEntityRoles\(room, key\)/);
+  assert.match(source, /if \(!entityRoles\.length\) return \[head\];/);
+  assert.match(source, /!actionable\(state\)/);
+  assert.match(source, /deviceTone\(state, role\) === "warning"/);
+  assert.match(source, /Deels niet beschikbaar/);
+  assert.match(source, /"Aandacht"/);
+  assert.match(source, /Beschikbaar/);
+  assert.match(source, /this\.stageHead\(room, this\.selectedCapability, activeLabel\)/);
+  // The dispatcher prepends the shared head; the five stage bodies never call it themselves.
+  const lightingStageMatch = source.match(/private lightingStage\(room: RoomConfig\): HTMLElement \{[\s\S]*?\n  \}/);
+  assert.ok(lightingStageMatch, "lightingStage methode niet gevonden");
+  assert.doesNotMatch(lightingStageMatch[0], /stageHead/, "lightingStage mag de gedeelde stage-head niet zelf renderen");
+});
+
+test("HD-206: capabilityEntityRoles telt elke geconfigureerde energiebron mee, inclusief plug- en kamerperiodetotalen", async () => {
+  const source = await readFile(sourceUrl, "utf8");
+  const rolesMatch = source.match(/function capabilityEntityRoles\(room: RoomConfig, key: RoomCapabilityStage\): Array<\{ entity: string; role: DeviceRole \}> \{[\s\S]*?\n\}/);
+  assert.ok(rolesMatch, "capabilityEntityRoles functie niet gevonden");
+  const body = rolesMatch[0];
+  assert.match(body, /room\.room_energy\?\.month_entity, room\.room_energy\?\.year_entity/);
+  assert.match(body, /plug\.energy_day_entity, plug\.energy_month_entity, plug\.energy_year_entity/);
+});
+
+test("HD-206: de rail toont een icoon en niet-gefabriceerde samenvatting per capability", async () => {
+  const source = await readFile(sourceUrl, "utf8");
+  assert.match(source, /private capabilitySummary\(room: RoomConfig, key: RoomCapabilityStage\): string \| undefined/);
+  assert.match(source, /const capIcon = element\("span", "mushroom-icon"\); capIcon\.append\(icon\(railIcon\)\)/);
+  assert.match(source, /if \(capSummary\) capCopy\.append\(element\("small", "", capSummary\)\)/);
+  assert.match(source, /"mdi:lightbulb-group-outline"/);
+  assert.match(source, /"mdi:window-shutter"/);
+  assert.match(source, /"mdi:thermostat"/);
+  assert.match(source, /"mdi:power-plug-outline"/);
+  assert.match(source, /"mdi:gauge"/);
+  // Lighting/covers/comfort summaries only appear when the underlying data exists.
+  assert.match(source, /if \(!reachable\.length\) return undefined;/);
+  assert.match(source, /return count \? `\$\{count\} bediening\$\{count === 1 \? "" : "en"\}` : undefined;/);
+  // Lighting/plugs "N van M" counts only over currently actionable entities, so an unreachable
+  // entity is never silently folded into "off" / excluded from the denominator instead.
+  assert.match(source, /individualLightEntities\(room\)\.filter\(\(entity\) => actionable\(this\.currentHass\?\.states\?\.\[entity\]\)\)/);
+  assert.match(source, /\(room\.smart_plugs \?\? \[\]\)\.filter\(\(plug\) => actionable\(this\.currentHass\?\.states\?\.\[plug\.switch_entity\]\)\)/);
+});
+
+test("HD-206: energySummary valt alleen terug op het plugtotaal als er geen kamerbron geconfigureerd is", async () => {
+  const source = await readFile(sourceUrl, "utf8");
+  const energySummaryMatch = source.match(/private energySummary\(room: RoomConfig\): string \| undefined \{[\s\S]*?\n  \}/);
+  assert.ok(energySummaryMatch, "energySummary methode niet gevonden");
+  const body = energySummaryMatch[0];
+  assert.match(body, /const roomDayEntity = room\.room_energy\?\.day_entity;/);
+  assert.match(body, /roomDayEntity \? energyKwh\(this\.currentHass\?\.states\?\.\[roomDayEntity\]\) : this\.plugPeriodTotal\(room\.smart_plugs \?\? \[\], "energy_day_entity"\)/);
+});
+
+test("HD-206: de hero toont meerdere echte statuspillen en een eerlijke placeholderillustratie", async () => {
+  const source = await readFile(sourceUrl, "utf8");
+  assert.match(source, /private heroPills\(room: RoomConfig\): HTMLElement\[\]/);
+  assert.match(source, /lookupFloorName\(this\.currentHass, room\.floor_id\)/);
+  assert.match(source, /floorName \? `Kamer · \$\{floorName\}` : "Kamer"/);
+  assert.match(source, /if \(!values\.includes\(operational\)\) values\.push\(operational\)/);
+  assert.match(source, /icon\("mdi:floor-plan"\)/);
+  assert.match(source, /Geen kamerfoto geconfigureerd/);
+  assert.match(source, /Kamerfoto niet beschikbaar/);
+  assert.doesNotMatch(source, /Fictieve/, "productcopy voor de placeholder mag geen testharnastaal gebruiken");
+});
+
 test("kameracties gebruiken korte namen, entiteitsiconen en duidelijke actieve types", async () => {
   const controls = await readFile(new URL("../src/cards/home-dashboard-room-controls.ts", import.meta.url), "utf8");
   const editor = await readFile(new URL("../src/editor/home-dashboard-editor.ts", import.meta.url), "utf8");

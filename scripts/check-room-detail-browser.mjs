@@ -43,6 +43,10 @@ for (const variant of ["normal", "dark", "warning", "missing", "unknown", "unava
         return { left: rect.left, right: rect.right, width: rect.width, height: rect.height };
       });
       const mushroomGrid = stage.querySelector(".mushroom-grid");
+      const deckHead = root.querySelector(".deck-head");
+      const railButtons = [...root.querySelectorAll(".capability-rail button")];
+      const stageHead = root.querySelector(".stage-head");
+      const badge = stageHead?.querySelector(".state-badge");
       return {
         labels,
         count: cards.length,
@@ -53,8 +57,19 @@ for (const variant of ["normal", "dark", "warning", "missing", "unknown", "unava
         tabs: root.querySelectorAll('.detail-tabs [role="tab"]').length,
         tabSelected: root.querySelector('.detail-tabs [role="tab"][aria-selected="true"]')?.textContent,
         railVisible: root.querySelector(".capability-rail").checkVisibility(),
-        railButtons: root.querySelectorAll(".capability-rail button").length,
-        selectedCapabilities: root.querySelectorAll('.capability-rail button[aria-selected="true"]').length
+        railButtons: railButtons.length,
+        selectedCapabilities: root.querySelectorAll('.capability-rail button[aria-selected="true"]').length,
+        deckHeadVisible: Boolean(deckHead?.checkVisibility()),
+        deckHeadRoomName: deckHead?.querySelector(".deck-title strong")?.textContent,
+        deckHeadCount: deckHead?.querySelector(":scope > span")?.textContent,
+        railIconsPresent: railButtons.every((button) => Boolean(button.querySelector("ha-icon svg"))),
+        railLabelsPresent: railButtons.every((button) => Boolean(button.querySelector(".mushroom-copy strong")?.textContent)),
+        railSummaryCount: railButtons.filter((button) => Boolean(button.querySelector(".mushroom-copy small")?.textContent)).length,
+        stageHeadTitle: stageHead?.querySelector("h3")?.textContent,
+        stageHeadDescription: stageHead?.querySelector("small")?.textContent,
+        stageHeadPrecedesContent: stageHead ? stage.children[0] === stageHead && stage.children[1] !== stageHead : false,
+        badgeText: badge?.textContent,
+        badgeDegraded: Boolean(badge?.classList.contains("unavailable"))
       };
     }, width <= 600);
     const label = `${variant}/${width}x${height}`;
@@ -67,10 +82,64 @@ for (const variant of ["normal", "dark", "warning", "missing", "unknown", "unava
     assert.equal(layout.railVisible, true, `${label}: capability rail remains visible`);
     assert.equal(layout.railButtons, 5, `${label}: every mapped v3 capability is represented on the rail`);
     assert.equal(layout.selectedCapabilities, 1, `${label}: exactly one capability stage is selected by default`);
+    assert.equal(layout.deckHeadVisible, true, `${label}: deck-head is visible above the capability rail`);
+    assert.ok(layout.deckHeadRoomName?.length > 0, `${label}: deck-head names the room`);
+    assert.match(layout.deckHeadCount, /\d/, `${label}: deck-head shows a non-fabricated count string`);
+    assert.equal(layout.railIconsPresent, true, `${label}: every rail button has an icon`);
+    assert.equal(layout.railLabelsPresent, true, `${label}: every rail button keeps its capability label`);
+    assert.ok(layout.railSummaryCount >= 1, `${label}: at least one rail button shows a one-line summary`);
+    assert.ok(layout.stageHeadTitle?.length > 0, `${label}: the active stage shows a stage-head title`);
+    assert.ok(layout.stageHeadDescription?.length > 0, `${label}: the active stage shows a stage-head description`);
+    assert.equal(layout.stageHeadPrecedesContent, true, `${label}: the stage-head renders before the stage's own content`);
+    assert.ok(["Beschikbaar", "Aandacht", "Deels niet beschikbaar"].includes(layout.badgeText), `${label}: the stage-head badge shows a real availability tone`);
     if (width <= 600) assert.equal(layout.mobileGrid, 1, `${label}: mobile controls use one clear column`);
+    if (variant === "normal") assert.equal(layout.badgeDegraded, false, `${label}: a fully healthy stage's badge is not degraded`);
     if (variant === "missing") assert.equal(await page.locator(".light-card").first().isDisabled(), true);
-    if (variant === "unavailable") { await selectCapability("Luifel & screens"); assert.equal(await page.locator(".cover-card button").first().isDisabled(), true); await selectCapability("Verlichting"); }
-    if (variant === "warning") { await selectCapability("Comfort"); assert.equal(await page.locator(".info.warning").count(), 1); await selectCapability("Verlichting"); }
+    if (variant === "unavailable") {
+      assert.equal(layout.badgeDegraded, false, `${label}: the default lighting stage stays available when only the cover entity is unavailable`);
+      await selectCapability("Luifel & screens");
+      assert.equal(await page.locator(".cover-card button").first().isDisabled(), true);
+      const coverStage = await page.evaluate(() => {
+        const badge = document.querySelector("home-dashboard-room-detail").shadowRoot.querySelector(".stage-head .state-badge");
+        return { text: badge?.textContent, degraded: badge?.classList.contains("unavailable") ?? false };
+      });
+      assert.equal(coverStage.degraded, true, `${label}: the covers stage badge switches tone when its entity is unavailable`);
+      assert.equal(coverStage.text, "Deels niet beschikbaar", `${label}: the degraded badge shows the unavailable-state copy`);
+      await selectCapability("Verlichting");
+    }
+    if (variant === "warning") {
+      await selectCapability("Comfort");
+      assert.equal(await page.locator(".info.warning").count(), 1);
+      const comfortBadge = await page.evaluate(() => {
+        const badge = document.querySelector("home-dashboard-room-detail").shadowRoot.querySelector(".stage-head .state-badge");
+        return { text: badge?.textContent, warning: badge?.classList.contains("warning") ?? false };
+      });
+      assert.equal(comfortBadge.warning, true, `${label}: the Comfort stage-head badge switches to the warning tone when a safety entity needs attention`);
+      assert.equal(comfortBadge.text, "Aandacht", `${label}: the warning badge shows the Aandacht copy rather than a fabricated Beschikbaar`);
+      await selectCapability("Verlichting");
+    }
+    if (variant === "unavailable" && width === 1440) {
+      // HD-206 fix regression: a plugs-only energy room whose only checkable entity is currently unavailable must
+      // show "Deels niet beschikbaar", never fabricate "Beschikbaar" from an incomplete entity check.
+      const plugsOnlyBadge = await page.evaluate(() => {
+        const fixture = window.roomFixture;
+        const room = fixture.config.rooms.find((candidate) => candidate.key === "plugs_only_energy");
+        const detail = document.createElement("home-dashboard-room-detail");
+        detail.setConfig({ type: "custom:home-dashboard-room-detail", room });
+        detail.hass = fixture.hass;
+        document.body.replaceChildren(detail);
+        return true;
+      });
+      assert.equal(plugsOnlyBadge, true, `${label}: plugs-only energy room detail mounted`);
+      await page.waitForFunction(() => document.querySelector("home-dashboard-room-detail")?.shadowRoot?.querySelector(".control-deck"));
+      await selectCapability("Verbruik");
+      const plugsOnlyEnergyBadge = await page.evaluate(() => {
+        const badge = document.querySelector("home-dashboard-room-detail").shadowRoot.querySelector(".stage-head .state-badge");
+        return { text: badge?.textContent, degraded: badge?.classList.contains("unavailable") ?? false };
+      });
+      assert.equal(plugsOnlyEnergyBadge.degraded, true, `${label}: a plugs-only energy room's Verbruik badge degrades when its only sensor is unavailable`);
+      assert.equal(plugsOnlyEnergyBadge.text, "Deels niet beschikbaar", `${label}: the plugs-only energy badge shows the unavailable-state copy, not a fabricated Beschikbaar`);
+    }
     await page.screenshot({ path: `${directory}/${variant}-${width}.png`, fullPage: true });
   }
 }

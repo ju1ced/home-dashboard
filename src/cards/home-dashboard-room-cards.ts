@@ -254,14 +254,58 @@ export function getRoomMetric(hass: HomeAssistantLike | undefined, room: RoomCon
 }
 
 
+function lookupFloorName(hass: HomeAssistantLike | undefined, floorId: string): string | undefined {
+  if (!floorId) return undefined;
+  const floors = hass?.floors;
+  if (Array.isArray(floors)) return floors.find((candidate) => candidate.floor_id === floorId || candidate.id === floorId)?.name;
+  return floors?.[floorId]?.name;
+}
+
 function resolveFloorName(hass: HomeAssistantLike | undefined, floorId: string, fallbackIndex: number): string {
   if (!floorId) return "Overige ruimtes";
-  const floors = hass?.floors;
-  if (Array.isArray(floors)) {
-    const floor = floors.find((candidate) => candidate.floor_id === floorId || candidate.id === floorId);
-    if (floor?.name) return floor.name;
-  } else if (floors?.[floorId]?.name) return floors[floorId].name ?? `Verdieping ${fallbackIndex + 1}`;
-  return `Verdieping ${fallbackIndex + 1}`;
+  const name = lookupFloorName(hass, floorId);
+  return name ? name : `Verdieping ${fallbackIndex + 1}`;
+}
+
+/** Lamps addressable on their own, excluding a light group's synthetic control entity (already represented by its group card). */
+function individualLightEntities(room: RoomConfig): string[] {
+  const groupTargets = new Set((room.light_groups ?? []).map((groupConfig) => groupConfig.control_entity));
+  return [...room.light_entities, ...(room.light_switch_entities ?? [])].filter((entity) => !groupTargets.has(entity));
+}
+
+/** Every entity + its device role that feeds a capability stage's status, used to decide the stage-head badge tone (availability AND warning). */
+function capabilityEntityRoles(room: RoomConfig, key: RoomCapabilityStage): Array<{ entity: string; role: DeviceRole }> {
+  if (key === "lighting") return [...room.light_entities, ...(room.light_switch_entities ?? [])].map((entity) => ({ entity, role: "light" as const }));
+  if (key === "covers") return room.cover_entities.map((entity) => ({ entity, role: "cover" as const }));
+  if (key === "comfort") {
+    const roles: Array<{ entity: string; role: DeviceRole }> = [];
+    if (room.hvac.entity) roles.push({ entity: room.hvac.entity, role: "climate" });
+    room.hvac.comfort_entities.forEach((entity) => roles.push({ entity, role: "comfort" }));
+    room.media_entities.forEach((entity) => roles.push({ entity, role: "media" }));
+    room.safety_entities.forEach((entity) => roles.push({ entity, role: "safety" }));
+    room.camera_entities.forEach((entity) => roles.push({ entity, role: "camera" }));
+    return roles;
+  }
+  if (key === "plugs") return (room.smart_plugs ?? []).flatMap((plug) => [plug.switch_entity, plug.power_entity].filter((value): value is string => Boolean(value)).map((entity) => ({ entity, role: "power" as const })));
+  const energyEntities = [
+    ...room.power_entities,
+    room.room_energy?.power_entity, room.room_energy?.day_entity, room.room_energy?.month_entity, room.room_energy?.year_entity,
+    ...(room.smart_plugs ?? []).flatMap((plug) => [plug.energy_day_entity, plug.energy_month_entity, plug.energy_year_entity])
+  ].filter((value): value is string => Boolean(value));
+  return energyEntities.map((entity) => ({ entity, role: "power" as const }));
+}
+
+/** Every entity that feeds a capability stage's status, used to decide whether a badge can be shown at all. */
+function capabilityEntities(room: RoomConfig, key: RoomCapabilityStage): string[] {
+  return capabilityEntityRoles(room, key).map(({ entity }) => entity);
+}
+
+function stageDescription(key: RoomCapabilityStage): string {
+  if (key === "lighting") return "Groepen bovenaan, lichtpunten met dimniveau eronder.";
+  if (key === "covers") return "Elke opening heeft een eigen positie, actiescope en Stop.";
+  if (key === "comfort") return "Klimaat, comfort, media en veiligheid in één overzicht.";
+  if (key === "plugs") return "Vermogen, verbruikstotalen en bevestiging per apparaat.";
+  return "Verbruik en periodetotalen met bron- en versheidscontext.";
 }
 
 function icon(name: string): HTMLElement {
@@ -641,7 +685,6 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
 
   private lightingStage(room: RoomConfig): HTMLElement {
     const stage = element("div", "stage-body");
-    const groupTargets = new Set((room.light_groups ?? []).map((groupConfig) => groupConfig.control_entity));
     const groups = (room.light_groups ?? []).map((groupConfig) => this.lightGroupCard(groupConfig));
     if (groups.length) {
       const heading = element("div", "section-heading");
@@ -649,7 +692,7 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
       const grid = element("div", "group-grid mushroom-grid"); grid.append(...groups);
       stage.append(heading, grid);
     }
-    const individualEntities = [...room.light_entities, ...(room.light_switch_entities ?? [])].filter((entity) => !groupTargets.has(entity));
+    const individualEntities = individualLightEntities(room);
     if (individualEntities.length) {
       const heading = element("div", "section-heading");
       heading.append(element("h4", "", "Individuele lampen"), element("span", "", `${individualEntities.length} apparaten`));
@@ -715,24 +758,40 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     return stage;
   }
 
+  /** Sums a smart plug's live wattage across valid W/kW readings; undefined when nothing reports. */
+  private plugWatts(plugs: NonNullable<RoomConfig["smart_plugs"]>): number | undefined {
+    const entries = plugs.map((plug) => this.currentHass?.states?.[plug.power_entity]).map((state) => ({ value: Number(state?.state), unit: state?.attributes?.unit_of_measurement }));
+    const valid = entries.filter((entry) => Number.isFinite(entry.value) && (entry.unit === "W" || entry.unit === "kW"));
+    return valid.length ? valid.reduce((sum, entry) => sum + (entry.unit === "kW" ? entry.value * 1000 : entry.value), 0) : undefined;
+  }
+
+  /** Sums a smart plug period total (day/month) across configured plugs; undefined when nothing reports. */
+  private plugPeriodTotal(plugs: NonNullable<RoomConfig["smart_plugs"]>, key: "energy_day_entity" | "energy_month_entity"): number | undefined {
+    const values = plugs.map((plug) => plug[key] ? energyKwh(this.currentHass?.states?.[plug[key]!]) : undefined).filter((value): value is number => value !== undefined);
+    return values.length ? values.reduce((sum, value) => sum + value, 0) : undefined;
+  }
+
+  /** A short "today" total for the rail: the room's own day source, else (only when no room-level source is configured
+   * at all) the plugs' combined day total. When a room-level source IS configured but is currently unavailable, the
+   * line is omitted rather than silently swapped for a different, smaller, unlabeled partial total. */
+  private energySummary(room: RoomConfig): string | undefined {
+    const roomDayEntity = room.room_energy?.day_entity;
+    const total = roomDayEntity ? energyKwh(this.currentHass?.states?.[roomDayEntity]) : this.plugPeriodTotal(room.smart_plugs ?? [], "energy_day_entity");
+    return total === undefined ? undefined : `${total.toFixed(2).replace(".", ",")} kWh vandaag`;
+  }
+
   private plugsStage(room: RoomConfig): HTMLElement {
     const stage = element("div", "stage-body");
     const plugs = room.smart_plugs ?? [];
     if (!plugs.length) return stage;
-    const wattEntries = plugs.map((plug) => this.currentHass?.states?.[plug.power_entity]).map((state) => ({ value: Number(state?.state), unit: state?.attributes?.unit_of_measurement }));
-    const validWatts = wattEntries.filter((entry) => Number.isFinite(entry.value) && (entry.unit === "W" || entry.unit === "kW"));
-    const totalWatts = validWatts.reduce((sum, entry) => sum + (entry.unit === "kW" ? entry.value * 1000 : entry.value), 0);
+    const totalWatts = this.plugWatts(plugs);
     const activeCount = plugs.filter((plug) => this.currentHass?.states?.[plug.switch_entity]?.state === "on").length;
-    const sumPeriod = (key: "energy_day_entity" | "energy_month_entity"): number | undefined => {
-      const values = plugs.map((plug) => plug[key] ? energyKwh(this.currentHass?.states?.[plug[key]!]) : undefined).filter((value): value is number => value !== undefined);
-      return values.length ? values.reduce((sum, value) => sum + value, 0) : undefined;
-    };
-    const dayTotal = sumPeriod("energy_day_entity");
-    const monthTotal = sumPeriod("energy_month_entity");
+    const dayTotal = this.plugPeriodTotal(plugs, "energy_day_entity");
+    const monthTotal = this.plugPeriodTotal(plugs, "energy_month_entity");
     const summary = element("div", "summary-strip");
     const metric = (value: string, label: string): HTMLElement => { const item = element("div", "summary-metric"); item.append(element("strong", "", value), element("span", "", label)); return item; };
     summary.append(
-      metric(validWatts.length ? `${Math.round(totalWatts)} W` : "—", "huidig vermogen"),
+      metric(totalWatts === undefined ? "—" : `${Math.round(totalWatts)} W`, "huidig vermogen"),
       metric(String(activeCount), "actieve plugs"),
       metric(dayTotal === undefined ? "—" : `${dayTotal.toFixed(2).replace(".", ",")} kWh`, "vandaag"),
       metric(monthTotal === undefined ? "—" : `${monthTotal.toFixed(1).replace(".", ",")} kWh`, "deze maand")
@@ -858,6 +917,70 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     return group("Kamerenergie", wrapper);
   }
 
+  /** Rail icon + one-line summary per capability; undefined omits the summary line rather than showing a placeholder. */
+  private capabilitySummary(room: RoomConfig, key: RoomCapabilityStage): string | undefined {
+    if (key === "lighting") {
+      const reachable = individualLightEntities(room).filter((entity) => actionable(this.currentHass?.states?.[entity]));
+      if (!reachable.length) return undefined;
+      const on = reachable.filter((entity) => this.currentHass?.states?.[entity]?.state === "on").length;
+      return `${on} van ${reachable.length} aan`;
+    }
+    if (key === "covers") {
+      const count = room.cover_entities.length;
+      return count ? `${count} bediening${count === 1 ? "" : "en"}` : undefined;
+    }
+    if (key === "comfort") {
+      const temperature = room.hvac.entity ? numberAttribute(this.currentHass?.states?.[room.hvac.entity], "current_temperature") : undefined;
+      return temperature === undefined ? undefined : `${temperature} °C`;
+    }
+    if (key === "plugs") {
+      const reachablePlugs = (room.smart_plugs ?? []).filter((plug) => actionable(this.currentHass?.states?.[plug.switch_entity]));
+      if (!reachablePlugs.length) return undefined;
+      const active = reachablePlugs.filter((plug) => this.currentHass?.states?.[plug.switch_entity]?.state === "on").length;
+      const watts = this.plugWatts(reachablePlugs);
+      return watts === undefined ? `${active} actief` : `${active} actief · ${Math.round(watts)} W`;
+    }
+    return this.energySummary(room);
+  }
+
+  /** Shared per-stage header: eyebrow/title/description plus a status badge derived from real entity states (never a fabricated signal). */
+  private stageHead(room: RoomConfig, key: RoomCapabilityStage, title: string): HTMLElement[] {
+    const entityRoles = capabilityEntityRoles(room, key);
+    const head = element("div", "section-heading stage-head");
+    const copy = element("div", "");
+    copy.append(element("span", "eyebrow", title), element("h3", "", room.name), element("small", "", stageDescription(key)));
+    head.append(copy);
+    // Nothing configured for this stage can actually be checked (e.g. a desk-only comfort stage): omit the badge
+    // rather than fabricate a "Beschikbaar" signal from an empty entity list.
+    if (!entityRoles.length) return [head];
+    const states = entityRoles.map(({ entity, role }) => ({ state: this.currentHass?.states?.[entity], role }));
+    const degradedCount = states.filter(({ state }) => !actionable(state)).length;
+    const warningCount = states.filter(({ state, role }) => actionable(state) && deviceTone(state, role) === "warning").length;
+    const tone: "unavailable" | "warning" | "normal" = degradedCount > 0 ? "unavailable" : warningCount > 0 ? "warning" : "normal";
+    const badgeText = tone === "unavailable" ? "Deels niet beschikbaar" : tone === "warning" ? "Aandacht" : "Beschikbaar";
+    const badge = element("span", `state-badge${tone === "normal" ? "" : ` ${tone}`}`, badgeText);
+    head.append(badge);
+    const noteText = tone === "unavailable"
+      ? `${degradedCount} bron(nen) zonder betrouwbare toestand.`
+      : tone === "warning"
+        ? (warningCount === 1 ? "1 signaal vraagt aandacht." : `${warningCount} signalen vragen aandacht.`)
+        : "Status en bediening blijven gescheiden in één overzicht.";
+    const noteEl = element("small", `state-note${tone === "normal" ? "" : ` ${tone}`}`, noteText);
+    return [head, noteEl];
+  }
+
+  /** Hero status pills: only from data that genuinely exists, deduplicated, always including the existing operational summary. */
+  private heroPills(room: RoomConfig): HTMLElement[] {
+    const values: string[] = [];
+    if (room.hvac.entity) {
+      const current = numberAttribute(this.currentHass?.states?.[room.hvac.entity], "current_temperature");
+      if (current !== undefined) values.push(`${current} °C`);
+    }
+    const operational = getRoomMetric(this.currentHass, room);
+    if (!values.includes(operational)) values.push(operational);
+    return values.map((value) => element("span", "hero-pill", value));
+  }
+
   private openHistory(entity: string, controlKey: string): void {
     const dialog = element("dialog", "history-dialog");
     dialog.setAttribute("aria-label", `Historie ${friendlyName(this.currentHass?.states?.[entity], "bron")}`);
@@ -900,9 +1023,13 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
       ${roomStyles}
       .detail,.control-deck,.room-layout-primary,.room-column,.mushroom-controls,.group,.detail-panel,.stage,.stage-body{display:grid;gap:18px;min-width:0;align-content:start}.detail{width:100%}.control-deck{grid-template-columns:minmax(150px,.24fr) minmax(0,1fr);gap:12px}.capability-rail{display:grid;gap:7px;align-content:start}.capability-rail button,.detail-tabs button{min-height:44px;border:1px solid var(--divider-color);border-radius:11px;padding:9px 12px;background:var(--room-surface);color:var(--primary-text-color);font:inherit;text-align:left}.capability-rail button[aria-selected=true],.detail-tabs button[aria-selected=true]{border-color:var(--primary-color);background:color-mix(in srgb,var(--primary-color) 10%,var(--room-surface));color:var(--primary-color);font-weight:700}.deck-content{display:grid;gap:12px;min-width:0}.detail-tabs{display:flex;gap:7px;overflow-x:auto}.detail-tabs button{flex:1 0 auto;text-align:center}.detail-panel[hidden]{display:none}.room-layout-primary{grid-template-columns:1.2fr .8fr .7fr}.group{gap:10px}.group-heading{min-height:32px;display:flex;align-items:center}.details-card{display:grid}
       .info-list,.mushroom-grid,.plug-grid,.energy-grid,.group-grid,.device-grid,.cover-grid,.comfort-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:9px}.energy-period{display:grid;gap:10px}.period-selector{display:flex;gap:7px;flex-wrap:wrap}.period-selector button{min-height:44px;padding:8px 13px;border:1px solid var(--divider-color);border-radius:999px;background:var(--room-surface);color:inherit}.period-selector button[aria-pressed=true]{border-color:var(--primary-color);background:var(--primary-color);color:var(--text-primary-color,#fff);font-weight:700}.energy-card{display:grid;gap:4px}.energy-comparison{display:grid;gap:9px;margin:0;padding:12px;border:1px solid var(--divider-color);border-radius:12px;background:var(--room-surface)}.energy-comparison figcaption{font-weight:700}.energy-bars{display:grid;gap:8px}.energy-bar-row{display:grid;grid-template-columns:minmax(90px,.7fr) minmax(100px,1.4fr) auto;gap:8px;align-items:center}.energy-bar-track{height:12px;border-radius:999px;background:var(--secondary-background-color);overflow:hidden}.energy-bar{display:block;width:var(--energy-share);height:100%;border-radius:inherit;background:var(--primary-color)}.energy-bar-value{font-variant-numeric:tabular-nums}.action-feedback{margin:0;padding:10px 12px;border:1px solid var(--divider-color);border-radius:12px;background:var(--room-surface)}.action-feedback.pending{border-color:var(--primary-color)}.action-feedback.success{border-color:var(--success-color,#2e7d32)}.action-feedback.error{border-color:var(--error-color,#b3261e)}
-      .info,.history-card,.mushroom-card,.command,.plug-lock,.history-dialog{background:var(--room-surface);color:var(--primary-text-color);border:1px solid var(--divider-color);border-radius:12px;padding:10px;font:inherit;overflow-wrap:anywhere}.info,.history-card,.mushroom-card{text-align:left}.warning{border-color:var(--error-color,#b3261e)}.unavailable{opacity:.72}
+      .info,.state-badge,.history-card,.mushroom-card,.command,.plug-lock,.history-dialog{background:var(--room-surface);color:var(--primary-text-color);border:1px solid var(--divider-color);border-radius:12px;padding:10px;font:inherit;overflow-wrap:anywhere}.info,.state-badge,.history-card,.mushroom-card{text-align:left}.warning{border-color:var(--error-color,#b3261e)}.unavailable{opacity:.72}
       button{cursor:pointer;min-height:44px;min-width:44px}button:disabled{cursor:default;opacity:.48;background:var(--secondary-background-color)}button:focus-visible{outline:2px solid var(--primary-color);outline-offset:2px}.mushroom-card{display:grid;grid-template-columns:40px minmax(0,1fr);gap:10px;align-items:center;min-height:76px;padding:12px;border-radius:16px}.light-card.active,.light-group-card.active{border-color:var(--primary-color);background:color-mix(in srgb,var(--primary-color) 10%,var(--room-surface))}.light-group-card.mixed{border-color:color-mix(in srgb,var(--primary-color) 45%,var(--divider-color));background:color-mix(in srgb,var(--primary-color) 5%,var(--room-surface))}.mushroom-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--secondary-background-color);color:var(--primary-color)}.mushroom-copy{display:grid;gap:2px}small{color:var(--secondary-text-color)}.commands{grid-column:1/-1}.smart-plug-card{grid-template-columns:minmax(0,1fr)}.smart-plug-card.active{border-color:var(--primary-color)}.plug-lock{color:var(--primary-color);font-weight:700}
-      .room-photo{width:110px;min-height:96px;border-radius:16px;background:linear-gradient(135deg,#ffffff33,transparent),var(--hd-hero);background-size:cover;background-position:center;flex:none}.embedded-card{min-height:120px}.embedded-card:empty::before{content:"Kaart wordt geladen…"}.history-dialog{box-sizing:border-box;width:min(720px,calc(100% - 32px));padding:16px;border:0;border-radius:18px}.history-dialog::backdrop{background:#0007}
+      .room-photo{width:110px;min-height:96px;border-radius:16px;background:linear-gradient(135deg,#ffffff33,transparent),var(--hd-hero);background-size:cover;background-position:center;flex:none;display:grid;place-items:center;gap:4px;padding:8px;box-sizing:border-box;text-align:center}.room-photo ha-icon{width:32px;height:32px;opacity:.85}.room-photo-caption{font-size:.68rem;opacity:.85}.embedded-card{min-height:120px}.embedded-card:empty::before{content:"Kaart wordt geladen…"}.history-dialog{box-sizing:border-box;width:min(720px,calc(100% - 32px));padding:16px;border:0;border-radius:18px}.history-dialog::backdrop{background:#0007}
+      .hero-pills{display:flex;flex-wrap:wrap;gap:8px}.hero-pill{padding:4px 10px;border-radius:999px;background:#ffffff26;font-size:.78rem;font-weight:600}
+      .deck-title{display:grid;gap:2px}
+      .stage-head{align-items:flex-start}
+      .capability-rail button{display:flex;gap:10px;align-items:center}
       .stage{padding:2px}.stage-body{gap:14px}.section-heading{display:flex;align-items:baseline;justify-content:space-between;gap:10px}.section-heading h4{margin:0;font-size:.95rem}.section-heading span{color:var(--secondary-text-color);font-size:.78rem}
       .summary-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--divider-color);border-radius:14px;overflow:hidden;background:var(--room-surface)}.summary-metric{min-height:70px;display:grid;align-content:center;gap:2px;padding:10px 12px;border-right:1px solid var(--divider-color)}.summary-metric:last-child{border-right:0}.summary-metric strong{font-size:1.05rem;font-variant-numeric:tabular-nums}.summary-metric span{color:var(--secondary-text-color);font-size:.72rem}
       .light-card-wrapper{display:grid;gap:8px}.range-row{display:grid;grid-template-columns:auto minmax(0,1fr) 42px;gap:9px;align-items:center}.range-row label,.range-row output{color:var(--secondary-text-color);font-size:.75rem;font-weight:680}input[type="range"]{width:100%;min-height:44px;accent-color:var(--primary-color)}
@@ -914,12 +1041,13 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     const root = element("main", "detail");
     const hero = element("section", "hero");
     const heroCopy = element("div", "hero-copy");
-    const eyebrow = element("span", "eyebrow", "Kamer");
+    const floorName = lookupFloorName(this.currentHass, room.floor_id);
+    const eyebrow = element("span", "eyebrow", floorName ? `Kamer · ${floorName}` : "Kamer");
     const title = element("h1", "", room.name);
     const subtitle = element("p", "", "Status en bediening per functie.");
     heroCopy.append(eyebrow, title, subtitle);
     const heroPills = element("div", "hero-pills");
-    heroPills.append(element("span", "hero-pill", getRoomMetric(this.currentHass, room)));
+    heroPills.append(...this.heroPills(room));
     hero.append(heroCopy, heroPills);
     const picture = room.image_entity ? this.currentHass?.states?.[room.image_entity]?.attributes?.entity_picture : undefined;
     const photo = element("div", "room-photo");
@@ -929,6 +1057,8 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
       photo.style.backgroundImage = `url("${picture.replaceAll("\\", "\\\\").replaceAll("\"", "\\\"")}")`;
     } else {
       photo.setAttribute("aria-hidden", "true");
+      photo.append(icon("mdi:floor-plan"));
+      photo.append(element("span", "room-photo-caption", room.image_entity ? "Kamerfoto niet beschikbaar" : "Geen kamerfoto geconfigureerd"));
     }
     hero.append(photo);
     root.append(hero);
@@ -939,10 +1069,6 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
       root.append(feedback);
     });
 
-    const deck = element("section", "control-deck");
-    const rail = element("nav", "capability-rail");
-    rail.setAttribute("aria-label", "Kamerfuncties");
-    rail.setAttribute("role", "tablist");
     const hasEnergy = Boolean(room.room_energy && Object.values(room.room_energy).some(Boolean)) || (room.smart_plugs ?? []).some((plug) => plug.energy_day_entity || plug.energy_month_entity || plug.energy_year_entity);
     const hasLighting = room.light_entities.length > 0 || (room.light_switch_entities?.length ?? 0) > 0 || (room.light_groups?.length ?? 0) > 0;
     const hasCovers = room.cover_entities.length > 0 || (room.cover_controls?.length ?? 0) > 0;
@@ -950,16 +1076,38 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     const hasPlugs = (room.smart_plugs?.length ?? 0) > 0;
     const hasEnergyStage = hasEnergy || room.power_entities.length > 0;
     const isAwningRoom = (room.cover_controls ?? []).some((coverConfig) => coverConfig.kind === "awning");
-    const railDefinitions: Array<[RoomCapabilityStage, string, boolean]> = [
-      ["lighting", "Verlichting", hasLighting],
-      ["covers", isAwningRoom ? "Luifel & screens" : "Rolluiken", hasCovers],
-      ["comfort", "Comfort", hasComfort],
-      ["plugs", "Smart plugs", hasPlugs],
-      ["energy", "Verbruik", hasEnergyStage]
+    const railDefinitions: Array<[RoomCapabilityStage, string, boolean, string]> = [
+      ["lighting", "Verlichting", hasLighting, "mdi:lightbulb-group-outline"],
+      ["covers", isAwningRoom ? "Luifel & screens" : "Rolluiken", hasCovers, "mdi:window-shutter"],
+      ["comfort", "Comfort", hasComfort, "mdi:thermostat"],
+      ["plugs", "Smart plugs", hasPlugs, "mdi:power-plug-outline"],
+      ["energy", "Verbruik", hasEnergyStage, "mdi:gauge"]
     ];
     const configuredCapabilities = railDefinitions.filter(([, , configured]) => configured).map(([key]) => key);
     if (!this.selectedCapability || !configuredCapabilities.includes(this.selectedCapability)) this.selectedCapability = configuredCapabilities[0];
-    railDefinitions.filter(([, , configured]) => configured).forEach(([key, label]) => {
+
+    const lightCount = individualLightEntities(room).length;
+    const coverCount = room.cover_entities.length;
+    const plugCount = room.smart_plugs?.length ?? 0;
+    const countParts: string[] = [];
+    if (lightCount > 0) countParts.push(`${lightCount} lamp${lightCount === 1 ? "" : "en"}`);
+    if (coverCount > 0) countParts.push(`${coverCount} opening${coverCount === 1 ? "" : "en"}`);
+    if (plugCount > 0) countParts.push(`${plugCount} plug${plugCount === 1 ? "" : "s"}`);
+    // Only render the deck-head when at least one capability is configured; otherwise there is nothing to count
+    // and the header would show an empty, dangling label.
+    if (configuredCapabilities.length > 0) {
+      const deckHead = element("header", "section-heading deck-head");
+      const deckTitle = element("div", "deck-title");
+      deckTitle.append(element("span", "eyebrow", "Control Deck"), element("strong", "", `${room.name} · individuele bediening`));
+      deckHead.append(deckTitle, element("span", "", countParts.join(" · ")));
+      root.append(deckHead);
+    }
+
+    const deck = element("section", "control-deck");
+    const rail = element("nav", "capability-rail");
+    rail.setAttribute("aria-label", "Kamerfuncties");
+    rail.setAttribute("role", "tablist");
+    railDefinitions.filter(([, , configured]) => configured).forEach(([key, label, , railIcon]) => {
       const button = document.createElement("button");
       button.type = "button";
       button.id = `room-rail-${room.key}-${key}`;
@@ -967,7 +1115,12 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
       button.setAttribute("aria-selected", String(this.selectedCapability === key));
       button.setAttribute("aria-controls", `room-stage-${room.key}`);
       button.tabIndex = this.selectedCapability === key ? 0 : -1;
-      button.textContent = label;
+      const capIcon = element("span", "mushroom-icon"); capIcon.append(icon(railIcon));
+      const capCopy = element("span", "mushroom-copy");
+      const capSummary = this.capabilitySummary(room, key);
+      capCopy.append(element("strong", "", label));
+      if (capSummary) capCopy.append(element("small", "", capSummary));
+      button.append(capIcon, capCopy);
       button.dataset.controlKey = `capability:${key}`;
       button.addEventListener("click", () => { this.selectedCapability = key; this.render(true); });
       button.addEventListener("keydown", (event) => this.handleRovingKeydown(event, configuredCapabilities, key, (next) => { this.selectedCapability = next as RoomCapabilityStage; }, (next) => `[data-control-key="capability:${next}"]`));
@@ -983,7 +1136,8 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
           : this.selectedCapability === "comfort" ? this.comfortStage(room)
             : this.selectedCapability === "plugs" ? this.plugsStage(room)
               : this.energyStage(room);
-      stage.append(stageContent);
+      const activeLabel = railDefinitions.find(([key]) => key === this.selectedCapability)?.[1] ?? "";
+      stage.append(...this.stageHead(room, this.selectedCapability, activeLabel), stageContent);
     } else {
       stage.append(element("p", "info unavailable", "Geen functies geconfigureerd voor deze kamer."));
     }

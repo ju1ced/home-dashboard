@@ -19,7 +19,12 @@ const errors = [];
 // ruimere marge dan voorheen (± 2,3 kB) na HD-171's waarschuwing dat de vorige
 // grens (603 bytes marge) de eerstvolgende specialistintegratie direct zou
 // blokkeren; HD-171 blijft de plek waar dit structureel wordt opgelost.
-const maxBundleBytes = 254_000;
+// 254_000 -> 258_000 (D-053): HD-206 voegt de deck-head, stage-head,
+// rail-iconen/samenvattingen en hero-pillen toe die HD-204 oversloeg, inclusief
+// een drietonige statusbadge zonder gefabriceerde waarden. Gemeten kandidaat:
+// 256.821 bytes. Dit is de derde verhoging op rij; HD-171 moet dit structureel
+// oplossen vóór de volgende specialistintegraties.
+const maxBundleBytes = 258_000;
 
 if (hacs.filename !== "home-dashboard.js") errors.push("hacs.json verwijst niet naar home-dashboard.js");
 if (hacs.homeassistant !== "2026.8.2") errors.push("Onverwachte minimale Home Assistant-versie");
