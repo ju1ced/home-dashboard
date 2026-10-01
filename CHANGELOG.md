@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.0-alpha.25 — 2026-10-01
+
+- Een kamerfoto kan nu rechtstreeks geüpload worden vanuit de kamereditor, via Home Assistants native media-selector (`image_upload`) — geen HA-hulpmiddel meer nodig vooraf. De bestaande `image_entity`-koppeling blijft gewoon werken; is beide geconfigureerd, dan krijgt de upload voorrang, met terugval naar `image_entity` en daarna de bestaande placeholder.
+- Drie bugs gevonden en opgelost tijdens adversariale review: de foto laadde nooit echt in een live sessie (Lovelace's `setConfig`-vóór-`hass`-volgorde werd verward met "definitief niet beschikbaar"), een opgeloste foto bleef onzichtbaar voor schermlezers (`aria-hidden` niet opgeruimd), en een eerste validatorfix was te breed (verzwakte verplichte-veldcontrole voor élk schemaveld) — opgelost bij de bron door het nieuwe veld een écht afwezige sleutel te laten zijn.
+- Een nieuwe, echte browsertest bewijst de volledige levenscyclus: monteren zonder `hass`, daarna toewijzen en oplossen, plus een reconnect-scenario dat bevestigt dat een eerdere afwijzing een latere nieuwe poging niet blokkeert.
+- De minified bundel blijft binnen een nieuw opgetrokken grens van 260 kB (D-054, de vierde verhoging in deze tickets-familie); de uitgebrachte kandidaat gebruikt 259.642 bytes.
+- De exacte vorm van de onderliggende `media_source/resolve_media`-respons kon niet tegen een echte Home Assistant-instantie geverifieerd worden; dit blijft een openstaand aandachtspunt voor de live testdashboardgate.
+- [Testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.25.md). Live Home Assistant-acceptatie blijft een afzonderlijke menselijke gate.
+
 ## 0.8.0-alpha.24 — 2026-10-01
 
 - Verwijdert betekenisloze tekst die de eigenaar op een live screenshot aanwees: de stage-header herhaalde de kamernaam en toonde een statische, niet-informatieve omschrijving per functie; de hero-ondertitel voegde evenmin iets toe. Beide zijn weg — alleen de echte statusbadge/-notitie blijven.
