@@ -143,6 +143,14 @@
           "power_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "rooms" },
           "history_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "rooms" },
           "image_entity": { "$ref": "#/$defs/entityReference", "x-editor": "rooms" },
+          "image_upload": {
+            "type": "object",
+            "required": ["media_content_id", "media_content_type"],
+            "properties": {
+              "media_content_id": { "type": "string", "x-editor": "rooms" },
+              "media_content_type": { "type": "string", "x-editor": "rooms" }
+            }
+          },
           "temperature_history_entity": { "$ref": "#/$defs/entityReference", "x-editor": "rooms" },
           "smart_plugs": {
             "type": "array", "uniqueItems": true, "x-editor": "rooms",

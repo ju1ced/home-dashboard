@@ -7,6 +7,7 @@ type HomeAssistantLike = {
   states?: Record<string, StateLike>;
   callService?: (domain: string, service: string, data: Record<string, unknown>) => Promise<unknown>;
   floors?: Array<{ floor_id?: string; id?: string; name?: string }> | Record<string, { name?: string }>;
+  connection?: { sendMessagePromise?: (message: Record<string, unknown>) => Promise<unknown> };
 };
 type LovelaceCardElement = HTMLElement & { hass?: HomeAssistantLike; setConfig?: (config: Record<string, unknown>) => void };
 type CardHelpers = { createCardElement: (config: Record<string, unknown>) => LovelaceCardElement };
@@ -424,6 +425,10 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
   private activeDetailTab: "devices" | "energy" | "history" = "devices";
   private activeEnergyPeriod: "day" | "month" | "year" = "day";
   private selectedCapability: RoomCapabilityStage | undefined;
+  /** media_content_id -> resolved servable URL (or undefined once resolved-but-genuinely-empty), cached for the component's lifetime. Only written once a real media_source/resolve_media request has actually settled. */
+  private photoCache = new Map<string, string | undefined>();
+  /** media_content_id's currently awaiting a media_source/resolve_media response, kept separate from photoCache so a render before `hass`/connection is available (or a rejected request) never gets permanently mistaken for a cached result. */
+  private photoInFlight = new Set<string>();
 
   public setConfig(config: RoomDetailConfig): void {
     if (!config.room?.key) throw new Error("Kamer ontbreekt.");
@@ -446,6 +451,11 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
       this.signature = next;
       this.render(true);
     }
+    // Lovelace assigns `hass` only after `setConfig()` (whose synchronous render has no connection yet) and
+    // again on every reconnect, so a real resolution attempt must be retried here too -- not only when the
+    // room's state signature happens to change -- or a room whose entities never change state would never
+    // get its photo resolved once a real connection becomes available.
+    if (this.config?.room) this.loadRoomPhoto(this.config.room);
     this.shadowRoot?.querySelectorAll<LovelaceCardElement>(".embedded-card > *").forEach(card => { card.hass = value; });
   }
 
@@ -519,6 +529,65 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
       this.actionFeedback.set(actionKey, { tone: "error", message: "Bediening mislukt. Controleer de toestand en probeer opnieuw.", sequence });
       this.render(true);
     });
+  }
+
+  /**
+   * Kicks off resolution of an uploaded photo via the standard `media_source/resolve_media`
+   * WebSocket command, then patches `.room-photo` in place once it settles.
+   *
+   * Lovelace calls `setConfig()` (which renders synchronously) before `hass` is ever assigned, so
+   * the very first attempt commonly runs with no connection at all; `hass` is then also reassigned
+   * on every reconnect. None of that may be mistaken for "already resolved": `photoInFlight` tracks
+   * only requests actually in flight, and `photoCache` is written only from a genuinely settled
+   * response. A still-missing connection, or a rejected request, is deliberately NOT cached, so the
+   * next render/hass assignment (including after a HA restart) gets a real retry instead of being
+   * stuck on the placeholder forever.
+   *
+   * Assumption (not verifiable without a real Home Assistant instance): the response is
+   * `{ url, mime_type }` with `url` already servable as-is (a relative path resolves against the HA
+   * frontend's own origin, same as `entity_picture`) -- flag this for verification against a live
+   * HA instance.
+   */
+  private loadRoomPhoto(room: RoomConfig): void {
+    const mediaContentId = room.image_upload?.media_content_id;
+    if (!mediaContentId || this.photoCache.has(mediaContentId) || this.photoInFlight.has(mediaContentId)) return;
+    const connection = this.currentHass?.connection;
+    if (typeof connection?.sendMessagePromise !== "function") return;
+    this.photoInFlight.add(mediaContentId);
+    const generation = this.generation;
+    const roomKey = this.config?.room.key;
+    let request: Promise<unknown>;
+    try {
+      request = connection.sendMessagePromise({ type: "media_source/resolve_media", media_content_id: mediaContentId });
+    } catch {
+      request = Promise.reject();
+    }
+    void request.then((response) => (response as { url?: unknown } | undefined)?.url, () => undefined).then((url) => {
+      this.photoInFlight.delete(mediaContentId);
+      if (typeof url === "string" && url) this.photoCache.set(mediaContentId, url);
+      if (generation !== this.generation || roomKey !== this.config?.room.key || !this.isConnected) return;
+      const photo = this.shadowRoot?.querySelector<HTMLElement>(".room-photo");
+      if (photo) this.paintPhoto(photo, this.config!.room);
+    });
+  }
+
+  /** Priority: resolved image_upload -> image_entity's entity_picture (unchanged) -> HD-206 placeholder. */
+  private paintPhoto(photo: HTMLElement, room: RoomConfig): void {
+    const mediaContentId = room.image_upload?.media_content_id;
+    const picture = (mediaContentId && this.photoCache.get(mediaContentId)) || (room.image_entity ? this.currentHass?.states?.[room.image_entity]?.attributes?.entity_picture : undefined);
+    photo.replaceChildren();
+    if (typeof picture === "string" && picture) {
+      photo.removeAttribute("aria-hidden");
+      photo.setAttribute("role", "img");
+      photo.setAttribute("aria-label", `Foto ${room.name}`);
+      photo.style.backgroundImage = `url("${picture.replaceAll("\\", "\\\\").replaceAll("\"", "\\\"")}")`;
+    } else {
+      photo.removeAttribute("role");
+      photo.removeAttribute("aria-label");
+      photo.style.backgroundImage = "";
+      photo.setAttribute("aria-hidden", "true");
+      photo.append(icon("mdi:floor-plan"), element("span", "room-photo-caption", room.image_entity || mediaContentId ? "Kamerfoto niet beschikbaar" : "Geen kamerfoto geconfigureerd"));
+    }
   }
 
   private command(label: string, entity: string, kind: DetailKind, command: DetailCommand, data: Record<string, unknown> = {}): HTMLButtonElement {
@@ -1081,17 +1150,9 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     const heroPills = element("div", "hero-pills");
     heroPills.append(...this.heroPills(room));
     hero.append(heroCopy, heroPills);
-    const picture = room.image_entity ? this.currentHass?.states?.[room.image_entity]?.attributes?.entity_picture : undefined;
     const photo = element("div", "room-photo");
-    if (typeof picture === "string" && picture) {
-      photo.setAttribute("role", "img");
-      photo.setAttribute("aria-label", `Foto ${room.name}`);
-      photo.style.backgroundImage = `url("${picture.replaceAll("\\", "\\\\").replaceAll("\"", "\\\"")}")`;
-    } else {
-      photo.setAttribute("aria-hidden", "true");
-      photo.append(icon("mdi:floor-plan"));
-      photo.append(element("span", "room-photo-caption", room.image_entity ? "Kamerfoto niet beschikbaar" : "Geen kamerfoto geconfigureerd"));
-    }
+    this.paintPhoto(photo, room);
+    this.loadRoomPhoto(room);
     hero.append(photo);
     root.append(hero);
     [...this.actionFeedback.values()].sort((left, right) => left.sequence - right.sequence).forEach((entry) => {

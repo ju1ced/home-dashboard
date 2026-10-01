@@ -95,6 +95,22 @@ config.rooms.push(migrateConfig({rooms:[{key:'airco_only_energy',name:'Alleen ai
 // the SAME combined wattage as the rail 'plugs' summary and the plugs-stage summary-strip for this room,
 // not a blank value just because a smart plug is present alongside the power_entities reading.
 config.rooms.push(migrateConfig({rooms:[{key:'plugs_and_airco_energy',name:'Plugs en airco',area_id:'EXAMPLE_PLUGS_AND_AIRCO',smart_plugs:[{key:'combo_plug',name:'Combo plug',switch_entity:put('switch','combo_switch','on',{friendly_name:'Combo plug'}),power_entity:put('sensor','combo_plug_power','280',{unit_of_measurement:'W'})}],power_entities:[put('sensor','combo_airco_power','420',{unit_of_measurement:'W',friendly_name:'Combo airco vermogen'})]}]}).config.rooms[0]);
+// HD-209: fictional media_content_id values used only by the room-photo resolve test below. These never
+// resemble a real media-source path; they exist purely to exercise connection.sendMessagePromise's
+// media_source/resolve_media branching (a resolvable id vs. one that always fails to resolve).
+const PHOTO_UPLOAD_OK_ID = 'media-source://image_upload/fixture_room_photo_ok';
+const PHOTO_UPLOAD_UNUSABLE_ID = 'media-source://image_upload/fixture_room_photo_unusable';
+const PHOTO_UPLOAD_RESOLVED_URL = '/api/media/fixture_room_photo_ok.jpg';
+// HD-209: a room configured with a resolvable image_upload, used to prove the setConfig-before-hass
+// lifecycle (bug #1) resolves the photo once a real hass/connection is assigned, instead of staying stuck.
+config.rooms.push(migrateConfig({rooms:[{key:'photo_upload_ok',name:'Fotokamer',area_id:'EXAMPLE_PHOTO_OK',image_upload:{media_content_id:PHOTO_UPLOAD_OK_ID,media_content_type:'image/jpeg'}}]}).config.rooms[0]);
+// HD-209: a room configured with an image_upload that never resolves (and an image_entity fallback), used to
+// prove the fallback path and to prove a later reconnect still attempts a fresh resolution rather than being
+// permanently stuck on the first failed attempt.
+config.rooms.push(migrateConfig({rooms:[{key:'photo_upload_unusable',name:'Fotokamer zonder upload',area_id:'EXAMPLE_PHOTO_UNUSABLE',image_entity:put('image','photo_fallback','available',{}),image_upload:{media_content_id:PHOTO_UPLOAD_UNUSABLE_ID,media_content_type:'image/jpeg'}}]}).config.rooms[0]);
+// NOTE: 'hall' must stay the LAST room pushed -- scripts/check-room-detail-browser.mjs's open() helper reads
+// `fixture.config.rooms.at(-1).safety_entities` to source its safety sensor, so any new fixture room must be
+// inserted above this line, never below it.
 config.rooms.push(migrateConfig({rooms:[{key:'hall',name:'Hal',area_id:'EXAMPLE_HALL',safety_entities:[put('binary_sensor','safety','off',{friendly_name:'Veiligheid hal'})]}]}).config.rooms[0]);
 const variant=params.get('fixture')||'normal';
 if(variant==='warning') states[ref('binary_sensor','safety')].state='unsafe';
@@ -102,7 +118,14 @@ if(variant==='missing') { delete states[config.rooms[0].control_light_entity]; d
 if(variant==='unknown') states[loungeAccent].state='unknown';
 if(variant==='unavailable') { states[config.rooms[0].control_cover_entity].state='unavailable'; states[config.today.battery_soc_entity].state='unavailable'; states[config.rooms.find(r=>r.key==='plugs_only_energy').smart_plugs[0].energy_month_entity].state='unavailable'; }
 const calls=[];
-const hass={states,connection:{subscribeMessage:async callback=>{queueMicrotask(()=>callback({forecast:[{datetime:'2026-09-08',condition:'cloudy',temperature:22,templow:14},{datetime:'2026-09-09',condition:'sunny',temperature:24,templow:15},{datetime:'2026-09-10',condition:'cloudy',temperature:21,templow:13}]}));return ()=>{};}},
+const hass={states,connection:{subscribeMessage:async callback=>{queueMicrotask(()=>callback({forecast:[{datetime:'2026-09-08',condition:'cloudy',temperature:22,templow:14},{datetime:'2026-09-09',condition:'sunny',temperature:24,templow:15},{datetime:'2026-09-10',condition:'cloudy',temperature:21,templow:13}]}));return ()=>{};},
+  // HD-209: fictional media_source/resolve_media responder used by the room-photo resolve test. Resolves
+  // PHOTO_UPLOAD_OK_ID to a servable fixture URL; rejects any other media_content_id (including
+  // PHOTO_UPLOAD_UNUSABLE_ID) so the fallback/retry path can be exercised against a real rejected promise.
+  sendMessagePromise:async message=>{
+    if(message?.type==='media_source/resolve_media'&&message.media_content_id===PHOTO_UPLOAD_OK_ID) return {url:PHOTO_UPLOAD_RESOLVED_URL,mime_type:'image/jpeg'};
+    throw Error('fixture media_source refusal');
+  }},
   callService:async(domain,service,data)=>{calls.push({domain,service,data});if(window.fixtureReject)throw Error('fixture refusal');}
 };
 const home=document.querySelector('home-dashboard-home-overview');

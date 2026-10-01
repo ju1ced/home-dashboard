@@ -100,6 +100,8 @@ export interface RoomConfig {
   history_entities: EntityReference[];
   /** Optional Home Assistant image entity used only as the room's visual header. */
   image_entity?: EntityReference;
+  /** Optional photo uploaded directly through the dashboard editor via the HA `media` selector, as an alternative to `image_entity`. */
+  image_upload?: { media_content_id: string; media_content_type: string } | undefined;
   /** Explicit recorder source for the embedded temperature trend. */
   temperature_history_entity?: EntityReference;
   /** Smart plugs remain explicit, so their measurement and switching scope cannot be inferred. */

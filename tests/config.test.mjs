@@ -359,6 +359,36 @@ test("Control Deck-kamercontract migreert groepen, openingen, plugs en drie ener
   assert.deepEqual(parseImportedConfig(serializeConfig(config)), config);
 });
 
+test("image_upload migreert verliesvrij en forceert geen default wanneer afwezig", () => {
+  const withUpload = migrateConfig({ rooms: [{
+    key: "office", name: "Bureau", area_id: "EXAMPLE_AREA",
+    image_upload: { media_content_id: "media-source://media_source/local/example_room_photo.jpg", media_content_type: "image/jpeg" }
+  }] }).config;
+  assert.deepEqual(withUpload.rooms[0].image_upload, { media_content_id: "media-source://media_source/local/example_room_photo.jpg", media_content_type: "image/jpeg" });
+  assert.deepEqual(validateConfigSchema(withUpload), []);
+  assert.deepEqual(parseImportedConfig(serializeConfig(withUpload)), withUpload);
+
+  const withoutUpload = migrateConfig({ rooms: [{ key: "office", name: "Bureau", area_id: "EXAMPLE_AREA" }] }).config;
+  assert.equal(Object.hasOwn(withoutUpload.rooms[0], "image_upload"), false, "image_upload moet volledig afwezig zijn, niet aanwezig met waarde undefined");
+  assert.deepEqual(validateConfigSchema(withoutUpload), []);
+  assert.deepEqual(parseImportedConfig(serializeConfig(withoutUpload)), withoutUpload);
+
+  const nulled = migrateConfig({ rooms: [{ key: "office", name: "Bureau", area_id: "EXAMPLE_AREA", image_upload: null }] }).config;
+  assert.equal(Object.hasOwn(nulled.rooms[0], "image_upload"), false, "een expliciete null in de input mag niet als geconfigureerde upload doorkomen");
+  assert.deepEqual(validateConfigSchema(nulled), []);
+
+  const garbage = migrateConfig({ rooms: [{ key: "office", name: "Bureau", area_id: "EXAMPLE_AREA", image_upload: { media_content_id: "" } }] }).config;
+  assert.equal(Object.hasOwn(garbage.rooms[0], "image_upload"), false, "een upload zonder media_content_id is geen geldige configuratie");
+  assert.deepEqual(validateConfigSchema(garbage), []);
+});
+
+test("schema-validator laat een verplicht veld niet ontsnappen aan typevalidatie door het expliciet op null te zetten", () => {
+  const config = migrateConfig({ rooms: [{ key: "office", name: "Bureau", area_id: "EXAMPLE_AREA" }] }).config;
+  config.rooms[0].hvac = null;
+  const issues = validateConfigSchema(config);
+  assert.ok(issues.some((issue) => issue.path === "rooms[0].hvac" && issue.code === "schema_type"), "een verplicht objectveld dat expliciet null is moet nog steeds een schema_type-fout opleveren");
+});
+
 test("Control Deck weigert een luifel zonder bevestiging bij beweging", () => {
   const entity = (domain, key) => `${domain}.${key}`;
   const config = migrateConfig({ rooms: [{

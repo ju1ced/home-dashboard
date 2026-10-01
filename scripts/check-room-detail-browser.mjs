@@ -472,6 +472,77 @@ await page.evaluate(() => {
 assert.equal(await page.locator(".control.kind-light").count(), 1, "Home fallback renders an explicitly configured lighting switch");
 await page.locator(".control.kind-light").click();
 assert.deepEqual(await page.evaluate(() => window.roomFixture.calls.at(-1)), await page.evaluate(() => ({ domain: "switch", service: "turn_off", data: { entity_id: window.roomFixture.config.rooms[0].light_switch_entities[0] } })), "Home uses the switch domain and exact target");
+// HD-209 bug #1 regression: Lovelace's real lifecycle calls setConfig() (synchronous render, no hass/connection
+// yet) and only assigns `hass` afterwards. This must not get the photo permanently stuck on the placeholder --
+// it must resolve once a real connection with media_source/resolve_media arrives, and must retry on reconnect
+// rather than being mistaken for "already resolved" from the pre-hass render.
+await open("normal", 1440);
+const beforeHassState = await page.evaluate(() => {
+  const fixture = window.roomFixture;
+  const okRoom = fixture.config.rooms.find((candidate) => candidate.key === "photo_upload_ok");
+  const detail = document.createElement("home-dashboard-room-detail");
+  // Real Lovelace ordering: setConfig() first, with no hass/connection assigned at all yet.
+  detail.setConfig({ type: "custom:home-dashboard-room-detail", room: okRoom });
+  document.body.replaceChildren(detail);
+  window.roomFixture.photoDetail = detail;
+  const photo = detail.shadowRoot?.querySelector(".room-photo");
+  return { mounted: Boolean(photo), ariaHidden: photo?.getAttribute("aria-hidden") ?? null, role: photo?.getAttribute("role") ?? null };
+});
+assert.equal(beforeHassState.mounted, true, "setConfig before hass mounts the room-photo element without crashing");
+assert.equal(beforeHassState.ariaHidden, "true", "setConfig before hass shows the placeholder (aria-hidden) since there is no connection to resolve against yet");
+assert.equal(beforeHassState.role, null, "setConfig before hass has not resolved anything yet, so no role=img");
+await page.evaluate(() => { window.roomFixture.photoDetail.hass = window.roomFixture.hass; });
+await page.waitForFunction(() => window.roomFixture.photoDetail.shadowRoot.querySelector(".room-photo")?.getAttribute("role") === "img");
+const resolvedPhoto = await page.evaluate(() => {
+  const photo = window.roomFixture.photoDetail.shadowRoot.querySelector(".room-photo");
+  return { backgroundImage: photo.style.backgroundImage, role: photo.getAttribute("role"), ariaLabel: photo.getAttribute("aria-label"), ariaHidden: photo.getAttribute("aria-hidden") };
+});
+assert.match(resolvedPhoto.backgroundImage, /fixture_room_photo_ok\.jpg/, "a real media_source/resolve_media response ends up painted onto the room-photo background, after setConfig ran with no connection at all");
+assert.equal(resolvedPhoto.role, "img", "a resolved photo gets role=img");
+assert.match(resolvedPhoto.ariaLabel, /Fotokamer/, "a resolved photo gets a room-specific aria-label");
+assert.equal(resolvedPhoto.ariaHidden, null, "a resolved photo removes aria-hidden (HD-209 bug #2 fix stays fixed)");
+
+// HD-209 fallback + retry-on-reconnect: a media_content_id that never resolves must fall back to the placeholder
+// (there is no entity_picture configured on this fixture's image_entity either) without crashing, and a later
+// reconnect (`hass` reassigned again) must still attempt a fresh resolution rather than being permanently stuck
+// on the first rejected attempt -- this is exactly the bug #1 regression this test exists to catch.
+const unusablePhotoBefore = await page.evaluate(async () => {
+  const fixture = window.roomFixture;
+  const unusableRoom = fixture.config.rooms.find((candidate) => candidate.key === "photo_upload_unusable");
+  const detail = document.createElement("home-dashboard-room-detail");
+  detail.setConfig({ type: "custom:home-dashboard-room-detail", room: unusableRoom });
+  document.body.replaceChildren(detail);
+  window.roomFixture.unusableDetail = detail;
+  const counter = { count: 0 };
+  const originalSendMessagePromise = fixture.hass.connection.sendMessagePromise;
+  const countingConnection = { ...fixture.hass.connection, sendMessagePromise: (message) => { counter.count++; return originalSendMessagePromise(message); } };
+  window.roomFixture.unusableCounter = counter;
+  window.roomFixture.unusableConnection = countingConnection;
+  detail.hass = { ...fixture.hass, connection: countingConnection };
+  // Let the rejected media_source/resolve_media promise settle before reading the DOM.
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  const photo = detail.shadowRoot.querySelector(".room-photo");
+  return { ariaHidden: photo.getAttribute("aria-hidden"), role: photo.getAttribute("role"), resolveCount: counter.count };
+});
+assert.equal(unusablePhotoBefore.ariaHidden, "true", "a never-resolving media_content_id falls back to the placeholder instead of crashing");
+assert.equal(unusablePhotoBefore.role, null, "a never-resolving media_content_id never gets role=img");
+assert.equal(unusablePhotoBefore.resolveCount, 1, "the first connection assignment attempts exactly one resolve");
 assert.deepEqual(errors, []);
-console.log(`Room-detail browser checks passed: normal/dark/warning/missing/unavailable at desktop/tablet/mobile; touch, dialog lifecycle, fallback, opt-in, service rejection, brightness slider and Home lighting switches. 100 unrelated updates: ${performance.milliseconds.toFixed(1)} ms, DOM retained.`);
+const unusablePhotoAfterReconnect = await page.evaluate(async () => {
+  const fixture = window.roomFixture;
+  const detail = fixture.unusableDetail;
+  // Simulate a reconnect: `hass` is reassigned again (same counting connection), as Lovelace does after HA
+  // restarts. A fixed bug #1 must attempt a fresh resolve here, not treat the first rejection as "already tried".
+  detail.hass = { ...fixture.hass, connection: fixture.unusableConnection };
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  const photo = detail.shadowRoot.querySelector(".room-photo");
+  return { ariaHidden: photo.getAttribute("aria-hidden"), role: photo.getAttribute("role"), resolveCount: fixture.unusableCounter.count };
+});
+assert.equal(unusablePhotoAfterReconnect.ariaHidden, "true", "after reconnect, the still-unresolvable photo remains on the placeholder rather than crashing");
+assert.equal(unusablePhotoAfterReconnect.role, null, "after reconnect, a still-failing resolution still shows no role=img");
+assert.equal(unusablePhotoAfterReconnect.resolveCount, 2, "a reconnect (hass reassigned again) attempts a fresh resolve instead of being permanently stuck on the first rejection (HD-209 bug #1 regression)");
+assert.deepEqual(errors, []);
+
+assert.deepEqual(errors, []);
+console.log(`Room-detail browser checks passed: normal/dark/warning/missing/unavailable at desktop/tablet/mobile; touch, dialog lifecycle, fallback, opt-in, service rejection, brightness slider, Home lighting switches and the setConfig-before-hass room-photo resolve/fallback/reconnect lifecycle. 100 unrelated updates: ${performance.milliseconds.toFixed(1)} ms, DOM retained.`);
 await browser.close();
