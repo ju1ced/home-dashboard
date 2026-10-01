@@ -1,6 +1,6 @@
 # Home Dashboard — ontwerpvoorstel
 
-Testcandidate **v0.8.0-alpha.23** voegt de omkadering rond de Control Deck-rail toe die alpha.22 oversloeg: een deck-head, een stage-head met een eerlijke drietonige statusbadge, rail-iconen/statusregels en een rijkere hero met meerdere statuspillen. Live Home Assistant-acceptatie blijft een afzonderlijke gate. Zie de [testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.23.md).
+Testcandidate **v0.8.0-alpha.24** verwerkt directe eigenaarfeedback op de live v3-omkadering: minder maar betekenisvollere tekst, Control Deck als echte afgebakende kaart, en een Kamerverbruik-cijfer dat alle geconfigureerde verbruikers combineert (smart plugs én bv. een airco) zonder dubbeltelling bij een kamermeter. Live Home Assistant-acceptatie blijft een afzonderlijke gate. Zie de [testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.24.md).
 
 Testcandidate **v0.8.0-alpha.9** gebruikt één navigatiebalk op dezelfde plek en met dezelfde maat in alle views, kiosk zonder extra frontendresource en een beheerderstandwiel voor de native dashboardeditor. Zie de [testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.9.md) en de [volledige testscope en runtimegrenzen](docs/releases/testing-navigation-consistency.md). De onderstaande alpha.8-beschrijving beschrijft de eerdere release.
 
@@ -70,7 +70,7 @@ Open daarna `http://127.0.0.1:4173/`. De fixtureselector wisselt tussen normaal,
 
 ## HACS-installatie
 
-[`v0.1.0-alpha.1`](https://github.com/ju1ced/home-dashboard/releases/tag/v0.1.0-alpha.1) heeft de volledige HACS-lifecycle doorlopen: installatie, update, verwijdering en herinstallatie. Zie [het geanonimiseerde resultaat](docs/releases/results-v0.1.0-alpha.1.md). De `v0.2`-reeks valideerde de GUI; de `v0.3`-reeks bracht de eerste views; latere alpha's breidden camera's, Home, Kamers en veilige kamerbediening uit. `v0.8.0-alpha.23` is de laatst getagde kandidaat, met de Control Deck-omkadering compleet; live Home Assistant-acceptatie blijft een afzonderlijke, nog goed te keuren validatiecyclus.
+[`v0.1.0-alpha.1`](https://github.com/ju1ced/home-dashboard/releases/tag/v0.1.0-alpha.1) heeft de volledige HACS-lifecycle doorlopen: installatie, update, verwijdering en herinstallatie. Zie [het geanonimiseerde resultaat](docs/releases/results-v0.1.0-alpha.1.md). De `v0.2`-reeks valideerde de GUI; de `v0.3`-reeks bracht de eerste views; latere alpha's breidden camera's, Home, Kamers en veilige kamerbediening uit. `v0.8.0-alpha.24` is de laatst getagde kandidaat, met de v3-omkadering verfijnd naar directe eigenaarfeedback; live Home Assistant-acceptatie blijft een afzonderlijke, nog goed te keuren validatiecyclus.
 
 ## Checks
 
@@ -112,4 +112,4 @@ scripts/          lokale preview en repositorychecks
 
 ## Status
 
-v0.8.0-alpha.23 is de getagde Control Deck-releasecandidate met de volledige v3-omkadering. De geautomatiseerde suite en browsermatrix zijn groen; twee onafhankelijke reviewrondes vonden en losten een vals-positieve statusbadge, een ontbrekende waarschuwingstoon en twee samenvattingsbugs op. De fixtures voeren geen live Home Assistant-write uit; deployment en runtimeacceptatie vereisen daarna nog de ingevulde menselijke gate uit de testchecklist.
+v0.8.0-alpha.24 verwerkt directe, geannoteerde eigenaarfeedback op de v3-omkadering: minder maar betekenisvollere tekst, Control Deck als afgebakende kaart, en een Kamerverbruik-cijfer dat alle verbruikers combineert. De geautomatiseerde suite en browsermatrix zijn groen; de fixtures voeren geen live Home Assistant-write uit; deployment en runtimeacceptatie vereisen daarna nog de ingevulde menselijke gate uit de testchecklist.
