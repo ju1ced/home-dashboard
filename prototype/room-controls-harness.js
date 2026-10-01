@@ -86,6 +86,15 @@ const config=migrateConfig({rooms,today:{enabled:true,weather_entity:put('weathe
 // used to prove the stage-head badge degrades correctly when that plug sensor is unavailable instead of
 // fabricating a "Beschikbaar" reading from an incomplete entity check.
 config.rooms.push(migrateConfig({rooms:[{key:'plugs_only_energy',name:'Alleen plugs',area_id:'EXAMPLE_PLUGS_ONLY',smart_plugs:[{key:'lone_plug',name:'Losse plug',switch_entity:put('switch','plugs_only_switch','off',{friendly_name:'Losse plug'}),power_entity:put('sensor','plugs_only_power','0',{unit_of_measurement:'W'}),energy_month_entity:put('sensor','plugs_only_energy_month','12',{unit_of_measurement:'kWh'})}]}]}).config.rooms[0]);
+// HD-208: a room whose only current-power source is a generic power_entities entry (e.g. an air conditioner) with
+// no smart_plugs and no room_energy, used to prove roomCurrentWatts() combines that reading into the Energie tab's
+// room-total card instead of only ever looking at smart plugs.
+config.rooms.push(migrateConfig({rooms:[{key:'airco_only_energy',name:'Alleen airco',area_id:'EXAMPLE_AIRCO_ONLY',power_entities:[put('sensor','airco_power','650',{unit_of_measurement:'W',friendly_name:'Airco vermogen'})]}]}).config.rooms[0]);
+// HD-208: a room with BOTH a reporting smart plug (valid power_entity reading) AND a power_entities entry
+// (e.g. an air conditioner), with no room_energy configured. Proves the Energie tab's room-total card shows
+// the SAME combined wattage as the rail 'plugs' summary and the plugs-stage summary-strip for this room,
+// not a blank value just because a smart plug is present alongside the power_entities reading.
+config.rooms.push(migrateConfig({rooms:[{key:'plugs_and_airco_energy',name:'Plugs en airco',area_id:'EXAMPLE_PLUGS_AND_AIRCO',smart_plugs:[{key:'combo_plug',name:'Combo plug',switch_entity:put('switch','combo_switch','on',{friendly_name:'Combo plug'}),power_entity:put('sensor','combo_plug_power','280',{unit_of_measurement:'W'})}],power_entities:[put('sensor','combo_airco_power','420',{unit_of_measurement:'W',friendly_name:'Combo airco vermogen'})]}]}).config.rooms[0]);
 config.rooms.push(migrateConfig({rooms:[{key:'hall',name:'Hal',area_id:'EXAMPLE_HALL',safety_entities:[put('binary_sensor','safety','off',{friendly_name:'Veiligheid hal'})]}]}).config.rooms[0]);
 const variant=params.get('fixture')||'normal';
 if(variant==='warning') states[ref('binary_sensor','safety')].state='unsafe';

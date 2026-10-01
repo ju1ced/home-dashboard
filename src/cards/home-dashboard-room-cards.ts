@@ -300,14 +300,6 @@ function capabilityEntities(room: RoomConfig, key: RoomCapabilityStage): string[
   return capabilityEntityRoles(room, key).map(({ entity }) => entity);
 }
 
-function stageDescription(key: RoomCapabilityStage): string {
-  if (key === "lighting") return "Groepen bovenaan, lichtpunten met dimniveau eronder.";
-  if (key === "covers") return "Elke opening heeft een eigen positie, actiescope en Stop.";
-  if (key === "comfort") return "Klimaat, comfort, media en veiligheid in één overzicht.";
-  if (key === "plugs") return "Vermogen, verbruikstotalen en bevestiging per apparaat.";
-  return "Verbruik en periodetotalen met bron- en versheidscontext.";
-}
-
 function icon(name: string): HTMLElement {
   const element = document.createElement("ha-icon") as HTMLElement & { icon?: string };
   element.icon = name || "mdi:sofa-outline";
@@ -758,11 +750,46 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     return stage;
   }
 
+  /** A single entity's live reading normalized to watts; undefined unless it reports a numeric W/kW state. */
+  private entityWatts(entity: string | undefined): number | undefined {
+    if (!entity) return undefined;
+    const state = this.currentHass?.states?.[entity];
+    const value = Number(state?.state);
+    const unit = state?.attributes?.unit_of_measurement;
+    if (!Number.isFinite(value) || (unit !== "W" && unit !== "kW")) return undefined;
+    return unit === "kW" ? value * 1000 : value;
+  }
+
   /** Sums a smart plug's live wattage across valid W/kW readings; undefined when nothing reports. */
   private plugWatts(plugs: NonNullable<RoomConfig["smart_plugs"]>): number | undefined {
-    const entries = plugs.map((plug) => this.currentHass?.states?.[plug.power_entity]).map((state) => ({ value: Number(state?.state), unit: state?.attributes?.unit_of_measurement }));
-    const valid = entries.filter((entry) => Number.isFinite(entry.value) && (entry.unit === "W" || entry.unit === "kW"));
-    return valid.length ? valid.reduce((sum, entry) => sum + (entry.unit === "kW" ? entry.value * 1000 : entry.value), 0) : undefined;
+    const valid = plugs.map((plug) => this.entityWatts(plug.power_entity)).filter((value): value is number => value !== undefined);
+    return valid.length ? valid.reduce((sum, value) => sum + value, 0) : undefined;
+  }
+
+  /** The room's single "right now" wattage figure, shared by the rail summary, the plugs-stage summary strip and the
+   * Energie tab's room-total card so the number is never computed three different ways. When room_energy.power_entity
+   * is configured it is treated as an authoritative whole-room/circuit meter that already includes every downstream
+   * plug and device, so nothing is added on top of it. Otherwise this combines every smart plug's power_entity with
+   * every room.power_entities entity reporting a genuine W/kW reading (e.g. an air conditioner), deduplicated by
+   * entity_id so a device configured in both lists is never counted twice. */
+  private roomCurrentWatts(room: RoomConfig): number | undefined {
+    if (room.room_energy?.power_entity) return this.entityWatts(room.room_energy.power_entity);
+    const plugs = room.smart_plugs ?? [];
+    const plugEntities = new Set(plugs.map((plug) => plug.power_entity).filter(Boolean));
+    const extra = room.power_entities.filter((entity, index) => !plugEntities.has(entity) && room.power_entities.indexOf(entity) === index).map((entity) => this.entityWatts(entity)).filter((value): value is number => value !== undefined);
+    const plugTotal = this.plugWatts(plugs);
+    if (plugTotal === undefined && !extra.length) return undefined;
+    return (plugTotal ?? 0) + extra.reduce((sum, value) => sum + value, 0);
+  }
+
+  /** True when room.power_entities contributes at least one genuine W/kW reading beyond any smart_plugs
+   * power_entity (deduplicated the same way roomCurrentWatts() dedupes them). Used to decide whether the Energie
+   * tab's room-total card should surface the combined figure: a plugs-only room's current wattage is already
+   * shown on the Smart plugs tab, so plugs alone never justify this card — but a power_entities reading does,
+   * whether it stands alone (e.g. an airco with no smart_plugs) or combines with smart_plugs in the same room. */
+  private hasExtraPowerReading(room: RoomConfig): boolean {
+    const plugEntities = new Set((room.smart_plugs ?? []).map((plug) => plug.power_entity).filter(Boolean));
+    return room.power_entities.some((entity, index) => !plugEntities.has(entity) && room.power_entities.indexOf(entity) === index && this.entityWatts(entity) !== undefined);
   }
 
   /** Sums a smart plug period total (day/month) across configured plugs; undefined when nothing reports. */
@@ -784,7 +811,7 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     const stage = element("div", "stage-body");
     const plugs = room.smart_plugs ?? [];
     if (!plugs.length) return stage;
-    const totalWatts = this.plugWatts(plugs);
+    const totalWatts = this.roomCurrentWatts(room);
     const activeCount = plugs.filter((plug) => this.currentHass?.states?.[plug.switch_entity]?.state === "on").length;
     const dayTotal = this.plugPeriodTotal(plugs, "energy_day_entity");
     const monthTotal = this.plugPeriodTotal(plugs, "energy_month_entity");
@@ -844,7 +871,12 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
   }
 
   private energyPeriodGroup(room: RoomConfig): HTMLElement | undefined {
-    const configured = Boolean(room.room_energy && Object.values(room.room_energy).some(Boolean)) || (room.smart_plugs ?? []).some((plug) => plug.energy_day_entity || plug.energy_month_entity || plug.energy_year_entity);
+    const currentWatts = this.roomCurrentWatts(room);
+    // A power_entities-sourced reading (whether alone or combined with smart_plugs) justifies showing the
+    // room-total card; a plugs-only room's current wattage is already surfaced on the Smart plugs tab, so
+    // plugs alone never justify this card on their own.
+    const hasPowerEntitiesReading = !room.room_energy?.power_entity && this.hasExtraPowerReading(room);
+    const configured = Boolean(room.room_energy && Object.values(room.room_energy).some(Boolean)) || (room.smart_plugs ?? []).some((plug) => plug.energy_day_entity || plug.energy_month_entity || plug.energy_year_entity) || hasPowerEntitiesReading;
     if (!configured) return undefined;
     const wrapper = element("div", "energy-period energy-period-card");
     const periods = [["day", "Vandaag"], ["month", "Maand"], ["year", "Jaar"]] as const;
@@ -864,12 +896,15 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     const grid = element("div", "energy-grid");
     const roomEntity = this.activeEnergyPeriod === "day" ? room.room_energy?.day_entity : this.activeEnergyPeriod === "month" ? room.room_energy?.month_entity : room.room_energy?.year_entity;
     const roomPeriod = this.activeEnergyPeriod === "day" ? room.room_energy?.day_period : this.activeEnergyPeriod === "month" ? room.room_energy?.month_period : room.room_energy?.year_period;
-    if (room.room_energy?.power_entity || roomEntity) {
+    if (room.room_energy?.power_entity || roomEntity || hasPowerEntitiesReading) {
       const card = element("article", "info energy-card");
       const roomState = roomEntity ? this.currentHass?.states?.[roomEntity] : undefined;
+      const currentText = room.room_energy?.power_entity
+        ? stateText(this.currentHass?.states?.[room.room_energy.power_entity])
+        : hasPowerEntitiesReading && currentWatts !== undefined ? `${Math.round(currentWatts)} W` : "";
       card.append(
         element("strong", "", `${room.name} totaal`),
-        element("small", "", [room.room_energy?.power_entity ? stateText(this.currentHass?.states?.[room.room_energy.power_entity]) : "", roomEntity ? stateText(roomState) : "Niet geconfigureerd"].filter(Boolean).join(" · ")),
+        element("small", "", [currentText, roomEntity ? stateText(roomState) : "Niet geconfigureerd"].filter(Boolean).join(" · ")),
         element("small", "energy-period-context", periodContext(roomPeriod, periodLabel)),
         element("small", "energy-source-context", roomEntity ? sourceContext(roomState, `${room.name} energie`) : "Bron: niet geconfigureerd")
       );
@@ -937,19 +972,17 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
       const reachablePlugs = (room.smart_plugs ?? []).filter((plug) => actionable(this.currentHass?.states?.[plug.switch_entity]));
       if (!reachablePlugs.length) return undefined;
       const active = reachablePlugs.filter((plug) => this.currentHass?.states?.[plug.switch_entity]?.state === "on").length;
-      const watts = this.plugWatts(reachablePlugs);
+      const watts = this.roomCurrentWatts(room);
       return watts === undefined ? `${active} actief` : `${active} actief · ${Math.round(watts)} W`;
     }
     return this.energySummary(room);
   }
 
-  /** Shared per-stage header: eyebrow/title/description plus a status badge derived from real entity states (never a fabricated signal). */
+  /** Shared per-stage header: eyebrow label plus a status badge derived from real entity states (never a fabricated signal). */
   private stageHead(room: RoomConfig, key: RoomCapabilityStage, title: string): HTMLElement[] {
     const entityRoles = capabilityEntityRoles(room, key);
     const head = element("div", "section-heading stage-head");
-    const copy = element("div", "");
-    copy.append(element("span", "eyebrow", title), element("h3", "", room.name), element("small", "", stageDescription(key)));
-    head.append(copy);
+    head.append(element("span", "eyebrow", title));
     // Nothing configured for this stage can actually be checked (e.g. a desk-only comfort stage): omit the badge
     // rather than fabricate a "Beschikbaar" signal from an empty entity list.
     if (!entityRoles.length) return [head];
@@ -1021,7 +1054,7 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     const style = document.createElement("style");
     style.textContent = `
       ${roomStyles}
-      .detail,.control-deck,.room-layout-primary,.room-column,.mushroom-controls,.group,.detail-panel,.stage,.stage-body{display:grid;gap:18px;min-width:0;align-content:start}.detail{width:100%}.control-deck{grid-template-columns:minmax(150px,.24fr) minmax(0,1fr);gap:12px}.capability-rail{display:grid;gap:7px;align-content:start}.capability-rail button,.detail-tabs button{min-height:44px;border:1px solid var(--divider-color);border-radius:11px;padding:9px 12px;background:var(--room-surface);color:var(--primary-text-color);font:inherit;text-align:left}.capability-rail button[aria-selected=true],.detail-tabs button[aria-selected=true]{border-color:var(--primary-color);background:color-mix(in srgb,var(--primary-color) 10%,var(--room-surface));color:var(--primary-color);font-weight:700}.deck-content{display:grid;gap:12px;min-width:0}.detail-tabs{display:flex;gap:7px;overflow-x:auto}.detail-tabs button{flex:1 0 auto;text-align:center}.detail-panel[hidden]{display:none}.room-layout-primary{grid-template-columns:1.2fr .8fr .7fr}.group{gap:10px}.group-heading{min-height:32px;display:flex;align-items:center}.details-card{display:grid}
+      .detail,.control-deck,.room-layout-primary,.room-column,.mushroom-controls,.group,.detail-panel,.stage,.stage-body{display:grid;gap:18px;min-width:0;align-content:start}.detail{width:100%}.control-deck{grid-template-columns:minmax(150px,.24fr) minmax(0,1fr);gap:12px;padding:14px;border:1px solid var(--divider-color);border-radius:18px;background:var(--room-surface);box-shadow:0 1px 2px rgb(20 35 28/.06),0 7px 24px rgb(20 35 28/.035);overflow:hidden}.capability-rail{display:grid;gap:7px;align-content:start}.capability-rail button,.detail-tabs button{min-height:44px;border:1px solid var(--divider-color);border-radius:11px;padding:9px 12px;background:var(--room-surface);color:var(--primary-text-color);font:inherit;text-align:left}.capability-rail button[aria-selected=true],.detail-tabs button[aria-selected=true]{border-color:var(--primary-color);background:color-mix(in srgb,var(--primary-color) 10%,var(--room-surface));color:var(--primary-color);font-weight:700}.deck-content{display:grid;gap:12px;min-width:0}.detail-tabs{display:flex;gap:7px;overflow-x:auto}.detail-tabs button{flex:1 0 auto;text-align:center}.detail-panel[hidden]{display:none}.room-layout-primary{grid-template-columns:1.2fr .8fr .7fr}.group{gap:10px}.group-heading{min-height:32px;display:flex;align-items:center}.details-card{display:grid}
       .info-list,.mushroom-grid,.plug-grid,.energy-grid,.group-grid,.device-grid,.cover-grid,.comfort-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:9px}.energy-period{display:grid;gap:10px}.period-selector{display:flex;gap:7px;flex-wrap:wrap}.period-selector button{min-height:44px;padding:8px 13px;border:1px solid var(--divider-color);border-radius:999px;background:var(--room-surface);color:inherit}.period-selector button[aria-pressed=true]{border-color:var(--primary-color);background:var(--primary-color);color:var(--text-primary-color,#fff);font-weight:700}.energy-card{display:grid;gap:4px}.energy-comparison{display:grid;gap:9px;margin:0;padding:12px;border:1px solid var(--divider-color);border-radius:12px;background:var(--room-surface)}.energy-comparison figcaption{font-weight:700}.energy-bars{display:grid;gap:8px}.energy-bar-row{display:grid;grid-template-columns:minmax(90px,.7fr) minmax(100px,1.4fr) auto;gap:8px;align-items:center}.energy-bar-track{height:12px;border-radius:999px;background:var(--secondary-background-color);overflow:hidden}.energy-bar{display:block;width:var(--energy-share);height:100%;border-radius:inherit;background:var(--primary-color)}.energy-bar-value{font-variant-numeric:tabular-nums}.action-feedback{margin:0;padding:10px 12px;border:1px solid var(--divider-color);border-radius:12px;background:var(--room-surface)}.action-feedback.pending{border-color:var(--primary-color)}.action-feedback.success{border-color:var(--success-color,#2e7d32)}.action-feedback.error{border-color:var(--error-color,#b3261e)}
       .info,.state-badge,.history-card,.mushroom-card,.command,.plug-lock,.history-dialog{background:var(--room-surface);color:var(--primary-text-color);border:1px solid var(--divider-color);border-radius:12px;padding:10px;font:inherit;overflow-wrap:anywhere}.info,.state-badge,.history-card,.mushroom-card{text-align:left}.warning{border-color:var(--error-color,#b3261e)}.unavailable{opacity:.72}
       button{cursor:pointer;min-height:44px;min-width:44px}button:disabled{cursor:default;opacity:.48;background:var(--secondary-background-color)}button:focus-visible{outline:2px solid var(--primary-color);outline-offset:2px}.mushroom-card{display:grid;grid-template-columns:40px minmax(0,1fr);gap:10px;align-items:center;min-height:76px;padding:12px;border-radius:16px}.light-card.active,.light-group-card.active{border-color:var(--primary-color);background:color-mix(in srgb,var(--primary-color) 10%,var(--room-surface))}.light-group-card.mixed{border-color:color-mix(in srgb,var(--primary-color) 45%,var(--divider-color));background:color-mix(in srgb,var(--primary-color) 5%,var(--room-surface))}.mushroom-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--secondary-background-color);color:var(--primary-color)}.mushroom-copy{display:grid;gap:2px}small{color:var(--secondary-text-color)}.commands{grid-column:1/-1}.smart-plug-card{grid-template-columns:minmax(0,1fr)}.smart-plug-card.active{border-color:var(--primary-color)}.plug-lock{color:var(--primary-color);font-weight:700}
@@ -1030,7 +1063,7 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
       .deck-title{display:grid;gap:2px}
       .stage-head{align-items:flex-start}
       .capability-rail button{display:flex;gap:10px;align-items:center}
-      .stage{padding:2px}.stage-body{gap:14px}.section-heading{display:flex;align-items:baseline;justify-content:space-between;gap:10px}.section-heading h4{margin:0;font-size:.95rem}.section-heading span{color:var(--secondary-text-color);font-size:.78rem}
+      .stage{padding:6px}.stage-body{gap:14px}.section-heading{display:flex;align-items:baseline;justify-content:space-between;gap:10px}.section-heading h4{margin:0;font-size:.95rem}.section-heading span{color:var(--secondary-text-color);font-size:.78rem}
       .summary-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--divider-color);border-radius:14px;overflow:hidden;background:var(--room-surface)}.summary-metric{min-height:70px;display:grid;align-content:center;gap:2px;padding:10px 12px;border-right:1px solid var(--divider-color)}.summary-metric:last-child{border-right:0}.summary-metric strong{font-size:1.05rem;font-variant-numeric:tabular-nums}.summary-metric span{color:var(--secondary-text-color);font-size:.72rem}
       .light-card-wrapper{display:grid;gap:8px}.range-row{display:grid;grid-template-columns:auto minmax(0,1fr) 42px;gap:9px;align-items:center}.range-row label,.range-row output{color:var(--secondary-text-color);font-size:.75rem;font-weight:680}input[type="range"]{width:100%;min-height:44px;accent-color:var(--primary-color)}
       .position-track{height:8px;overflow:hidden;border-radius:999px;background:var(--secondary-background-color)}.position-fill{height:100%;border-radius:inherit;background:var(--primary-color)}
@@ -1044,8 +1077,7 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     const floorName = lookupFloorName(this.currentHass, room.floor_id);
     const eyebrow = element("span", "eyebrow", floorName ? `Kamer · ${floorName}` : "Kamer");
     const title = element("h1", "", room.name);
-    const subtitle = element("p", "", "Status en bediening per functie.");
-    heroCopy.append(eyebrow, title, subtitle);
+    heroCopy.append(eyebrow, title);
     const heroPills = element("div", "hero-pills");
     heroPills.append(...this.heroPills(room));
     hero.append(heroCopy, heroPills);

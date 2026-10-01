@@ -47,7 +47,13 @@ for (const variant of ["normal", "dark", "warning", "missing", "unknown", "unava
       const railButtons = [...root.querySelectorAll(".capability-rail button")];
       const stageHead = root.querySelector(".stage-head");
       const badge = stageHead?.querySelector(".state-badge");
+      const deck = root.querySelector(".control-deck");
+      const deckStyle = deck ? getComputedStyle(deck) : undefined;
       return {
+        heroHasSubtitle: Boolean(root.querySelector(".hero p")),
+        deckHasBorder: deckStyle ? deckStyle.borderTopWidth !== "0px" && deckStyle.borderTopStyle !== "none" : false,
+        deckHasRadius: deckStyle ? parseFloat(deckStyle.borderTopLeftRadius) > 0 : false,
+        deckHasFrame: deckStyle ? deckStyle.boxShadow !== "none" || deckStyle.backgroundColor !== "rgba(0, 0, 0, 0)" : false,
         labels,
         count: cards.length,
         horizontalOverflow: document.documentElement.scrollWidth > innerWidth,
@@ -65,8 +71,9 @@ for (const variant of ["normal", "dark", "warning", "missing", "unknown", "unava
         railIconsPresent: railButtons.every((button) => Boolean(button.querySelector("ha-icon svg"))),
         railLabelsPresent: railButtons.every((button) => Boolean(button.querySelector(".mushroom-copy strong")?.textContent)),
         railSummaryCount: railButtons.filter((button) => Boolean(button.querySelector(".mushroom-copy small")?.textContent)).length,
-        stageHeadTitle: stageHead?.querySelector("h3")?.textContent,
-        stageHeadDescription: stageHead?.querySelector("small")?.textContent,
+        stageHeadEyebrow: stageHead?.querySelector(".eyebrow")?.textContent,
+        stageHeadHasTitle: Boolean(stageHead?.querySelector("h3")),
+        stageHeadHasDescription: Boolean(stageHead?.querySelector(":scope > small")),
         stageHeadPrecedesContent: stageHead ? stage.children[0] === stageHead && stage.children[1] !== stageHead : false,
         badgeText: badge?.textContent,
         badgeDegraded: Boolean(badge?.classList.contains("unavailable"))
@@ -88,10 +95,15 @@ for (const variant of ["normal", "dark", "warning", "missing", "unknown", "unava
     assert.equal(layout.railIconsPresent, true, `${label}: every rail button has an icon`);
     assert.equal(layout.railLabelsPresent, true, `${label}: every rail button keeps its capability label`);
     assert.ok(layout.railSummaryCount >= 1, `${label}: at least one rail button shows a one-line summary`);
-    assert.ok(layout.stageHeadTitle?.length > 0, `${label}: the active stage shows a stage-head title`);
-    assert.ok(layout.stageHeadDescription?.length > 0, `${label}: the active stage shows a stage-head description`);
+    assert.ok(layout.stageHeadEyebrow?.length > 0, `${label}: the active stage shows a stage-head eyebrow label`);
+    assert.equal(layout.stageHeadHasTitle, false, `${label}: HD-208 removes the redundant room-name h3 from the stage-head`);
+    assert.equal(layout.stageHeadHasDescription, false, `${label}: HD-208 removes the static, non-status stage-head description`);
     assert.equal(layout.stageHeadPrecedesContent, true, `${label}: the stage-head renders before the stage's own content`);
     assert.ok(["Beschikbaar", "Aandacht", "Deels niet beschikbaar"].includes(layout.badgeText), `${label}: the stage-head badge shows a real availability tone`);
+    assert.equal(layout.heroHasSubtitle, false, `${label}: HD-208 removes the static, non-dynamic hero subtitle`);
+    assert.equal(layout.deckHasBorder, true, `${label}: HD-208 gives the Control Deck a bounded card border`);
+    assert.equal(layout.deckHasRadius, true, `${label}: HD-208 gives the Control Deck a card border-radius`);
+    assert.equal(layout.deckHasFrame, true, `${label}: HD-208 gives the Control Deck a visible card background/shadow`);
     if (width <= 600) assert.equal(layout.mobileGrid, 1, `${label}: mobile controls use one clear column`);
     if (variant === "normal") assert.equal(layout.badgeDegraded, false, `${label}: a fully healthy stage's badge is not degraded`);
     if (variant === "missing") assert.equal(await page.locator(".light-card").first().isDisabled(), true);
@@ -139,6 +151,46 @@ for (const variant of ["normal", "dark", "warning", "missing", "unknown", "unava
       });
       assert.equal(plugsOnlyEnergyBadge.degraded, true, `${label}: a plugs-only energy room's Verbruik badge degrades when its only sensor is unavailable`);
       assert.equal(plugsOnlyEnergyBadge.text, "Deels niet beschikbaar", `${label}: the plugs-only energy badge shows the unavailable-state copy, not a fabricated Beschikbaar`);
+
+      // HD-208: a room with only a generic power_entities entry (no smart_plugs, no room_energy) must still show a
+      // combined current-wattage figure in the Energie tab's room-total card, proving roomCurrentWatts() counts it.
+      const aircoOnlyMounted = await page.evaluate(() => {
+        const fixture = window.roomFixture;
+        const room = fixture.config.rooms.find((candidate) => candidate.key === "airco_only_energy");
+        const detail = document.createElement("home-dashboard-room-detail");
+        detail.setConfig({ type: "custom:home-dashboard-room-detail", room });
+        detail.hass = fixture.hass;
+        document.body.replaceChildren(detail);
+        return true;
+      });
+      assert.equal(aircoOnlyMounted, true, `${label}: airco-only energy room detail mounted`);
+      await page.waitForFunction(() => document.querySelector("home-dashboard-room-detail")?.shadowRoot?.querySelector(".control-deck"));
+      await selectCapability("Verbruik");
+      const aircoOnlyTotalText = await page.evaluate(() => document.querySelector("home-dashboard-room-detail").shadowRoot.querySelector(".energy-card")?.textContent ?? "");
+      assert.match(aircoOnlyTotalText, /650 W/, `${label}: the room-total card combines a power_entities-only reading into the current-wattage figure`);
+
+      // HD-208: a room with BOTH a reporting smart plug AND a power_entities entry (no room_energy) must show the
+      // SAME combined wattage number on the Energie tab's room-total card as on the rail "plugs" summary and the
+      // plugs-stage summary-strip — this is the exact gap where the room-total card previously went silently blank.
+      const comboMounted = await page.evaluate(() => {
+        const fixture = window.roomFixture;
+        const room = fixture.config.rooms.find((candidate) => candidate.key === "plugs_and_airco_energy");
+        const detail = document.createElement("home-dashboard-room-detail");
+        detail.setConfig({ type: "custom:home-dashboard-room-detail", room });
+        detail.hass = fixture.hass;
+        document.body.replaceChildren(detail);
+        return true;
+      });
+      assert.equal(comboMounted, true, `${label}: plugs+airco combined energy room detail mounted`);
+      await page.waitForFunction(() => document.querySelector("home-dashboard-room-detail")?.shadowRoot?.querySelector(".control-deck"));
+      await selectCapability("Smart plugs");
+      const comboRailSummaryText = await page.locator('.capability-rail button[aria-selected="true"] .mushroom-copy small').textContent();
+      assert.match(comboRailSummaryText, /700 W/, `${label}: the rail's Smart plugs summary shows the combined plug+power_entities wattage`);
+      const comboSummaryStripText = await page.locator(".stage .summary-strip").first().textContent();
+      assert.match(comboSummaryStripText, /700 W/, `${label}: the plugs-stage summary-strip shows the combined plug+power_entities wattage`);
+      await selectCapability("Verbruik");
+      const comboTotalText = await page.evaluate(() => document.querySelector("home-dashboard-room-detail").shadowRoot.querySelector(".energy-card")?.textContent ?? "");
+      assert.match(comboTotalText, /700 W/, `${label}: the Energie tab's room-total card shows the same combined wattage as the plugs-stage summary and rail, not a blank value`);
     }
     await page.screenshot({ path: `${directory}/${variant}-${width}.png`, fullPage: true });
   }
@@ -179,6 +231,11 @@ assert.ok(await page.locator(".details-card .energy-period-context", { hasText: 
 await selectCapability("Smart plugs");
 assert.equal(await page.locator(".smart-plug-card").count(), 2, "the plugs stage renders repeated smart plugs");
 assert.match(await page.locator(".stage .summary-strip").first().textContent(), /actieve plugs/, "the plugs stage shows a summary strip");
+// HD-208: room_0 configures a 420 W room_energy.power_entity that is authoritative over its 176 W + 34 W plugs
+// (it already includes them). roomCurrentWatts() now shares this room_energy-priority figure with the rail and
+// plugs-stage summary too, so both read 420 W here, not the 210 W plug-only sum they showed before HD-208.
+assert.match(await page.locator(".stage .summary-strip").first().textContent(), /420 W/, "the plugs-stage current-wattage metric defers to the authoritative room_energy reading, not just its own plugs");
+assert.match(await page.locator('.capability-rail button[aria-selected="true"] .mushroom-copy small').textContent(), /420 W/, "the rail's Smart plugs summary shares the same authoritative room_energy wattage");
 assert.equal(await page.locator(".smart-plug-card").first().locator(".plug-metrics .plug-metric").count(), 3, "each plug card shows day/month/year metrics");
 assert.equal(await page.locator(".smart-plug-card.protected .command").isDisabled(), true, "protected plugs never expose an enabled action");
 assert.match(await page.locator(".smart-plug-card.protected .protection-reason").textContent(), /netwerkautomatisering/, "protected plugs explain why control is disabled");

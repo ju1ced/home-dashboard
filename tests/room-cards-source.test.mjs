@@ -213,7 +213,7 @@ test("HD-206: deck-head toont een niet-gefabriceerde telling boven de rail", asy
   assert.match(source, /plugCount > 0/);
 });
 
-test("HD-206: elke stage krijgt een gedeelde stageHead met eyebrow, titel, beschrijving en een op echte status gebaseerde badge met drie tonen", async () => {
+test("HD-206: elke stage krijgt een gedeelde stageHead met eyebrow en een op echte status gebaseerde badge met drie tonen", async () => {
   const source = await readFile(sourceUrl, "utf8");
   assert.match(source, /private stageHead\(room: RoomConfig, key: RoomCapabilityStage, title: string\)/);
   assert.match(source, /capabilityEntityRoles\(room, key\)/);
@@ -228,6 +228,30 @@ test("HD-206: elke stage krijgt een gedeelde stageHead met eyebrow, titel, besch
   const lightingStageMatch = source.match(/private lightingStage\(room: RoomConfig\): HTMLElement \{[\s\S]*?\n  \}/);
   assert.ok(lightingStageMatch, "lightingStage methode niet gevonden");
   assert.doesNotMatch(lightingStageMatch[0], /stageHead/, "lightingStage mag de gedeelde stage-head niet zelf renderen");
+});
+
+test("HD-208: stageHead en hero laten gefabriceerde/statische tekst weg (geen kamernaam-h3, geen stageDescription, geen statische hero-subtitel)", async () => {
+  const source = await readFile(sourceUrl, "utf8");
+  const stageHeadMatch = source.match(/private stageHead\(room: RoomConfig, key: RoomCapabilityStage, title: string\): HTMLElement\[\] \{[\s\S]*?\n  \}/);
+  assert.ok(stageHeadMatch, "stageHead methode niet gevonden");
+  assert.doesNotMatch(stageHeadMatch[0], /element\("h3"/, "stageHead mag de kamernaam niet als h3 herhalen");
+  assert.doesNotMatch(source, /function stageDescription/, "de statische stageDescription-functie moet verwijderd zijn");
+  assert.doesNotMatch(source, /Status en bediening per functie\./, "de statische hero-subtitel moet verwijderd zijn");
+});
+
+test("HD-208: roomCurrentWatts combineert power_entities met smart_plugs, met room_energy als niet-opgeteld gezaghebbend totaal", async () => {
+  const source = await readFile(sourceUrl, "utf8");
+  const match = source.match(/private roomCurrentWatts\(room: RoomConfig\): number \| undefined \{[\s\S]*?\n  \}/);
+  assert.ok(match, "roomCurrentWatts methode niet gevonden");
+  const body = match[0];
+  assert.match(body, /if \(room\.room_energy\?\.power_entity\) return this\.entityWatts\(room\.room_energy\.power_entity\);/, "room_energy.power_entity blijft gezaghebbend zonder dat er iets bij wordt opgeteld");
+  assert.match(body, /room\.power_entities\.filter/, "power_entities worden meegeteld wanneer room_energy.power_entity ontbreekt");
+  assert.match(body, /plugEntities\.has\(entity\)/, "entiteiten die in beide lijsten voorkomen worden gededupliceerd");
+  assert.match(body, /this\.plugWatts\(plugs\)/, "smart_plugs blijven meetellen via de bestaande plugWatts()");
+  // Called from the rail summary, the plugs-stage summary strip and the Energie tab's room-total card: one shared number everywhere.
+  assert.match(source, /const watts = this\.roomCurrentWatts\(room\);/, "railsamenvatting gebruikt de gedeelde roomCurrentWatts");
+  assert.match(source, /const totalWatts = this\.roomCurrentWatts\(room\);/, "plugs-stage samenvattingsstrip gebruikt de gedeelde roomCurrentWatts");
+  assert.match(source, /const currentWatts = this\.roomCurrentWatts\(room\);/, "Energie-tab roomtotaalkaart gebruikt de gedeelde roomCurrentWatts");
 });
 
 test("HD-206: capabilityEntityRoles telt elke geconfigureerde energiebron mee, inclusief plug- en kamerperiodetotalen", async () => {
