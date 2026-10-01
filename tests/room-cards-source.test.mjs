@@ -4,6 +4,49 @@ import test from "node:test";
 
 const sourceUrl = new URL("../src/cards/home-dashboard-room-cards.ts", import.meta.url);
 
+test("HD-209 kamerfoto: image_upload resolutie heeft prioriteit boven image_entity en valt veilig terug", async () => {
+  const source = await readFile(sourceUrl, "utf8");
+  const types = await readFile(new URL("../src/config/types.ts", import.meta.url), "utf8");
+
+  // Resolutie via de standaard media_source/resolve_media WebSocket-call, nooit callWS of een eigen backend.
+  assert.match(source, /media_source\/resolve_media/);
+  assert.match(source, /sendMessagePromise/);
+  assert.doesNotMatch(source, /callWS\(/);
+
+  // Prioriteit: eerst een opgeloste image_upload-URL, dan image_entity's entity_picture, anders de HD-206 placeholder.
+  assert.match(source, /mediaContentId\s*&&\s*this\.photoCache\.get\(mediaContentId\)\)\s*\|\|\s*\(room\.image_entity/);
+  assert.match(source, /Kamerfoto niet beschikbaar/);
+  assert.match(source, /Geen kamerfoto geconfigureerd/);
+
+  // Resolutie faalt stil (geen throw); een succesvolle URL wordt gecachet per media_content_id voor de
+  // levensduur van het component, maar een ontbrekende connectie of afwijzing wordt NIET gecachet zodat
+  // een latere render/hass-toewijzing (bv. na een HA-herstart) een echte nieuwe poging kan doen.
+  assert.match(source, /\.then\(\(response\) => \(response as \{ url\?: unknown \} \| undefined\)\?\.url, \(\) => undefined\)/);
+  assert.match(source, /photoCache = new Map/);
+  assert.match(source, /photoInFlight = new Set/);
+  assert.doesNotMatch(source, /photoCache\.set\(mediaContentId, undefined\)/, "een ontbrekende/afgewezen resolutie mag niet permanent als resultaat gecachet worden");
+
+  // setConfig() rendert synchroon voordat Lovelace `hass` toewijst; de hass-setter moet een echte
+  // retry triggeren zodra een connectie beschikbaar komt, niet alleen wanneer de state-signature wijzigt.
+  assert.match(source, /if \(this\.config\?\.room\) this\.loadRoomPhoto\(this\.config\.room\);/);
+
+  assert.match(types, /image_upload\?:\s*\{\s*media_content_id:\s*string;\s*media_content_type:\s*string\s*\}/);
+});
+
+test("HD-209 kamerfoto: aria-hidden wordt correct getoggeld in beide richtingen", async () => {
+  const source = await readFile(sourceUrl, "utf8");
+  const paintPhotoMatch = source.match(/private paintPhoto\(photo: HTMLElement, room: RoomConfig\): void \{[\s\S]*?\n  \}/);
+  assert.ok(paintPhotoMatch, "paintPhoto methode niet gevonden");
+  const body = paintPhotoMatch[0];
+  // Opgeloste/beschikbare foto: aria-hidden moet expliciet verwijderd worden, anders blijft een element
+  // met zowel role="img"/aria-label als aria-hidden="true" volledig verborgen voor assistive technology.
+  assert.match(body, /photo\.removeAttribute\("aria-hidden"\);\s*\n\s*photo\.setAttribute\("role", "img"\)/);
+  // Placeholder: role/aria-label worden verwijderd en aria-hidden wordt (opnieuw) gezet.
+  assert.match(body, /photo\.removeAttribute\("role"\);/);
+  assert.match(body, /photo\.removeAttribute\("aria-label"\);/);
+  assert.match(body, /photo\.setAttribute\("aria-hidden", "true"\);/);
+});
+
 test("kameroverzicht toont concrete, state-aware apparaatpresentaties", async () => {
   const source = await readFile(sourceUrl, "utf8");
   assert.match(source, /friendlyName\(state, roleFallback\(role, index\)\)/);

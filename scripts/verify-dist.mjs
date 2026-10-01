@@ -24,7 +24,12 @@ const errors = [];
 // een drietonige statusbadge zonder gefabriceerde waarden. Gemeten kandidaat:
 // 256.821 bytes. Dit is de derde verhoging op rij; HD-171 moet dit structureel
 // oplossen vóór de volgende specialistintegraties.
-const maxBundleBytes = 258_000;
+// 258_000 -> 260_000 (D-054): HD-209 voegt rechtstreekse kamerfoto-upload toe
+// via de native HA media-selector (image_upload) en media_source/resolve_media.
+// Gemeten kandidaat: 259.642 bytes (na de adversarial-reviewronde die de
+// setConfig/hass-volgorde, aria-hidden en schema-validator fixte). Vierde
+// verhoging op rij; HD-171 moet dit structureel oplossen.
+const maxBundleBytes = 260_000;
 
 if (hacs.filename !== "home-dashboard.js") errors.push("hacs.json verwijst niet naar home-dashboard.js");
 if (hacs.homeassistant !== "2026.8.2") errors.push("Onverwachte minimale Home Assistant-versie");

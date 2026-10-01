@@ -174,6 +174,16 @@ export function migrateConfig(input: unknown): MigrationResult {
     if (isObject(inputRoom) && isObject(inputRoom.desk) && isObject(inputRoom.desk.card_config)) {
       room.desk = { card_type: "custom:linak-desk-card", card_config: structuredClone(inputRoom.desk.card_config) };
     }
+    // image_upload has no sensible non-empty default (unlike room_energy/desk/hvac), so it stays a truly
+    // absent key (Object.hasOwn === false) unless a configured upload is actually present on the input.
+    // mergeKnown() only copies keys that already exist on the defaults object, so this field is populated
+    // here explicitly rather than via the generic default-object path.
+    if (isObject(inputRoom) && isObject(inputRoom.image_upload) && typeof inputRoom.image_upload.media_content_id === "string" && inputRoom.image_upload.media_content_id) {
+      room.image_upload = {
+        media_content_id: inputRoom.image_upload.media_content_id,
+        media_content_type: typeof inputRoom.image_upload.media_content_type === "string" ? inputRoom.image_upload.media_content_type : ""
+      };
+    }
   });
   merged.actions = normalizeItems<ActionConfig>(merged.actions, (index) => ({
     key: `action_${index + 1}`,

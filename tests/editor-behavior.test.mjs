@@ -285,3 +285,29 @@ test("kamereditor beheert geneste Control Deck-items zonder JSON-handwerk", () =
   editor.removeRoomNestedItem(0, "cover_controls", 0);
   assert.equal(editor._config.rooms[0].cover_controls.length, 0);
 });
+
+test("HD-209: kamereditor rendert een media-uploadselector naast image_entity en schrijft het objectwaarde terug", () => {
+  const config = createDefaultConfig();
+  config.rooms.push(room("living_room"));
+  const editor = new HomeDashboardStrategyEditor();
+  editor.connectedCallback();
+  editor.setConfig(config);
+  findTab(editor, "rooms").emit("click");
+
+  const html = editor.shadowRoot.innerHTML;
+  assert.match(html, /data-field="image_upload"/);
+  assert.match(html, /data-selector="[^"]*media[^"]*image_upload[^"]*true/);
+  assert.match(html, /data-field="image_entity"/);
+
+  const upload = { media_content_id: "media-source://media_source/local/example_room_photo.jpg", media_content_type: "image/jpeg" };
+  let saved;
+  editor.addEventListener("config-changed", (event) => { saved = event.detail.config; });
+  editor.updateCollection("rooms", 0, "image_upload", upload);
+  assert.deepEqual(editor._config.rooms[0].image_upload, upload);
+  assert.deepEqual(saved.rooms[0].image_upload, upload);
+
+  // image_entity blijft onaangetast door de nieuwe uploadselector.
+  editor.updateCollection("rooms", 0, "image_entity", "image.living_room_photo");
+  assert.equal(editor._config.rooms[0].image_entity, "image.living_room_photo");
+  assert.deepEqual(editor._config.rooms[0].image_upload, upload);
+});
