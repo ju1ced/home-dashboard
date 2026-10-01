@@ -1,6 +1,6 @@
 {
   "name": "home-dashboard",
-  "version": "0.8.0-alpha.23",
+  "version": "0.8.0-alpha.24",
   "private": true,
   "type": "module",
   "description": "HACS-installable community dashboard strategy for Home Assistant",

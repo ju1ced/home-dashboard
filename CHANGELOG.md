@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8.0-alpha.24 — 2026-10-01
+
+- Verwijdert betekenisloze tekst die de eigenaar op een live screenshot aanwees: de stage-header herhaalde de kamernaam en toonde een statische, niet-informatieve omschrijving per functie; de hero-ondertitel voegde evenmin iets toe. Beide zijn weg — alleen de echte statusbadge/-notitie blijven.
+- Control Deck krijgt een echte kaartomkadering (rand, radius, schaduw, achtergrond) zodat rail en actieve functie-inhoud als één kaart ogen, zoals in de v3-mockup.
+- Kamerverbruik combineert voortaan daadwerkelijk alle geconfigureerde verbruikers: smart plugs én de generieke apparatenlijst (bv. een airco) tellen samen op wanneer er geen kamerbrede meter is, met deduplicatie en een strikte W/kW-check. Is er wel een kamermeter geconfigureerd, dan blijft die gezaghebbend zonder dubbeltelling — hetzelfde cijfer staat nu overal (rail, Smart-plugs-tab, Energie-tab).
+- Editor: duidelijke hulptekst over het verschil tussen de generieke apparatenlijst en Smart plugs, en de plugvelden gegroepeerd onder "Basis"/"Energieperiodes" in plaats van één lange lijst.
+- Twee reviewrondes losten op: een stilzwijgend wegvallend verbruikscijfer op de Energie-tab bij een combinatie van smart plugs en een generiek apparaat. Awning-confirmation, plug-tweestapsbevestiging en toetsenbordnavigatie zijn ongewijzigd.
+- De minified bundel blijft binnen de bestaande 258 kB-grens (D-053); de uitgebrachte kandidaat gebruikt 257.796 bytes (204 bytes marge — zeer krap).
+- [Testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.24.md). Live Home Assistant-acceptatie blijft een afzonderlijke menselijke gate.
+
 ## 0.8.0-alpha.23 — 2026-09-30
 
 - Voegt de omkadering rond de Control Deck-rail toe die alpha.22 oversloeg: een deck-head boven de rail (kamernaam + telling van werkelijk geconfigureerde lampen/openingen/plugs), een gedeelde stage-head bovenaan elke functie (titel, omschrijving, statusbadge), iconen en een statusregel per rail-knop, en een rijkere hero met meerdere statuspillen plus een neutrale placeholder-illustratie zonder kamerfoto.
