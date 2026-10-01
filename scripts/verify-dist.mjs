@@ -5,8 +5,11 @@ const packageJson = JSON.parse(await readFile(new URL("package.json", root), "ut
 const hacs = JSON.parse(await readFile(new URL("hacs.json", root), "utf8"));
 const distDirectory = new URL("dist/", root);
 const bundleUrl = new URL("dist/home-dashboard.js", root);
+const editorBundleUrl = new URL("dist/home-dashboard-editor.js", root);
 const bundle = await readFile(bundleUrl, "utf8");
+const editorBundle = await readFile(editorBundleUrl, "utf8");
 const bundleStats = await stat(bundleUrl);
+const editorBundleStats = await stat(editorBundleUrl);
 const distFiles = await readdir(distDirectory);
 const errors = [];
 // 215_000 -> 245_000: HD-202 voegt het volledige capability-gedreven Control Deck
@@ -29,7 +32,19 @@ const errors = [];
 // Gemeten kandidaat: 259.642 bytes (na de adversarial-reviewronde die de
 // setConfig/hass-volgorde, aria-hidden en schema-validator fixte). Vierde
 // verhoging op rij; HD-171 moet dit structureel oplossen.
-const maxBundleBytes = 260_000;
+// 260_000 -> 210_000 (D-055, HD-210): de config-flow editor UI
+// (src/editor/home-dashboard-editor.ts + src/editor/fields.ts) is uitgesplitst
+// naar een eigen, zelfstandig esbuild-bundle (dist/home-dashboard-editor.js),
+// lazy geladen via HomeDashboardStrategy.getConfigElement() en dus niet langer
+// onderdeel van de bundle die elke dashboardbezoeker downloadt. Gemeten
+// hoofdbundel na de split: 204.856 bytes. Dit lost HD-171 structureel op in
+// plaats van de grens telkens te verhogen; de editor krijgt een eigen, los
+// budget hieronder.
+const maxBundleBytes = 210_000;
+// De editor is alleen nodig voor wie de visuele configuratie-UI opent: geen
+// runtime-performancepad, dus een ruimer budget. Gemeten op 93.887 bytes na de
+// split; dit is puur een plafond om een ongemerkte opblazing te signaleren.
+const maxEditorBundleBytes = 160_000;
 
 if (hacs.filename !== "home-dashboard.js") errors.push("hacs.json verwijst niet naar home-dashboard.js");
 if (hacs.homeassistant !== "2026.8.2") errors.push("Onverwachte minimale Home Assistant-versie");
@@ -39,10 +54,16 @@ if (!bundle.includes(packageJson.version)) errors.push("Packageversie ontbreekt 
 if (bundle.includes("sourceMappingURL")) errors.push("Productiebundle bevat een sourcemapverwijzing");
 if (distFiles.some((file) => file.endsWith(".map"))) errors.push("dist bevat een sourcemap");
 if (bundleStats.size > maxBundleBytes) errors.push(`Dashboardbundle overschrijdt ${Math.round(maxBundleBytes / 1000)} kB: ${bundleStats.size}`);
+if (!editorBundle.startsWith("/*! Home Dashboard editor")) errors.push("Editorbundleheader ontbreekt");
+if (!editorBundle.includes(packageJson.version)) errors.push("Packageversie ontbreekt in editorbundle");
+if (editorBundle.includes("sourceMappingURL")) errors.push("Productie-editorbundle bevat een sourcemapverwijzing");
+if (editorBundleStats.size > maxEditorBundleBytes) errors.push(`Editorbundle overschrijdt ${Math.round(maxEditorBundleBytes / 1000)} kB: ${editorBundleStats.size}`);
+if (bundle.includes('customElements.define("home-dashboard-strategy-editor"')) errors.push("Editor-registratie lekt in de hoofdbundel (customElements.define)");
+if (!editorBundle.includes('customElements.define("home-dashboard-strategy-editor"')) errors.push("Editorbundle registreert het editor-element niet");
 
 if (errors.length) {
   console.error(errors.map((error) => `- ${error}`).join("\n"));
   process.exitCode = 1;
 } else {
-  console.log(`Dist-check geslaagd: ${bundleStats.size} bytes, versie ${packageJson.version}.`);
+  console.log(`Dist-check geslaagd: home-dashboard.js ${bundleStats.size} bytes, home-dashboard-editor.js ${editorBundleStats.size} bytes, versie ${packageJson.version}.`);
 }

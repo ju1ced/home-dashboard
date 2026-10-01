@@ -19,6 +19,10 @@ class HaSelectorFixture extends HTMLElement {
 customElements.define("ha-selector", HaSelectorFixture);
 
 const { createDefaultConfig } = await import("/dist/home-dashboard.js");
+// HD-210: de editor is een los, lazy geladen bundle. Dit harnas simuleert geen
+// Home Assistant, dus het laadt het editorbundle rechtstreeks in plaats van via
+// HomeDashboardStrategy.getConfigElement().
+await import("/dist/home-dashboard-editor.js");
 const editor = document.querySelector("home-dashboard-strategy-editor");
 const strategyRegistered = window.customStrategies?.some((entry) => entry.type === "home-dashboard" && entry.strategyType === "dashboard");
 document.querySelector("#events").textContent = strategyRegistered

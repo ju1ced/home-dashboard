@@ -39,6 +39,8 @@ const required = [
   "config/examples/unavailable.json",
   "config/mapping.example.json",
   "dist/home-dashboard.js",
+  "dist/home-dashboard-editor.js",
+  "src/editor/editor-entry.ts",
   "scripts/build.mjs",
   "scripts/privacy-patterns.mjs",
   "scripts/verify-dist.mjs",
@@ -164,6 +166,7 @@ for (const [file, expected] of renderSizes) {
 // and fixtures, not the two generated release sidecars.
 const generatedPrivacyExclusions = new Set([
   "dist/home-dashboard.js.sha256",
+  "dist/home-dashboard-editor.js.sha256",
   "dist/release-manifest.json"
 ]);
 const allFiles = (await walk(root)).filter((file) => {

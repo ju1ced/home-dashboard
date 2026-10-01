@@ -2,21 +2,25 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
-  EDITOR_COVERAGE,
-  EDITOR_SECTION_KEYS,
   HomeDashboardStrategy,
-  HomeDashboardStrategyEditor,
   compileConfig,
   createDefaultConfig,
-  getEditorItemToken,
-  getEditorSectionForKey,
-  mergeEditorIssues,
   migrateConfig,
   parseImportedConfig,
   serializeConfig,
   validateConfig,
   validateConfigSchema
 } from "../dist/home-dashboard.js";
+// HD-210: de editor is een los, lazy geladen bundle (dist/home-dashboard-editor.js)
+// en zit niet meer in dist/home-dashboard.js.
+import {
+  EDITOR_COVERAGE,
+  EDITOR_SECTION_KEYS,
+  HomeDashboardStrategyEditor,
+  getEditorItemToken,
+  getEditorSectionForKey,
+  mergeEditorIssues
+} from "../dist/home-dashboard-editor.js";
 
 async function fixture(name) {
   return JSON.parse(await readFile(new URL(`../config/examples/${name}.json`, import.meta.url), "utf8"));
@@ -497,7 +501,7 @@ test("strategy maakt vijf echte views en behoudt veilige foutpreviews", async ()
 });
 
 test("editorbundle bevat ordering, focus- en live-feedbackcontracten", async () => {
-  const bundle = await readFile(new URL("../dist/home-dashboard.js", import.meta.url), "utf8");
+  const bundle = await readFile(new URL("../dist/home-dashboard-editor.js", import.meta.url), "utf8");
   for (const marker of ["data-room-move", "data-view-move", "data-section-nav", "data-section-step", "data-go-section", "Privacybediening is optioneel", "Laat Privacyactie op Geen", "risico:", "role=\"tabpanel\"", "queueMicrotask", "aria-live", "config-changed", "home-dashboard-strategy-editor"]) assert.match(bundle, new RegExp(marker));
 });
 

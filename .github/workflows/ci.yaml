@@ -33,4 +33,4 @@ jobs:
       - name: Run browser regression matrix
         run: pnpm run test:browser
       - name: Verify committed bundle
-        run: git diff --exit-code -- dist/home-dashboard.js
+        run: git diff --exit-code -- dist/home-dashboard.js dist/home-dashboard-editor.js
