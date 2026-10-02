@@ -18,7 +18,12 @@ class HaSelectorFixture extends HTMLElement {
 
 customElements.define("ha-selector", HaSelectorFixture);
 
-const { createDefaultConfig } = await import("/dist/home-dashboard.js");
+const { createDefaultConfig, HomeDashboardStrategy } = await import("/dist/home-dashboard.js");
+// HD-210: ga via dezelfde lazy-load als de echte Home Assistant-configflow
+// (HomeDashboardStrategy.getConfigElement() -> dynamic import van
+// dist/home-dashboard-editor.js). Dit dekt de echte import.meta.url/?v=
+// resolutie over HTTP, in plaats van het editorbundle rechtstreeks te laden.
+await HomeDashboardStrategy.getConfigElement();
 const editor = document.querySelector("home-dashboard-strategy-editor");
 const strategyRegistered = window.customStrategies?.some((entry) => entry.type === "home-dashboard" && entry.strategyType === "dashboard");
 document.querySelector("#events").textContent = strategyRegistered

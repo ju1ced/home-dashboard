@@ -106,10 +106,14 @@ globalThis.customElements = {
 globalThis.document = { createElement: () => new FakeHTMLElement() };
 globalThis.window = { customStrategies: [] };
 
-const {
-  HomeDashboardStrategyEditor,
-  createDefaultConfig
-} = await import("../dist/home-dashboard.js?editor-behavior");
+const { createDefaultConfig, HomeDashboardStrategy } = await import("../dist/home-dashboard.js?editor-behavior");
+// De editor is sinds HD-210 een los, lazy geladen bundle (dist/home-dashboard-editor.js),
+// geladen via dezelfde weg als de echte Home Assistant-configflow:
+// HomeDashboardStrategy.getConfigElement() (dynamic import + registratie als
+// side effect), in plaats van het editorbundle rechtstreeks te importeren.
+// Dit dekt de echte import.meta.url/?v=-resolutie binnen dist/home-dashboard.js.
+await HomeDashboardStrategy.getConfigElement();
+const HomeDashboardStrategyEditor = registry.get("home-dashboard-strategy-editor");
 
 test("dashboard- en view-strategy zijn beide geregistreerd", () => {
   assert.ok(registry.has("ll-strategy-dashboard-home-dashboard"));
@@ -118,6 +122,11 @@ test("dashboard- en view-strategy zijn beide geregistreerd", () => {
   assert.ok(registry.has("home-dashboard-home-overview"));
   assert.ok(registry.has("home-dashboard-room-overview"));
   assert.ok(registry.has("home-dashboard-room-detail"));
+});
+
+test("editorbundle registreert het editor-element afzonderlijk", () => {
+  assert.ok(registry.has("home-dashboard-strategy-editor"));
+  assert.equal(registry.get("home-dashboard-strategy-editor"), HomeDashboardStrategyEditor);
 });
 
 function room(key) {

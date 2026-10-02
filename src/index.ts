@@ -13,12 +13,10 @@ import { getRoomMetric, HomeDashboardRoomDetail, HomeDashboardRoomOverview, regi
 import { getKiaPresentation, HomeDashboardKiaSummary, registerHomeDashboardKiaIntegration } from "./cards/home-dashboard-kia-integration";
 import { getPrinterPresentation, HomeDashboardPrinterSummary, registerHomeDashboardPrinterIntegration } from "./cards/home-dashboard-printer-integration";
 import { getPoolPresentation, HomeDashboardPoolSummary, registerHomeDashboardPoolIntegration } from "./cards/home-dashboard-pool-integration";
-import { EDITOR_COVERAGE } from "./editor/fields";
-import { EDITOR_SECTION_KEYS, getEditorItemToken, getEditorSectionForKey, HomeDashboardStrategyEditor, mergeEditorIssues, registerHomeDashboardEditor } from "./editor/home-dashboard-editor";
 import { HomeDashboardStrategy, registerHomeDashboardStrategy } from "./strategy/home-dashboard-strategy";
 import { buildView, HomeDashboardViewStrategy, registerHomeDashboardViewStrategy } from "./strategy/home-dashboard-view-strategy";
 
-export { buildView, compileConfig, createDefaultConfig, EDITOR_COVERAGE, EDITOR_SECTION_KEYS, getCameraPresentation, getEditorItemToken, getEditorSectionForKey, getHomeStructureSignature, getKiaPresentation, getPoolPresentation, getPrinterPresentation, getRoomMetric, getWastePresentation, HomeDashboardCameraStrip, HomeDashboardHomeOverview, HomeDashboardKiaSummary, HomeDashboardPoolSummary, HomeDashboardPrinterSummary, HomeDashboardRoomDetail, HomeDashboardRoomOverview, HomeDashboardStrategy, HomeDashboardStrategyEditor, HomeDashboardViewStrategy, mergeEditorIssues, migrateConfig, parseImportedConfig, resolveLightGroupState, roomPath, serializeConfig, validateConfig, validateConfigSchema };
+export { buildView, compileConfig, createDefaultConfig, getCameraPresentation, getHomeStructureSignature, getKiaPresentation, getPoolPresentation, getPrinterPresentation, getRoomMetric, getWastePresentation, HomeDashboardCameraStrip, HomeDashboardHomeOverview, HomeDashboardKiaSummary, HomeDashboardPoolSummary, HomeDashboardPrinterSummary, HomeDashboardRoomDetail, HomeDashboardRoomOverview, HomeDashboardStrategy, HomeDashboardViewStrategy, migrateConfig, parseImportedConfig, resolveLightGroupState, roomPath, serializeConfig, validateConfig, validateConfigSchema };
 export type { HomeDashboardConfigV1, ValidationIssue } from "./config/types";
 
 export interface HomeDashboardBuildInfo {
@@ -49,7 +47,6 @@ if (typeof window !== "undefined") {
   registerHomeDashboardKiaIntegration();
   registerHomeDashboardPrinterIntegration();
   registerHomeDashboardPoolIntegration();
-  registerHomeDashboardEditor();
   registerHomeDashboardViewStrategy();
   registerHomeDashboardStrategy();
   window.__HOME_DASHBOARD_BUILD__ = buildInfo;

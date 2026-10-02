@@ -190,6 +190,12 @@ try {
   currentCase='editor/rooms/normal/1440x1100';
   await page.setViewportSize({width:1440,height:1100});
   await page.goto(`${prototypeUrl}/editor.html`);
+  // HD-210: the editor is lazy-loaded from a separate dist/home-dashboard-editor.js
+  // bundle (editor-harness.js dynamically imports it after the main bundle), so
+  // page.goto's load event can resolve before that second import finishes and
+  // the element upgrades. Wait for the real registration/render explicitly
+  // instead of relying on goto's load-event timing.
+  await page.waitForFunction(()=>customElements.get('home-dashboard-strategy-editor') && document.querySelector('home-dashboard-strategy-editor').shadowRoot?.querySelector('select[data-path="general.palette"] option'));
   await page.evaluate(()=>document.querySelector('home-dashboard-strategy-editor').addEventListener('config-changed',event=>window.savedRoomConfig=event.detail.config));
   const palette=page.locator('select[data-path="general.palette"]');
   assert.deepEqual(await palette.locator('option').allTextContents(),['Huidig blauw','Warm zand','Rustig salie','Zacht leisteen','Gedempt petrol']);

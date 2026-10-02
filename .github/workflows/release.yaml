@@ -44,6 +44,8 @@ jobs:
           gh release create "$GITHUB_REF_NAME" \
             dist/home-dashboard.js \
             dist/home-dashboard.js.sha256 \
+            dist/home-dashboard-editor.js \
+            dist/home-dashboard-editor.js.sha256 \
             dist/release-manifest.json \
             --generate-notes \
             --title "$GITHUB_REF_NAME" \

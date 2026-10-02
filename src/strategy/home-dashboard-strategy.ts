@@ -5,6 +5,8 @@ import type { HomeDashboardConfigV1, ViewPath } from "../config/types";
 import type { HomeDashboardViewConfig } from "./home-dashboard-view-strategy";
 import { roomPath } from "../cards/home-dashboard-room-cards";
 
+declare const __HOME_DASHBOARD_VERSION__: string;
+
 interface StrategyMetadata {
   type: string;
   strategyType: "dashboard";
@@ -49,7 +51,17 @@ export class HomeDashboardStrategy extends HTMLElementBase {
     return { title: "Home Dashboard", icon: "mdi:home-assistant" };
   }
 
-  public static getConfigElement(): HTMLElement {
+  public static async getConfigElement(): Promise<HTMLElement> {
+    // Lazy-loaded editor bundle: a separate, self-contained esbuild output
+    // (dist/home-dashboard-editor.js) that only runtime visitors who open the
+    // dashboard's visual config UI ever download. The `v=` query string is a
+    // cache-buster distinct from HACS's own `?hacstag=` (which only applies to
+    // the one Lovelace resource URL, not to anything that URL dynamically
+    // imports): it forces a fresh fetch of the matching editor file whenever
+    // the HACS-delivered home-dashboard.js is a new version, even if a stale
+    // editor file with the same name is still cached from a previous release.
+    const editorUrl = new URL(`./home-dashboard-editor.js?v=${__HOME_DASHBOARD_VERSION__}`, import.meta.url).href;
+    await import(editorUrl);
     return document.createElement("home-dashboard-strategy-editor");
   }
 

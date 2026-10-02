@@ -19,30 +19,43 @@ test("HACS manifest points at the versioned dashboard bundle", async () => {
   assert.match(bundle, new RegExp(packageJson.version.replaceAll(".", "\\.")));
 });
 
-test("dist contains exactly one HACS JavaScript runtime artifact", async () => {
-  const files = (await readdir(new URL("dist/", root))).filter((file) => file.endsWith(".js"));
-  assert.deepEqual(files, ["home-dashboard.js"]);
+test("dist contains exactly the expected HACS JavaScript artifacts (HD-210 split)", async () => {
+  const files = (await readdir(new URL("dist/", root))).filter((file) => file.endsWith(".js")).sort();
+  // home-dashboard.js: eager runtime bundle, downloaded by every HACS visitor.
+  // home-dashboard-editor.js: lazy config-flow editor, loaded only on demand
+  // from HomeDashboardStrategy.getConfigElement(). No other .js file may ship
+  // in dist/ — a stray file here would be either an accident or a forgotten
+  // release asset (see .github/workflows/release.yaml's gh release create list).
+  assert.deepEqual(files, ["home-dashboard-editor.js", "home-dashboard.js"]);
   assert.ok((await stat(new URL("dist/home-dashboard.js", root))).size > 0);
+  assert.ok((await stat(new URL("dist/home-dashboard-editor.js", root))).size > 0);
 });
 
 test("release assets are deterministic for a given bundle", async () => {
   const bundle = await readFile(new URL("dist/home-dashboard.js", root));
+  const editorBundle = await readFile(new URL("dist/home-dashboard-editor.js", root));
   const repositoryCheck = await readFile(new URL("scripts/check-repo.mjs", root), "utf8");
   const packageJson = JSON.parse(await readFile(new URL("package.json", root), "utf8"));
   const commit = "01234567".repeat(5);
   const tag = `v${packageJson.version}`;
-  // Zie scripts/verify-dist.mjs en D-054: 260_000 is de gereviewde grens na
-  // de kamerfoto-upload (HD-209), gemeten op 259.642 bytes na de adversarial-
-  // reviewronde.
-  assert.ok(bundle.length <= 260_000);
+  // Zie scripts/verify-dist.mjs en D-055 (HD-210): de editor is uitgesplitst
+  // naar dist/home-dashboard-editor.js, dus de hoofdbundel krijgt een nieuw,
+  // veel lager budget (210_000, gemeten 204.856 bytes). De editorbundle heeft
+  // een eigen, ruimer budget (160_000, gemeten 93.887 bytes) in verify-dist.mjs.
+  assert.ok(bundle.length <= 210_000);
   assert.equal(bundle.includes(Buffer.from("sourceMappingURL")), false);
+  assert.equal(editorBundle.includes(Buffer.from("sourceMappingURL")), false);
   const result = spawnSync(process.execPath, ["scripts/create-release-assets.mjs"], { cwd: rootPath, encoding: "utf8", env: { ...process.env, GITHUB_SHA: commit, RELEASE_TAG: tag } });
   assert.equal(result.status, 0, result.stderr);
   const checksum = await readFile(new URL("dist/home-dashboard.js.sha256", root), "utf8");
+  const editorChecksum = await readFile(new URL("dist/home-dashboard-editor.js.sha256", root), "utf8");
   const manifest = JSON.parse(await readFile(new URL("dist/release-manifest.json", root), "utf8"));
   const sha256 = createHash("sha256").update(bundle).digest("hex");
+  const editorSha256 = createHash("sha256").update(editorBundle).digest("hex");
   assert.equal(checksum, `${sha256}  home-dashboard.js\n`);
+  assert.equal(editorChecksum, `${editorSha256}  home-dashboard-editor.js\n`);
   assert.deepEqual({ artifact: manifest.artifact, commit: manifest.commit, sha256: manifest.sha256, tag: manifest.tag, version: manifest.version }, { artifact: "home-dashboard.js", commit, sha256, tag, version: packageJson.version });
+  assert.deepEqual(manifest.editor, { artifact: "home-dashboard-editor.js", sha256: editorSha256 });
   assert.match(repositoryCheck, /generatedPrivacyExclusions/);
   assert.match(repositoryCheck, /dist\/home-dashboard\.js\.sha256/);
   assert.match(repositoryCheck, /dist\/release-manifest\.json/);
