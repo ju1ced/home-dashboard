@@ -57,7 +57,7 @@ Geen tickets.
 | [HD-208 Control Deck afbakenen, zinloze tekst schrappen, Kamerverbruik combineren](tickets.md#hd-208--control-deck-visueel-afbakenen-zinloze-tekst-schrappen-en-kamerverbruik-echt-combineren) | P0 | Kamers | PR #55 · `v0.8.0-alpha.24` |
 | [HD-209 Kamerafbeelding rechtstreeks kunnen uploaden](tickets.md#hd-209--kamerafbeelding-rechtstreeks-kunnen-uploaden) | P1 | Kamers | PR #57 · `v0.8.0-alpha.25` |
 | [HD-207 Control Deck-omkadering: drie resterende hiaten](tickets.md#hd-207--control-deck-omkadering-drie-resterende-hiaten) | P2 | Kamers | PR #63 · nog niet gereleased |
-| [HD-205 Verbruik en Historie op echte HA-statistics en logbook-data](tickets.md#hd-205--verbruik-en-historie-op-echte-ha-statistics-en-logbook-data) | P2 | Kamers / Energie en domeinen | Lokaal · `v0.8.0-alpha.27` candidate, PR volgt |
+| [HD-205 Verbruik en Historie op echte HA-statistics en logbook-data](tickets.md#hd-205--verbruik-en-historie-op-echte-ha-statistics-en-logbook-data) | P2 | Kamers / Energie en domeinen | PR #66 · `v0.8.0-alpha.27` candidate |
 
 ## Geblokkeerd
 
