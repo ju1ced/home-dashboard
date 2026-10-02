@@ -42,7 +42,7 @@ Home bevat geen uitgebreide grafieken, inventarislijsten, alle batterijen, alle 
 - Eén version-controlled configuratiemodel met locale-onafhankelijke room keys en Nederlandse labels.
 - De Kamers-hoofdview toont alle bevestigde kamers onder Gelijkvloers, Boven en Buiten; voorraad-/beheergroepen blijven uitgesloten.
 - Iedere room summary toont primaire status, een expliciete detailingang en alleen passende quick actions, bijvoorbeeld licht, cover of een benoemde scène. Riskante of brede acties blijven detail-only.
-- Capabilities zijn expliciet en optioneel: licht, cover, klimaat, media, safety, camera, energie en andere relevante functies.
+- Capabilities zijn expliciet en optioneel: licht, cover, klimaat, media, safety, camera, energie en andere relevante functies. Een optioneel bureau (`room.desk`) embedt de zelfstandig geïnstalleerde LINAK-bureaucard transparant in de Comfort-stage — geen eigen route of centrale mappinglaag, zie HD-203.
 - Zware kamerdetails ondersteunen conditioneel volledige HVAC-mode/preset/fan/swing, scènes, openingen, aanwezigheid, CO₂/luchtkwaliteit, lux, geluid/druk, veilige apparaatschakeling, actueel/dagverbruik en beslisrelevante historie.
 - Een apparaatblok kan actueel vermogen, dagenergie, optionele spanning, lockstatus, control en `more-info` tonen; ontbrekende velden verdwijnen zonder nulwaarde te fabriceren.
 - Lege of niet-geconfigureerde secties worden niet gerenderd.
