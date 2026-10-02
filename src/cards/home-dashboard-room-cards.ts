@@ -287,7 +287,7 @@ function capabilityEntityRoles(room: RoomConfig, key: RoomCapabilityStage): Arra
     room.camera_entities.forEach((entity) => roles.push({ entity, role: "camera" }));
     return roles;
   }
-  if (key === "plugs") return (room.smart_plugs ?? []).flatMap((plug) => [plug.switch_entity, plug.power_entity].filter((value): value is string => Boolean(value)).map((entity) => ({ entity, role: "power" as const })));
+  if (key === "plugs") return (room.smart_plugs ?? []).flatMap((plug) => [plug.switch_entity, plug.power_entity, plug.energy_day_entity, plug.energy_month_entity, plug.energy_year_entity].filter((value): value is string => Boolean(value)).map((entity) => ({ entity, role: "power" as const })));
   const energyEntities = [
     ...room.power_entities,
     room.room_energy?.power_entity, room.room_energy?.day_entity, room.room_energy?.month_entity, room.room_energy?.year_entity,
@@ -1192,7 +1192,10 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
       const deckHead = element("header", "section-heading deck-head");
       const deckTitle = element("div", "deck-title");
       deckTitle.append(element("span", "eyebrow", "Control Deck"), element("strong", "", `${room.name} · individuele bediening`));
-      deckHead.append(deckTitle, element("span", "", countParts.join(" · ")));
+      deckHead.append(deckTitle);
+      // A comfort-/energie-only room has nothing countParts covers (no lamps/openings/plugs), so omit the trailing
+      // count span rather than render an empty, dangling label — never fabricate a count for an uncounted capability.
+      if (countParts.length > 0) deckHead.append(element("span", "", countParts.join(" · ")));
       root.append(deckHead);
     }
 
