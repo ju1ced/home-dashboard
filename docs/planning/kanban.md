@@ -14,8 +14,13 @@ De kolom **Volgorde** vertaalt afhankelijkheden naar de aanbevolen uitvoering: f
 | [HD-180 HACS lifecycle en compatibiliteitsmatrix bijwerken](tickets.md#hd-180--hacs-lifecycle-en-compatibiliteitsmatrix-bijwerken) | P1 | Release engineering | 6a | Install/update/downgrade/verwijderen opnieuw bewijzen voor de actuele productvorm |
 | [HD-181 Admin-dashboardgrens uitwerken](tickets.md#hd-181--admin-dashboardgrens-uitwerken) | P2 | Diagnostiek | 2b | `require_admin`-grens voor diagnostiek/beheer, los van het gezinsdashboard |
 | [HD-192 v1-documentatie en release readiness afronden](tickets.md#hd-192--v1-documentatie-en-release-readiness-afronden) | P1 | Release engineering | 6c | Documentatie laten overeenkomen met de werkelijk bewezen v1-scope |
-| [HD-200 3D-printerspecialist: contract en documentatiereconciliatie](tickets.md#hd-200--3d-printerspecialist-contract-productiegate-en-documentatiereconciliatie) | P1 | Specialisten | 2a | Printerspecialist retroactief door dezelfde contract- en documentatiediscipline halen |
 | [HD-201 Volledige productaudit voor privacy en beveiliging](tickets.md#hd-201--volledige-productaudit-voor-privacy-en-beveiliging) | P0 | Quality engineering | 5c | Eén privacy-/securityaudit over het volledige samengevoegde product; inventarisatie mag in fase 2 starten |
+| [HD-203 LINAK-bureaucard: contract en documentatiereconciliatie](tickets.md#hd-203--linak-bureaucard-contract-en-documentatiereconciliatie) | P2 | Specialisten | 2d | Bureaucard retroactief door dezelfde contract- en documentatiediscipline halen |
+| [HD-211 Printersummary: relevante-state gating toevoegen](tickets.md#hd-211--printersummary-relevante-state-gating-toevoegen) | P2 | Performance | 2a-vervolg | Gevonden tijdens HD-200: `set hass` rendert onvoorwaardelijk, geen diffing tegen de vijf gemapte entiteiten |
+| [HD-205 Verbruik en Historie op echte HA-statistics en logbook-data](tickets.md#hd-205--verbruik-en-historie-op-echte-ha-statistics-en-logbook-data) | P2 | Kamers / Energie en domeinen | 2f | Na HD-204; vervangt native history-fallback door echte statistics/logbook-koppeling |
+| [HD-207 Control Deck-omkadering: drie resterende hiaten](tickets.md#hd-207--control-deck-omkadering-drie-resterende-hiaten) | P2 | Kamers | 2h | Plugs-energiebadge, lege deck-head-telling en screenshot-volgorde uit de HD-206-verificatie |
+| [HD-208 Control Deck afbakenen, zinloze tekst schrappen, Kamerverbruik combineren](tickets.md#hd-208--control-deck-visueel-afbakenen-zinloze-tekst-schrappen-en-kamerverbruik-echt-combineren) | P0 | Kamers | 2i | Live-feedback van de eigenaar: lege tekst, geen kaartafbakening, onvolledig Kamerverbruik, onduidelijke editor |
+| [HD-209 Kamerafbeelding rechtstreeks kunnen uploaden](tickets.md#hd-209--kamerafbeelding-rechtstreeks-kunnen-uploaden) | P1 | Kamers | 2j | Natieve HA media-selector met image_upload, naast de bestaande entity-picker |
 
 
 ## In uitvoering
@@ -27,7 +32,6 @@ Geen tickets.
 | Ticket | Prioriteit | Categorie | Volgorde | Toelichting |
 |---|---|---|---|---|
 | [HD-170 Volledige responsive, accessibility en visual QA](tickets.md#hd-170--volledige-responsive-accessibility-en-visual-qa) | P1 | Quality engineering | 1a en 4b | Nu de menselijke alpha.20-QA uitvoeren; definitief sluiten na validatie van de gekozen specialistset |
-| [HD-202 Control Deck-kamerdashboard implementeren](tickets.md#hd-202--control-deck-kamerdashboard-implementeren) | P1 | Kamers | 2c | Lokale alpha.20-kandidaat: schema, GUI, runtime, fixtures en browsermatrix gereed voor onafhankelijke review |
 
 ## Klaar
 
@@ -48,6 +52,11 @@ Geen tickets.
 | [HD-110 Browserregressiematrix consolideren](tickets.md#hd-110--browserregressiematrix-consolideren) | P1 | Quality engineering | Lokaal · 88/88 tests, `pnpm run test:browser` |
 | [HD-120 Energy-paritymanifest actualiseren](tickets.md#hd-120--energy-paritymanifest-actualiseren) | P1 | Energie en domeinen | Lokaal · `docs/quality/energy-parity-manifest.md` |
 | [HD-150 Zwembadstatusrandgevallen tegen de bron bevestigen](tickets.md#hd-150--zwembadstatusrandgevallen-tegen-de-bron-bevestigen) | P1 | Specialisten | Lokaal · `docs/quality/pool-status-contract.md` |
+| [HD-202 Control Deck-kamerdashboard implementeren](tickets.md#hd-202--control-deck-kamerdashboard-implementeren) | P1 | Kamers | PR #48 · `v0.8.0-alpha.21` |
+| [HD-204 Control Deck herstructureren naar de v3-rail](tickets.md#hd-204--control-deck-herstructureren-naar-de-v3-rail) | P1 | Kamers | PR #50 · `v0.8.0-alpha.22` |
+| [HD-206 Control Deck-omkadering aanvullen naar de v3-mockup](tickets.md#hd-206--control-deck-omkadering-aanvullen-naar-de-v3-mockup) | P1 | Kamers | PR #52 · `v0.8.0-alpha.23` |
+| [HD-210 Bundlebudget structureel oplossen: editor lazy laden](tickets.md#hd-210--bundlebudget-structureel-oplossen-editor-lazy-laden) | P0 | Performance | PR #59 · `v0.8.0-alpha.26` |
+| [HD-200 3D-printerspecialist: contract en documentatiereconciliatie](tickets.md#hd-200--3d-printerspecialist-contract-productiegate-en-documentatiereconciliatie) | P1 | Specialisten | Documentatie, geen release nodig |
 
 ## Geblokkeerd
 

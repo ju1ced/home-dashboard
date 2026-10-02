@@ -62,6 +62,8 @@ Meetbare productiecriteria vastleggen voor bundle, parse, DOM, long tasks, navig
 
 Home, Kamers, lichte/zware kamer, Energie, Security en specialistviews; koude en warme cache; relevante en irrelevante stateupdates.
 
+**Bekend aandachtspunt (28 september 2026):** het bundlebudget staat na de alpha.20 Control Deck-slice (incl. de awning-confirmationfix) op 244.397/245.000 bytes — 603 bytes marge. HD-131, HD-141, HD-152 en het resterende deel van HD-170 zullen dit hoogstwaarschijnlijk overschrijden; Kia's vergelijkbare specialistadapter kostte destijds al 8 kB (D-038). Wie een van die tickets oppakt, meet eerst de werkelijke bundlekost en legt daarna een eigen D-0xx-budgetverhoging vast — de grens wordt niet vooraf of onder tijdsdruk opgerekt.
+
 **Acceptatiecriteria**
 
 - Methode, hardware/browsercontext en telwijze zijn reproduceerbaar.
@@ -184,11 +186,15 @@ Documentreview, linkcheck, privacycheck, clean install/upgrade en release-assetv
 ### HD-200 — 3D-printerspecialist: contract, productiegate en documentatiereconciliatie
 
 - **Epic:** Specialisten
-- **Status:** Backlog
+- **Status:** Klaar — documentatiereconciliatie vastgelegd op 2 oktober 2026 ([D-056](../design/decision-log.md#d-056--3d-printerspecialist-retroactief-erkend-als-vijfde-eersteklas-specialist-hd-200)). Geen Home Assistant-write, geen release nodig (puur documentatie).
 - **Prioriteit:** P1
 - **Omvang:** M
 - **Eigenaar:** Specialist-agent + Lead / integrator
 - **Afhankelijkheden:** geen voor het documentatiedeel; productiegatebewijs kan toegang tot de printer-bronrepo vereisen
+
+**Resultaat**
+
+Printer erkend als vijfde eersteklas specialist in `requirements.md`, `delivery-roadmap.md`, `implementation-plan.md` en `integration-strategy.md`. Architecturaal verschil expliciet gedocumenteerd: geen externe bronrepo-kaart, volledig native geïmplementeerd. Vier van de vijf productiegates bevestigd of niet-van-toepassing (geen servicecalls, dus geen confirmation-/foutgate nodig); gate 1 (relevante-state gating) is een reëel gat, vastgelegd als afzonderlijk [HD-211](#hd-211--printersummary-relevante-state-gating-toevoegen) in plaats van stilzwijgend opgelost.
 
 **Doel**
 
@@ -215,6 +221,40 @@ De al gemergede en uitgebrachte 3D-printerspecialist ([HD-008](#hd-008--zelfstan
 **Validatie**
 
 Documentreview, linkcheck, en waar nodig bronrepo-testbewijs en een browsercheck van de bestaande centrale adapter.
+
+---
+
+### HD-211 — Printersummary: relevante-state gating toevoegen
+
+- **Epic:** Performance
+- **Status:** Backlog
+- **Prioriteit:** P2
+- **Omvang:** S
+- **Eigenaar:** Specialist-agent
+- **Afhankelijkheden:** geen
+
+**Doel**
+
+`HomeDashboardPrinterSummary`'s `hass`-setter laat renderen op elke toewijzing, zonder te controleren of een van de vijf gemapte entiteiten (`status`, `progress`, `time_remaining`, `nozzle_temperature`, `bed_temperature`, plus `job_failed`/`insufficient_filament`) daadwerkelijk veranderde.
+
+**Achtergrond**
+
+Gevonden tijdens [HD-200](#hd-200--3d-printerspecialist-contract-productiegate-en-documentatiereconciliatie)'s retroactieve productiegate-beoordeling: `src/cards/home-dashboard-printer-integration.ts`'s `set hass(value)` roept onvoorwaardelijk `this.updateValues()` aan. Dit is dezelfde klasse bevinding als robots productiegate-eis 1 ("alleen op relevante entitywijzigingen renderen"), maar dan voor de printer. De bestaande 100-irrelevante-updates-perfgate (`scripts/render-room-controls.mjs`) dekt alleen de kamerdetail-DOM, niet deze summary-kaart, dus het gat bleef tot nu onopgemerkt.
+
+**Scope**
+
+- `set hass` vergelijkt de relevante entiteitstates (status/progress/tijd/temperaturen/foutsignalen) tegen de vorige waarden vóór een her-render; identieke states slaan `updateValues()` over.
+- Een gerichte test/fixture die aantoont dat N irrelevante `hass`-toewijzingen (andere entiteiten wijzigen, printerentiteiten niet) geen DOM-update op de printersummary veroorzaken.
+
+**Acceptatiecriteria**
+
+- Printersummary rendert niet opnieuw bij een `hass`-toewijzing die geen van de gemapte entiteiten raakt.
+- Bestaand gedrag (status/voortgang/temperaturen/foutweergave, aria-label) blijft ongewijzigd bij een relevante wijziging.
+- Geen regressie op de bestaande printerfixtures (normal/warning/error/unavailable/mapping-incompleet).
+
+**Validatie**
+
+`pnpm test`, gerichte rerender-perftest naar het patroon van de kamerdetail-100-updates-gate, `git diff --check`.
 
 ---
 
@@ -249,6 +289,320 @@ Het volledige samengevoegde product — alle hoofdviews, kamerdetails, Energie/D
 **Validatie**
 
 Privacyguard over de volledige tracked bron, gerichte codereview per informatiestroom, en een geanonimiseerd auditrapport.
+
+---
+
+### HD-203 — LINAK-bureaucard: contract en documentatiereconciliatie
+
+- **Epic:** Specialisten
+- **Status:** Backlog
+- **Prioriteit:** P2
+- **Omvang:** S
+- **Eigenaar:** Specialist-agent + Lead / integrator
+- **Afhankelijkheden:** geen
+
+**Doel**
+
+De al meegekomen, transparante LINAK-bureaucardintegratie (`room.desk`, `custom:linak-desk-card`) door dezelfde documentatie- en governancediscipline halen als Kia, robot, tuin, zwembad en de 3D-printer (HD-200), zodat ze niet ongeticket en ongedocumenteerd in `main` belandt.
+
+**Achtergrond**
+
+Gevonden tijdens de onafhankelijke herreview van de alpha.20 Control Deck-slice: `src/config/types.ts` (`RoomDeskConfig`), `src/config/migrate.ts` en `src/cards/home-dashboard-room-cards.ts` bevatten een volledig werkende, transparante passthrough naar de zelfstandig geïnstalleerde `custom:linak-desk-card` (vaste `card_type`, ondoorzichtige `card_config`, geen servicecall of domeinlogica centraal gekopieerd — hetzelfde patroon als de andere specialisten). Er bestaat geen ticket, geen beslislogregel en geen vermelding in `requirements.md`, `delivery-roadmap.md` of `integration-strategy.md`.
+
+**Scope**
+
+- Beslislogentry toevoegen die de LINAK-bureaucard als specialistintegratie erkent (reden, datum, betrokken commit/release).
+- `requirements.md`, `delivery-roadmap.md` en `integration-strategy.md` bijwerken zodat ze de bureaucard naast de andere specialisten noemen, of expliciet motiveren waarom dit een lichtere categorie is (puur transparante passthrough zonder eigen productiepoort).
+- Nagaan of hetzelfde risicoprofiel als Kia/printer/pool van toepassing is (missing resource, versiemismatch, stale) en of daar al een fallback voor bestaat in `home-dashboard-room-cards.ts`.
+
+**Acceptatiecriteria**
+
+- Beslislog, requirements en roadmap noemen de bureaucard expliciet.
+- Resource-/versiemismatch-fallback is bevestigd of als apart gat vastgelegd.
+- Geen bureaustuurlogica wordt centraal gekopieerd.
+
+**Validatie**
+
+Documentreview, linkcheck, en een gerichte browsercheck van de bestaande fallback (indien aanwezig).
+
+---
+
+### HD-204 — Control Deck herstructureren naar de v3-rail
+
+- **Epic:** Kamers
+- **Status:** Backlog
+- **Prioriteit:** P1
+- **Omvang:** L
+- **Eigenaar:** Rooms-agent
+- **Afhankelijkheden:** geen nieuwe databronnen; herbouwt op de bestaande `light_groups`, `cover_controls`, `smart_plugs` en `room_energy`-velden
+
+**Doel**
+
+De op 24 september 2026 afgetikte v3-ontwerpstudie (`generated/room-dashboard-concepts/index.html`, gitignored) alsnog exact implementeren: de capabilityrail (Verlichting, Openingen, Comfort, Smart plugs, Verbruik) als primaire navigatie op paginaniveau, met een apart "Details, apparaten, energie en historie"-blok eronder met zijn eigen 3 tabs (Apparaten/Energie/Historie). Dit vervangt de 4-tabsindeling (Bediening/Apparaten/Energie/Historie) uit HD-202, die zonder gedocumenteerde reden van v3 afweek.
+
+**Achtergrond**
+
+Sessie-analyse op 28 september 2026 vond geen enkele decision-logregel, v4-mockup of designreview die de overstap van v3's rail-primaire structuur naar de gemergede 4-tabsindeling verklaart. `control-deck-room-dashboard.md` werd pas geschreven in dezelfde commit die de implementatie afrondde. De eigenaar heeft v3 bevestigd als het gewenste eindbeeld.
+
+**Scope**
+
+- IA: de rail wordt topniveau-navigatie (niet genest in een "Bediening"-tab); het Details-blok blijft apart eronder met zijn bestaande 3 tabs.
+- Verlichting: lichtgroepkaarten met actief/gedeeltelijk/uit-status (kleur én tekst), individuele lampen elk met een dimslider (0-100%) naast de bestaande toggle.
+- Openingen: samenvattingsstrip (aantal bedieningen, volledig open, gedeeltelijk, gesloten), positiebalk per opening, luifel-specifieke hulptekst ("Uit = uitschuiven · In = intrekken · beweging vraagt bevestiging").
+- Comfort: temperatuur-, lucht-, veiligheids- en kamerfunctiekaarten zoals in v3.
+- Smart plugs: samenvattingsstrip (huidig vermogen, actieve plugs, dag-/maandtotaal), plugkaart met dag/maand/jaar-kWh-grid en het bestaande twee-staps-bevestigingspatroon.
+- Details/Apparaten: read-only inventarisoverzicht per capability, zoals v3's inventory grid.
+- Geen nieuwe databronnen: alles hergebruikt bestaande configuratievelden. Verbruik (rail) en Historie (Details) behouden voorlopig hun bestaande native-fallbackgedrag; zie HD-205 voor de echte statistics-/logbookkoppeling.
+
+**Acceptatiecriteria**
+
+- Rail is de hoofdnavigatie; er is geen "Bediening"-tab meer.
+- Het Details-blok met Apparaten/Energie/Historie-tabs blijft functioneel gescheiden eronder.
+- Dimsliders, lichtgroep-, opening- en plugkaarten tonen dezelfde informatie en acties als vóór deze herbouw — expliciet inclusief de awning-confirmationfix uit `v0.8.0-alpha.21` (geen regressie).
+- Normal/warning/missing/unknown/unavailable per capability blijven afgedekt in fixtures/tests.
+- 390×844, tablet en 1440×900 blijven zonder overflow/clipping; 44×44 px-targets en toetsenbordvolgorde blijven behouden.
+
+**Validatie**
+
+`pnpm test`, `pnpm run test:browser`, `git diff --check`, onafhankelijke review, en een bundlebudget-check tegen het aandachtspunt uit HD-171.
+
+---
+
+### HD-205 — Verbruik en Historie op echte HA-statistics en logbook-data
+
+- **Epic:** Kamers / Energie en domeinen
+- **Status:** Backlog
+- **Prioriteit:** P2
+- **Omvang:** XL
+- **Eigenaar:** Rooms-agent + Energy & domains-agent
+- **Afhankelijkheden:** HD-204; menselijke gate voor de privacy-/logbookscope vóór implementatie
+
+**Doel**
+
+De v3-ontwerpstudie's "Verbruik"-dagstaafdiagram (per apparaat, 7 dagen/maand/jaar) en de "Historie"-tab (vermogen/temperatuur-lijngrafiek plus gebeurtenissenlijst) met echte Home Assistant-data implementeren, in plaats van de huidige native `history-graph`-fallback.
+
+**Achtergrond**
+
+De huidige `v0.8.0-alpha.21`-implementatie koos bewust voor de native history-graph om geen gefabriceerde tijdreeksen te tonen (zie de "bekende en bewuste grenzen" in de testchecklists en het Control Deck-contract). Dat was een geldige, gedocumenteerde afweging — dit ticket doet de echte koppeling zorgvuldig en apart, niet als bijvangst van HD-204.
+
+**Scope**
+
+- `recorder/statistics_during_period` (WebSocket) voor per-dag/maand/jaar-verbruik per smart plug en kamerbron, met een periode-toggle (7 dagen/maand/jaar) zoals v3.
+- `history/history_during_period` voor het vermogens- en temperatuurverloop (24u/7d/30d).
+- `logbook/get_events`, strikt gefilterd tot de expliciet gemapte entiteiten van de kamer (geen woningbrede logboekregels), met een vast maximumaantal getoonde gebeurtenissen.
+- Privacyscope: geen entity-ID's, automatiseringsinterne details of ongerelateerde huishoudactiviteit lekt in de getoonde gebeurtenissen; alleen al-gemapte entiteiten komen in aanmerking.
+- Missing/unavailable/lege-statistics fallback: geen data betekent een duidelijke lege status, nooit een gefabriceerde nulwaarde.
+
+**Acceptatiecriteria**
+
+- Geen enkele getoonde grafiekwaarde of gebeurtenis is gefabriceerd; alles komt van een echte HA-call of toont expliciet "niet beschikbaar".
+- Het logbookfilter toont uitsluitend entiteiten die al in de kamerconfiguratie zijn opgenomen.
+- Periodewissel (7 dagen/maand/jaar, 24u/7d/30d) hergebruikt de bestaande datum-/periodesemantiek uit Energie (D-021).
+- Een nieuwe decision-logregel legt deze uitbreiding van "alleen native fallback" naar "eigen statistics/logbook-raadpleging" vast, inclusief de privacyafweging.
+- Normal/missing/unavailable/lege-periode fixtures en tests voor beide panelen.
+
+**Validatie**
+
+`pnpm test`, `pnpm run test:browser`, privacyguard, gerichte review van de logbookfilterlogica, en nieuwe fixtures zonder echte identifiers.
+
+---
+
+### HD-206 — Control Deck-omkadering aanvullen naar de v3-mockup
+
+- **Epic:** Kamers
+- **Status:** Backlog
+- **Prioriteit:** P1
+- **Omvang:** M
+- **Eigenaar:** Rooms-agent
+- **Afhankelijkheden:** HD-204 (gemerged, `v0.8.0-alpha.22`); geen nieuwe databronnen
+
+**Doel**
+
+De "chrome" rond de Control Deck-rail die in HD-204 werd overgeslagen alsnog toevoegen, zodat het kamerdetail visueel overeenkomt met de afgetikte v3-mockup, niet alleen qua navigatiestructuur.
+
+**Achtergrond**
+
+Live test door de eigenaar (`docs/screenshots/bureau_*.png`, 30 september 2026) tegen de gepubliceerde v3-mockup-artifact toonde aan dat vier omkaderende elementen uit de mockup nergens in de HD-204-implementatie voorkomen — dit was een omissie in de oorspronkelijke implementatie-opdracht, niet een configuratiegat (de eerder vermoede "smart plugs ontbreekt"-melding bleek wél een configuratiegat: de eigenaar had de nieuwe Smart Plugs-sectie nog niet ingevuld in de kamereditor).
+
+**Scope**
+
+- **Deck-head:** een sectiekop boven de capabilityrail met eyebrow "Control Deck", "{kamer} · individuele bediening" en een telling ("X lampen · Y openingen · Z plugs"), zoals `deck-head`/`deck-title`/`deck-count` in de mockup.
+- **Stage-head:** bovenaan de inhoud van elke geselecteerde rail-functie een titel, korte omschrijving, een statusbadge ("Beschikbaar"/"Aandacht"/"Deels niet beschikbaar") en een verklarende notitie, zoals `stageHeader()` in de mockup. Hergebruik bestaande state-detectielogica (missing/unavailable/normal) waar die al bestaat.
+- **Rail-iconen en samenvattingsregel:** elke rail-knop krijgt een icoontegel (passend bij dit project se bestaande icoonsysteem) en een tweede regel met een korte statussamenvatting onder het label (bv. "4 van 6 aan", "2 bedieningen"), zoals `cap-icon`/`cap-copy` in de mockup.
+- **Hero:** vervang de ene generieke `hero-pill` door de drie aparte statuspillen uit de mockup waar de onderliggende data bestaat (temperatuur, vocht/luchtkwaliteit, aanwezigheid/bezet — alleen tonen wat werkelijk gemapt is, geen lege pillen fabriceren). Voeg een decoratieve kamerillustratie-fallback toe wanneer geen `image_entity` is geconfigureerd, met dezelfde privacyveilige bijschriftconventie als de mockup ("Fictieve privacyveilige kamerillustratie" → hier: een neutrale, niet-fictieve variant van dat bijschrift, aangezien dit geen fixture is).
+
+**Acceptatiecriteria**
+
+- Alle vier elementen zijn aanwezig en volgen de mockup's structuur en informatiehiërarchie.
+- Niets hiervan vereist een nieuwe databron; alles hergebruikt reeds beschikbare state/mapping.
+- Lege of niet-geconfigureerde categorieën (bv. geen `image_entity`, geen comfortbron) tonen geen lege kaart en fabriceren geen data.
+- Normal/warning/missing/unavailable per stage blijven afgedekt in fixtures/tests.
+- 390×844, tablet en 1440×900 blijven zonder overflow/clipping; 44×44 px-targets en toetsenbordvolgorde blijven behouden.
+- Geen regressie op de al bestaande awning-confirmation-, plug-tweestaps- of dimslider-logica.
+
+**Validatie**
+
+`pnpm test`, `pnpm run test:browser`, `git diff --check`, onafhankelijke review, bundlebudget-check tegen de D-052-grens (254 kB).
+
+---
+
+### HD-207 — Control Deck-omkadering: drie resterende hiaten
+
+- **Epic:** Kamers
+- **Status:** Backlog
+- **Prioriteit:** P2
+- **Omvang:** S
+- **Eigenaar:** Rooms-agent
+- **Afhankelijkheden:** HD-206 (gemerged)
+
+**Doel**
+
+Drie kleine, niet-blokkerende hiaten oplossen die de finale verificatie van HD-206 vond, buiten de scope van de vier gefixte bevindingen.
+
+**Scope**
+
+- `capabilityEntityRoles()`'s "plugs"-tak controleert alleen `switch_entity`/`power_entity`, niet `energy_day_entity`/`energy_month_entity`/`energy_year_entity` — dezelfde soort vals-"Beschikbaar"-risico als eerder gefixt voor de energie-tak, nu voor de plugs-stage zelf: een plug met gezonde schakel-/vermogensbron maar een unavailable dag-energiesensor toont toch "Beschikbaar" terwijl de metrics "—" tonen.
+- De deck-head-telling (`countParts`) toont een lege `<span>` voor een kamer die alleen comfort of energie heeft geconfigureerd (geen lampen/openingen/plugs) — de bestaande `configuredCapabilities.length > 0`-guard dekt dit niet, want die telt capabilities, niet telbare items.
+- In `scripts/check-room-detail-browser.mjs` overschrijft de nieuwe `plugs_only_energy`-fixture per ongeluk de betekenis van de `unavailable/1440`-screenshot (`generated/room-detail/unavailable-1440.png` toont nu de plugs-only-kamer in plaats van de hoofdfixture se unavailable-coverstate) — screenshot-volgorde moet aangepast of een aparte capture toegevoegd.
+
+**Acceptatiecriteria**
+
+- Plugs-stagebadge reflecteert ook een unavailable energiesensor van een geconfigureerde plug.
+- Deck-head toont geen lege telling; ofwel de header verschijnt niet, ofwel de tellingslogica dekt ook comfort-/energie-only kamers correct af (zonder een fantasietelling te verzinnen).
+- De bestaande `unavailable-1440.png`-evidence documenteert weer wat de rest van de matrix documenteert; de plugs-only-assertie krijgt zijn eigen, apart benoemd bewijsstuk indien een screenshot nuttig is.
+
+**Validatie**
+
+`pnpm test`, `pnpm run test:browser`, `git diff --check`.
+
+---
+
+### HD-208 — Control Deck visueel afbakenen, zinloze tekst schrappen en Kamerverbruik echt combineren
+
+- **Epic:** Kamers
+- **Status:** Backlog
+- **Prioriteit:** P0
+- **Omvang:** L
+- **Eigenaar:** Rooms-agent + GUI-configagent
+- **Afhankelijkheden:** HD-206 (gemerged, `v0.8.0-alpha.23`); geen nieuwe databronnen
+
+**Doel**
+
+Vier rechtstreekse bevindingen van de eigenaar op een geannoteerde screenshot van de live `v0.8.0-alpha.23`-installatie oplossen: betekenisloze tekst in de HD-206-omkadering, een niet-afgebakende Control Deck-weergave, een Kamerverbruik-cijfer dat niet alle apparaten combineert, en een onduidelijke kamerconfiguratie in de editor.
+
+**Achtergrond**
+
+De eigenaar annoteerde `/tmp/agent-dashboard/screenshot-home-dashboard-claude-1790776578570.png` met "ZINLOOS" bij zowel de hero-ondertitel als de stage-head-titel/omschrijving. Onderzoek bevestigde: `stageHead()` herhaalt de kamernaam als `<h3>` en toont een statische, niet-kamerspecifieke omschrijving per functie; de hero-ondertitel "Status en bediening per functie" bestond al vóór HD-206 en voegt evenmin iets toe. De `.control-deck`-CSS heeft geen rand/schaduw/achtergrond die rail+inhoud als kaart omkadert zoals in de v3-mockup. Kamerverbruik telt alleen `smart_plugs`- en `room_energy`-bronnen; de oudere generieke `power_entities`-lijst (waarin bv. een airco-vermogensensor terechtkomt) wordt wel getoond maar nooit meegeteld, en de editor legt de relatie tussen beide paden nergens uit.
+
+**Scope**
+
+- `stageHead()`: de redundante `<h3>${room.name}</h3>` en de statische `stageDescription()`-zin verwijderen; alleen behouden wat echte informatie toevoegt (de statusbadge/-notitie). Hero-ondertitel "Status en bediening per functie" vervangen door iets met echte inhoud of schrappen.
+- `.control-deck` (en de bijbehorende rail/stage-structuur) krijgt een echte kaartbehandeling (rand, radius, schaduw, achtergrond) die rail + actieve stage samen omkadert als één herkenbare sectie, zoals `.deck.card` in de mockup — losstaand van kleurkeuze/thema.
+- Een bredere stylingpas tegen de mockup (spacing, kaartvorm, railknopstijl) voor zover die niet van het HA-thema/kleurenpalet afhangt.
+- **Kamerverbruik combineert voortaan alle geconfigureerde verbruikers:**
+  - Huidig vermogen ("nu"): wanneer `room_energy.power_entity` geconfigureerd is, blijft die gezaghebbend (een kamer-/circuitmeter kan de plugs en de airco al omvatten; er wordt niets bovenop opgeteld, zoals dag/maand/jaar dat al deden). Alleen wanneer er géén kamerbrede meter is, worden `smart_plugs[].power_entity` en elke generieke `power_entities`-entiteit met een numerieke W/kW-waarde samen opgeteld — met deduplicatie per entity-ID zodat niets dubbel telt.
+  - Dag-/maand-/jaartotalen: blijven beperkt tot bronnen die daadwerkelijk een periode-entiteit hebben (`room_energy`/`smart_plugs`'s `energy_day/month/year_entity`); een generieke `power_entities`-bron zonder periode-entiteit draagt bewust niet bij aan een dag-/maand-/jaarcijfer — geen fictieve periodewaarde fabriceren uit een kale huidige-vermogenlezing.
+  - Een niet-numerieke of unavailable `power_entities`-waarde wordt overgeslagen, niet als 0 geteld.
+- **Editor-duidelijkheid:** korte hulptekst bij "Overige apparaten" (power_entities) die uitlegt dat dit meetelt in het huidige vermogen maar geen dag-/maand-/jaaroverzicht geeft tenzij via Smart plugs gemapt; de Smart-plugs-sectie's 13 losse velden krijgen een duidelijkere visuele groepering (bv. basisvelden vs. energieperiodevelden) zodat niet alles als één ononderscheiden blok oogt.
+
+**Acceptatiecriteria**
+
+- Geen enkele tekst in hero/stage-head herhaalt informatie die al zichtbaar is of is louter generiek zonder kamerspecifieke betekenis.
+- Control Deck oogt als één afgebakende kaart, niet als losse rail- en stage-elementen op de paginaondergrond.
+- Kamerverbruik "nu" combineert `room_energy`, `smart_plugs` én `power_entities` zonder dubbeltelling; dag-/maand-/jaar blijven eerlijk beperkt tot bronnen met een echte periode-entiteit.
+- Geen regressie op awning-confirmation, plug-tweestapsbevestiging, roving-tabindex of de HD-206-statusbadgelogica.
+- Editor maakt het onderscheid tussen "Overige apparaten" en "Smart plugs" voor een nieuwe gebruiker begrijpelijk zonder de broncode te lezen.
+- Normal/warning/missing/unavailable blijven afgedekt in fixtures/tests; 390×844/tablet/1440 zonder overflow; 44×44 px-targets behouden.
+
+**Validatie**
+
+`pnpm test`, `pnpm run test:browser`, `git diff --check`, onafhankelijke review, bundlebudget-check tegen de D-053-grens (258 kB).
+
+---
+
+### HD-209 — Kamerafbeelding rechtstreeks kunnen uploaden
+
+- **Epic:** Kamers
+- **Status:** Backlog
+- **Prioriteit:** P1
+- **Omvang:** M
+- **Eigenaar:** GUI-configagent + Rooms-agent
+- **Afhankelijkheden:** geen; onafhankelijk van HD-208 (aparte worktree, zelfde bestanden mogelijk geraakt, sequentieel mergen)
+
+**Doel**
+
+Een kamerafbeelding kunnen uploaden vanuit de kamereditor zelf, in plaats van verplicht eerst zelf een `image.*`-entiteit te moeten aanmaken via HA Instellingen → Hulpmiddelen.
+
+**Achtergrond**
+
+Vandaag biedt `renderRoomControlDeck()` alleen een entity-picker gefilterd op domein `image` (`room.image_entity`) — de gebruiker moet dus eerst buiten het dashboard om een Image-hulpmiddel aanmaken. Home Assistant heeft sinds frontend 20251029.0 (HA 2025.11, dus al ruim binnen de minimale ondersteunde versie 2026.8.2) een natieve `media`-selector met `image_upload: true` die een upload-widget toont zonder eigen backend-code; de waarde is een `{media_content_id, media_content_type}`-paar dat via de bestaande `media_source`-resolutie naar een weergeefbare URL wordt omgezet.
+
+**Scope**
+
+- Nieuw optioneel configveld (bv. `room.image_upload: { media_content_id, media_content_type }`) naast het bestaande `image_entity` — geen vervanging, twee geldige paden naast elkaar.
+- Editor: een `<ha-selector>` met `{ media: { accept: ["image/*"], image_upload: true } }` toevoegen naast de bestaande entity-picker, met duidelijke hulptekst over het verschil (upload = eigen foto zonder HA-hulpmiddel; entity-picker = koppelen aan een al bestaande `image`-entiteit).
+- Rendering: bij het tonen van de kamerfoto eerst de upload-referentie proberen op te lossen (via de bestaande `media_source`-resolutiemethode die Home Assistant al aanbiedt), anders terugvallen op `image_entity`, anders de bestaande placeholder-illustratie uit HD-206.
+- Schema-/migratiecompatibiliteit: bestaande configuraties met alleen `image_entity` blijven ongewijzigd werken.
+
+**Acceptatiecriteria**
+
+- Een gebruiker kan een foto uploaden zonder het dashboard te verlaten of een HA-hulpmiddel aan te maken.
+- Bestaande `image_entity`-mappings blijven werken; geen enkele bestaande kamer verliest zijn foto.
+- Ontbrekende/falende resolutie van een upload-referentie toont de bestaande placeholder, nooit een kapotte afbeelding of fout zonder uitleg.
+- Normal/missing/unavailable blijven afgedekt in fixtures/tests.
+
+**Validatie**
+
+`pnpm test`, `pnpm run test:browser`, `git diff --check`, onafhankelijke review, bundlebudget-check.
+
+---
+
+### HD-210 — Bundlebudget structureel oplossen: editor lazy laden
+
+- **Epic:** Performance
+- **Status:** Klaar — PR #59 gemerged en `v0.8.0-alpha.26` getagd en gereleased op 2 oktober 2026 (release-PR #60). Geen Home Assistant-write of deployment goedgekeurd.
+- **Prioriteit:** P0
+- **Omvang:** L
+- **Eigenaar:** Performance, privacy & release-QA-agent + Foundation & HACS-agent
+- **Afhankelijkheden:** geen featurefreeze nodig voor dit specifieke, afgebakende deel van HD-171 (bouwtooling-wijziging, geen productfunctionaliteit); HD-171 zelf dekt de bredere parse/DOM/rerender-meting en blijft wel op featurefreeze wachten
+
+**Resultaat (zie [D-055](../design/decision-log.md#d-055--bundlebudget-structureel-opgelost-editor-lazy-geladen-hd-210))**
+
+Twee kandidaten gemeten vóór de keuze: esbuild `splitting: true` gaf een kleinere hoofdbundel (165 kB) maar met een gedeelde chunk (39,5 kB) die de hoofdbundel nog altijd eager importeert — effectief vrijwel dezelfde downloadkost (204,8 kB) als twee volledig zelfstandige bundles, met een slechter faalgedrag (een stale gedeelde chunk breekt het hele dashboard, niet enkel de editor). Gekozen: twee zelfstandige esbuild-bundles (`dist/home-dashboard.js` 204.856 bytes, `dist/home-dashboard-editor.js` 93.887 bytes, elk zonder statische afhankelijkheid van elkaar). Hoofdbundelbudget 260 kB → 210 kB; editor krijgt een eigen 160 kB-budget. HACS' `gather_files_to_download()`-brongedrag rechtstreeks nagelezen (downloadt alle release-assets voor een pinned plugin-repo, niet enkel het `hacs.json`-bestand) — release-workflow aangepast om de editor-chunk mee te geven. Geen regressie op awning-confirmation, plug-tweestaps, HD-206/208-statuslogica of de HD-209-fotoflow (`git diff --stat` tegen alpha.25 toont geen wijzigingen in die bestanden). `pnpm test` 118/118, volledige `pnpm run test:browser`-matrix en `git diff --check` groen, onafhankelijk herverifieerd.
+
+**Doel**
+
+De herhaalde bundlebudget-verhogingen (245 kB → 254 kB → 258 kB → 260 kB over vier Control Deck-tickets) structureel oplossen in plaats van telkens opnieuw de grens op te trekken: de grafische configuratie-editor (`src/editor/home-dashboard-editor.ts` + `fields.ts`, samen ca. 75 kB bron) wordt uit de altijd-geladen runtimebundel gehaald en pas on-demand geladen wanneer de gebruiker de dashboardconfiguratie daadwerkelijk opent — exact het patroon dat Home Assistants eigen ingebouwde kaarteditors al gebruiken ("built-in editors are lazy loaded") en dat de deliveryroadmap destijds al aankondigde ("lazy first-loadwinst wordt pas na een echte frontendmeting geclaimd").
+
+**Achtergrond (onderzocht en bevestigd vóór implementatie)**
+
+- HACS downloadt en serveert **elk bestand** in `dist/` (niet uitsluitend het in `hacs.json` genoemde bestand), dus meerdere JS-bestanden naast elkaar in `dist/` is een door HACS ondersteund, standaard patroon voor plugin-repositories.
+- `getConfigElement()` mag in Home Assistants customstrategy-/customcard-contract een Promise retourneren; asynchroon laden van de editor is het gedocumenteerde, courante patroon bij bestaande custom cards én bij HA's eigen ingebouwde editors.
+- De huidige build (`scripts/build.mjs`) gebruikt `esbuild` met `outfile` (één bestand, geen `splitting`). `src/index.ts` importeert en registreert de editor **eager** en onvoorwaardelijk, en re-exporteert editor-symbolen (`HomeDashboardStrategyEditor`, `EDITOR_COVERAGE`, `EDITOR_SECTION_KEYS`, `getEditorItemToken`, `getEditorSectionForKey`, `mergeEditorIssues`) — dat houdt de editor in de hoofdbundel ook als enkel de `customElements.define`-aanroep lazy zou worden.
+- `tests/editor-behavior.test.mjs` importeert deze symbolen vandaag rechtstreeks via `dynamic import("../dist/home-dashboard.js?...")` en destructureert ze — dit moet mee-veranderen naar een import van het nieuwe, apart gebouwde editor-chunkbestand.
+
+**Scope**
+
+- `scripts/build.mjs`: `esbuild` naar `splitting: true` + `outdir` (i.p.v. `outfile`), met gecontroleerde `entryNames`/chunkbenaming zodat het hoofdbestand exact `home-dashboard.js` blijft heten (ongewijzigd voor `hacs.json`/HA-resourceregistratie) en de editor-chunk een voorspelbare, stabiele bestandsnaam krijgt.
+- `src/strategy/home-dashboard-strategy.ts`: `getConfigElement()` wordt `async`, doet een dynamische `import("../editor/home-dashboard-editor")` (die de `customElements.define`-registratie als sideeffect uitvoert) en retourneert dan pas het element.
+- `src/index.ts`: de eager `import`/`registerHomeDashboardEditor()`-aanroep en de editor-symboolre-exports verwijderen uit het altijd-geladen pad.
+- `tests/editor-behavior.test.mjs` (en eventuele andere tests die editor-symbolen via de hoofdbundel importeren): aanpassen naar een import van het nieuwe editor-chunkbestand.
+- `tests/foundation.test.mjs`'s "dist bevat precies één HACS JavaScript-runtime-artefact"-test: bijwerken naar de nieuwe, bewust meerdere-bestanden-verwachting (hoofdbundel + editor-chunk), met een expliciete reden in de test zelf.
+- `scripts/verify-dist.mjs` en `scripts/create-release-assets.mjs`: nagaan of checksums/validatie op het juiste bestand (de hoofdbundel) blijven werken en of de editor-chunk ook een checksum verdient voor integriteit.
+- Budget: na de split een **nieuwe, lagere** harde grens voor de hoofdbundel meten en vastleggen (naast een afzonderlijke, ruimere grens voor de editor-chunk, die niet elke keer op dezelfde manier onder druk staat omdat hij niet in elke paginaweergave meetelt).
+
+**Acceptatiecriteria**
+
+- De hoofdbundel (altijd geladen, elke dashboardweergave) krimpt meetbaar doordat de editor er niet langer in zit; het exacte bytenaantal vóór/na wordt gerapporteerd.
+- De editor werkt functioneel ongewijzigd: openen van de dashboardconfiguratie laadt de editor on-demand, zonder waarneembare vertraging die de bestaande toegankelijkheids-/UX-eisen schendt.
+- Alle bestaande tests (inclusief `editor-behavior.test.mjs`) slagen tegen de nieuwe build-output, aangepast waar nodig zonder functionele dekking te verliezen.
+- `pnpm run test:browser` blijft volledig groen, inclusief het native editor-menu/GUI-configuratiepad.
+- Geen regressie op awning-confirmation, plug-tweestapsbevestiging, de HD-206/HD-208-statuslogica, of de HD-209-fotoflow.
+- Dit ticket verhoogt het bundelbudget niet verder — het verlaagt de hoofdbundel en legt een apart, eigen budget voor de editor-chunk vast.
+
+**Validatie**
+
+`pnpm test`, `pnpm run test:browser`, `git diff --check`, onafhankelijke review, en een expliciete vergelijking van het gemeten hoofdbundel-bytenaantal vóór en na de split.
 
 ---
 

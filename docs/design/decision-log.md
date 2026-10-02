@@ -363,3 +363,17 @@
 - **Manifest en release-assets:** `release-manifest.json` krijgt een `editor`-subobject (`artifact`, `sha256`) naast het bestaande top-level `artifact`-veld, dat `home-dashboard.js` als hoofdbestand blijft aanwijzen.
 - **Regressiebewaking:** `git diff --stat` tegen `v0.8.0-alpha.25` op `src/cards/home-dashboard-room-cards.ts`, `src/config/migrate.ts` en `src/config/schema-validator.ts` toont geen wijzigingen — de awning-confirmation-, smart-plug-tweestaps-, Kamerverbruik- en kamerfoto-logica uit D-052 t/m D-054 is ongemoeid. `pnpm test` (118/118) en de volledige `pnpm run test:browser`-matrix, inclusief een scenario dat de editor via de echte lazy-load-pad en devserver opent, zijn groen. `git diff --check` is schoon.
 - **Openstaand:** live Home Assistant-acceptatie en de overige HD-170/HD-205/HD-207-gates blijven afzonderlijk, ongewijzigd door deze ticket.
+
+## D-056 — 3D-printerspecialist retroactief erkend als vijfde eersteklas specialist (HD-200)
+
+- **Status:** documentatiereconciliatie, geen codewijziging; vastgelegd op 2 oktober 2026. Geen Home Assistant-write of deployment betrokken.
+- **Besluit:** de 3D-printerspecialist (reeds gemerged en uitgebracht via PR #39/#41, `v0.8.0-alpha.11`/`.12`, zie [HD-008](../planning/tickets.md#hd-008--zelfstandige-3d-printerspecialist)) wordt formeel erkend als vijfde eersteklas specialist naast Kia, robot, tuin en zwembad. `requirements.md`, `delivery-roadmap.md`, `implementation-plan.md` (Definition of Done) en `integration-strategy.md` zijn bijgewerkt om hem expliciet te noemen; vóór dit besluit stond hij nergens in de designbaseline vermeld, ook al draaide hij al in `main` en werd hij al meegetest door HD-160/HD-170.
+- **Architecturaal verschil:** anders dan de andere vier is er geen externe bronrepo-kaart. De volledige summary en detailweergave (`src/cards/home-dashboard-printer-integration.ts`) zijn native gebouwd met bestaande sectie-, tile- en picture-entity-kaarttypes. Dit is geen afwijking die gecorrigeerd moet worden — `docs/releases/testing-printer-specialist.md` documenteerde dit al bij de oorspronkelijke release — maar het ontbrak tot nu in de architectuurdocumentatie.
+- **Vijf productiegates beoordeeld tegen de native implementatie** (de gates uit de Robotstofzuiger-sectie zijn geschreven voor een bronrepo + centrale adapter en zijn hier aangepast beoordeeld, zie `integration-strategy.md`):
+  1. Relevante-state gating: **niet geïmplementeerd** — `set hass` roept onvoorwaardelijk `updateValues()` aan. Vastgelegd als een apart, geïsoleerd vervolgticket (HD-211), niet stilzwijgend binnen dit documentatieticket opgelost.
+  2. Zichtbare servicefouten: **niet van toepassing** — geen enkele servicecall in de integratie.
+  3. Confirmations voor riskante acties: **niet van toepassing**, zelfde reden.
+  4. Missing/unavailable-fallback: **bevestigd** met bestaande native fallbackteksten en fixtures.
+  5. Mobiel/toetsenbord/screenreadergedrag: **bevestigd** via de bestaande gedeelde routematrix (`scripts/check-prototype-browser.mjs`), dezelfde bewijsstandaard als bij Kia/robot/tuin.
+- **Geen bronlogica gekopieerd:** dit besluit verandert geen gedrag en kopieert geen printerlogica; het erkent alleen wat al bestond. HD-160 kan zonder documentatie-inconsistentie doorlopen.
+- **Openstaand:** [HD-211](../planning/tickets.md#hd-211--printersummary-relevante-state-gating-toevoegen) (relevante-state gating) blijft een apart ticket. Live Home Assistant-acceptatie blijft ongewijzigd een afzonderlijke gate.

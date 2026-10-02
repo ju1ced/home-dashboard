@@ -7,7 +7,7 @@
 1. Home toont binnen enkele seconden uitsluitend wat nu aandacht vraagt, primaire woningstatus en de meest gebruikte acties.
 2. Dagelijkse acties zijn direct of met maximaal één extra navigatiestap bereikbaar.
 3. De view Kamers toont alle bevestigde woon- en buitenruimtes, gegroepeerd per verdieping, met de nodige veilige quick actions en een route naar iedere detailpagina.
-4. Kia, robotstofzuiger en tuin zijn eersteklas domeinen: compacte summary plus hun volledige bestaande kaart. Zwembad krijgt een nieuwe volledige specialistische kaart in dezelfde ontwerp- en integratiefamilie.
+4. Kia, robotstofzuiger en tuin zijn eersteklas domeinen: compacte summary plus hun volledige bestaande kaart. Zwembad krijgt een nieuwe volledige specialistische kaart in dezelfde ontwerp- en integratiefamilie. De 3D-printer is een vijfde eersteklas specialist (HD-008/HD-200), met hetzelfde summary-plus-detailpatroon, maar volledig native gebouwd omdat er geen externe bronrepo-kaart bestaat.
 5. De centrale shell blijft native-first, snel, toegankelijk, responsief en fouttolerant.
 6. Publieke broncode bevat uitsluitend logische keys en fictieve fixtures.
 7. Het default dashboard blijft tijdens ontwerp, bouw en validatie read-only.
@@ -32,7 +32,7 @@ Home bevat in deze volgorde:
 4. een horizontaal scrollbare beveiligingsstrook met live-preview/fallback voor alle eigenaar-gekozen camera's, zichtbare privacystand en alarmstatus;
 5. actieve uitzonderingen en maximaal enkele echte quick actions;
 6. kamers met actieve/relevante toestand, zonder volledige kamerlijst te dupliceren;
-7. compacte Kia-, robot-, tuin- en zwembadingangen;
+7. compacte Kia-, robot-, tuin-, zwembad- en printeringangen;
 8. secundaire domeinnavigatie.
 
 Home bevat geen uitgebreide grafieken, inventarislijsten, alle batterijen, alle updates, netwerkdetails of volledige specialistische kaarten. Camera's die niet voor de Home-strook zijn geconfigureerd blijven op beveiligings- of kamerdetail.
@@ -78,7 +78,7 @@ Home bevat geen uitgebreide grafieken, inventarislijsten, alle batterijen, alle 
 ## Architectuur en dependencies
 
 - Native Heading, Tile, Badge, Visibility en Sections waar zij het probleem oplossen.
-- Beoogd eindbeeld: de drie bestaande specialistische custom cards plus een nieuw te bouwen zwembadcard. Andere dependencies vereisen meetbare UX-winst.
+- Beoogd eindbeeld: de drie bestaande specialistische custom cards plus een nieuw te bouwen zwembadcard. De 3D-printer is de uitzondering: geen externe custom card, volledig native opgebouwd omdat er geen bronrepo-kaart bestaat om naar uit te besteden. Andere dependencies vereisen meetbare UX-winst.
 - Volledige specialistische cards worden alleen op detailsubviews gerenderd.
 - Custom cards gebruiken relevante-state subscriptions/gating, `getGridOptions()`, cleanup en expliciete configfouten.
 - Alleen ondersteunde HA-themevariabelen; geen private frontendimports.
@@ -103,7 +103,7 @@ Home bevat geen uitgebreide grafieken, inventarislijsten, alle batterijen, alle 
 
 - Minimale ondersteunde versie is Home Assistant 2026.8.2, de actuele live versie op de peildatum.
 - Energie is een zelfstandige, volledige hoofdview en geen secundaire ingang onder Domeinen.
-- `Open details` voor Kia, robot en tuin opent de volledige bestaande specialistische card. Voor zwembad opent dezelfde route later de nieuwe volledige zwembadcard.
+- `Open details` voor Kia, robot en tuin opent de volledige bestaande specialistische card. Voor zwembad opent dezelfde route later de nieuwe volledige zwembadcard. Voor de 3D-printer opent `specialist-printer` native detailkaarten (printtaak, temperaturen, filament, camera) in plaats van een externe card.
 - Alle geconfigureerde camera-previews en hun afzonderlijke privacystanden blijven een cruciaal Home-onderdeel; privacy uitschakelen vereist confirmation en autorisatie in de backend.
 - De twee initiële Home-acties zijn `Avondscene` en het expliciet gemapte script `Lichten beneden uit`; zonder goedgekeurde mapping wordt een actie verborgen.
 - Diagnostiek en beheer gaan naar een afzonderlijk `require_admin`-dashboard.
