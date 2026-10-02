@@ -408,11 +408,15 @@ Sessie-analyse op 28 september 2026 vond geen enkele decision-logregel, v4-mocku
 ### HD-205 — Verbruik en Historie op echte HA-statistics en logbook-data
 
 - **Epic:** Kamers / Energie en domeinen
-- **Status:** Backlog — menselijke privacy-/logbookgate opgelost op 2 oktober 2026 door de eigenaar ([D-058](../design/decision-log.md#d-058--hd-205-privacy--en-logbookscope-door-de-eigenaar-goedgekeurd)); implementatie mag starten.
+- **Status:** Klaar — candidate `v0.8.0-alpha.27`, lokaal geverifieerd op 2 oktober 2026 met adversariale review ([D-059](../design/decision-log.md#d-059--verbruik-en-historie-op-echte-ha-statistics-en-logbook-data-hd-205)). Geen Home Assistant-write of deployment goedgekeurd.
 - **Prioriteit:** P2
 - **Omvang:** XL
 - **Eigenaar:** Rooms-agent + Energy & domains-agent
 - **Afhankelijkheden:** HD-204 (gemerged)
+
+**Resultaat**
+
+Verbruik-tab krijgt een echt dagstaafdiagram per apparaat naast de bestaande periodekaarten; Historie-tab is herbouwd van een per-entiteit `history-graph`-dialoog naar een volwaardig tabblad met temperatuur-/luchtvochtigheidslijngrafiek en strikt gefilterd logboek (max 50, nooit woningbreed). Alle vijf D-058-punten nageleefd. Eén reële bug gevonden tijdens bouw (kamerentiteit-expansiemismatch tussen `render()` en de nieuwe WS-laders) en één tijdens onafhankelijke review (een server-geleverde ruwe entity_id in het logboek-`name`-veld) — beide gefixt met gerichte, niet-vacuüme tests. Hoofdbundelbudget 210 kB → 213 kB (D-059, eerste verhoging sinds D-055).
 
 **Doel**
 

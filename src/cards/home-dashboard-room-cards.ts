@@ -34,7 +34,7 @@ interface CustomCardMetadata {
   preview?: boolean;
 }
 
-type DeviceRole = "light" | "cover" | "climate" | "media" | "comfort" | "safety" | "camera" | "power" | "history";
+type DeviceRole = "light" | "cover" | "climate" | "media" | "comfort" | "safety" | "camera" | "power";
 type DevicePresentation = { entity: string; icon: string; label: string; value: string; tone: "normal" | "active" | "warning" | "unavailable" };
 type DetailKind = "light" | "cover" | "media" | "climate" | "plug";
 type DetailCommand = "toggle" | "open" | "stop" | "close" | "set_temperature" | "set_brightness";
@@ -132,13 +132,17 @@ function friendlyName(state: StateLike | undefined, fallback: string): string {
   return typeof state?.attributes?.friendly_name === "string" ? state.attributes.friendly_name : fallback;
 }
 
+function formatDateTime(date: Date): string {
+  return `${date.toLocaleDateString("nl-BE")} ${date.toLocaleTimeString("nl-BE", { hour: "2-digit", minute: "2-digit" })}`;
+}
+
 function sourceContext(state: StateLike | undefined, fallback: string): string {
   const source = friendlyName(state, fallback);
   const updated = state?.last_updated ? new Date(state.last_updated) : undefined;
   const ageMinutes = updated && Number.isFinite(updated.getTime()) ? Math.max(0, Math.floor((Date.now() - updated.getTime()) / 60_000)) : undefined;
   const freshness = ageMinutes === undefined ? "versheid onbekend" : ageMinutes < 15 ? "recent" : ageMinutes < 1_440 ? `${Math.floor(ageMinutes / 60)} uur oud` : `${Math.floor(ageMinutes / 1_440)} dagen oud`;
   const updateText = updated && Number.isFinite(updated.getTime())
-    ? `bijgewerkt ${updated.toLocaleDateString("nl-BE")} ${updated.toLocaleTimeString("nl-BE", { hour: "2-digit", minute: "2-digit" })} · ${freshness}`
+    ? `bijgewerkt ${formatDateTime(updated)} · ${freshness}`
     : "update en versheid onbekend";
   return `Bron: ${source} · ${updateText}`;
 }
@@ -164,6 +168,60 @@ function actionable(state: StateLike | undefined): boolean {
   return Boolean(state?.state && !["unknown", "unavailable"].includes(state.state));
 }
 
+/** HD-205: true only for a genuine temperature or humidity sensor, never a bare "%" (which would also
+ * match battery/humidifier-target sensors with no device_class). */
+function isTemperatureOrHumiditySensor(state: StateLike | undefined): boolean {
+  const deviceClass = state?.attributes?.device_class;
+  if (deviceClass === "temperature" || deviceClass === "humidity") return true;
+  const unit = state?.attributes?.unit_of_measurement;
+  return unit === "°C" || unit === "°F";
+}
+
+/** HD-205/D-058 point 4: the Historie line graph is temperature/humidity only. `room.history_entities`
+ * is a generic "Overige historie" bucket in the editor (not climate-scoped), so it is filtered at
+ * runtime by device_class/unit; `hvac.history_entities` is editor-labelled "Klimaathistorie" but not
+ * schema-enforced, so it gets the same defensive filter. `temperature_history_entity` is always
+ * included unfiltered: it is named for exactly this purpose, and an unavailable state loses its
+ * device_class/unit attributes entirely -- filtering it out would make a dead sensor silently
+ * disappear instead of showing "niet beschikbaar". */
+export function temperatureHumidityEntities(hass: HomeAssistantLike | undefined, room: RoomConfig): string[] {
+  const generic = [...room.history_entities, ...room.hvac.history_entities].filter((entity) => isTemperatureOrHumiditySensor(hass?.states?.[entity]));
+  return [...new Set([room.temperature_history_entity, ...generic].filter((value): value is string => Boolean(value)))];
+}
+
+export type LogbookEntryLike = { when: number; entity_id?: string; name?: string; domain?: string };
+
+/** HD-205/D-058 points 1+2: never a house-wide call -- only entities already explicitly mapped in
+ * `allowedEntities` (the room's own `roomEntities()`) are eligible, domains that are never a legitimate
+ * room device (automation/script/scene) are dropped defensively even though they should already be
+ * excluded by the allowlist, and the result is newest-first and hard-capped at 50. Free-text `message`
+ * is deliberately never surfaced by the caller -- only the resolved name/state -- so no automation-internal
+ * detail can leak into the room's event list. */
+export function filterRoomLogbookEvents(entries: readonly LogbookEntryLike[], allowedEntities: readonly string[], limit = 50): LogbookEntryLike[] {
+  const allowed = new Set(allowedEntities);
+  return entries
+    .filter((entry) => entry.entity_id && allowed.has(entry.entity_id) && !["automation", "script", "scene"].includes(entry.domain ?? ""))
+    .slice()
+    .sort((a, b) => b.when - a.when)
+    .slice(0, limit);
+}
+
+type StatisticsPeriod = "day" | "month" | "year";
+const STATISTICS_PERIOD_SPAN: Record<StatisticsPeriod, number> = { day: 7 * 86_400_000, month: 365 * 86_400_000, year: 5 * 365 * 86_400_000 };
+
+export type StatisticBucket = { start: number; value: number | undefined };
+
+/** Extracts one statistic_id's bucketed series from a `recorder/statistics_during_period` response.
+ * `undefined` (not an empty array) means the key is entirely absent from the response -- the HA-documented
+ * signal that this source has no long-term statistics at all (see D-205 verification notes); an empty
+ * array means it does have long-term statistics but none fall in this window. Callers must keep those two
+ * cases visually distinct and never substitute a fabricated zero for either. */
+export function extractStatisticSeries(response: unknown, statisticId: string): StatisticBucket[] | undefined {
+  const rows = (response as Record<string, Array<{ start: number; sum?: number | null; state?: number | null }>> | null | undefined)?.[statisticId];
+  if (!rows) return undefined;
+  return rows.map((row) => ({ start: row.start, value: row.sum ?? row.state ?? undefined }));
+}
+
 function entityIcon(entity: string, state?: StateLike): string {
   const configuredIcon = state?.attributes?.icon;
   if (typeof configuredIcon === "string" && configuredIcon) return configuredIcon;
@@ -178,7 +236,7 @@ function entityIcon(entity: string, state?: StateLike): string {
 function roleFallback(role: DeviceRole, index = 0): string {
   const labels: Record<DeviceRole, string> = {
     light: "Verlichting", cover: "Cover", climate: "Klimaat", media: "Media", comfort: "Comfortsensor",
-    safety: "Veiligheid", camera: "Camera", power: "Energie", history: "Historie"
+    safety: "Veiligheid", camera: "Camera", power: "Energie"
   };
   return index > 0 ? `${labels[role]} ${index + 1}` : labels[role];
 }
@@ -424,11 +482,21 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
   private actionFeedback = new Map<string, { tone: "pending" | "success" | "error"; message: string; sequence: number }>();
   private activeDetailTab: "devices" | "energy" | "history" = "devices";
   private activeEnergyPeriod: "day" | "month" | "year" = "day";
+  private activeHistoryWindow: "24h" | "7d" | "30d" = "24h";
   private selectedCapability: RoomCapabilityStage | undefined;
   /** media_content_id -> resolved servable URL (or undefined once resolved-but-genuinely-empty), cached for the component's lifetime. Only written once a real media_source/resolve_media request has actually settled. */
   private photoCache = new Map<string, string | undefined>();
   /** media_content_id's currently awaiting a media_source/resolve_media response, kept separate from photoCache so a render before `hass`/connection is available (or a rejected request) never gets permanently mistaken for a cached result. */
   private photoInFlight = new Set<string>();
+  /** HD-205: request-key -> settled `recorder/statistics_during_period` / `history/history_during_period` /
+   * `logbook/get_events` response, cached the same way as `photoCache` (never caches a rejection, so a lost
+   * connection retries on the next real `hass` assignment or period/window change instead of being stuck). */
+  private statisticsCache = new Map<string, unknown>();
+  private statisticsInFlight = new Set<string>();
+  private historyCache = new Map<string, unknown>();
+  private historyInFlight = new Set<string>();
+  private logbookCache = new Map<string, unknown>();
+  private logbookInFlight = new Set<string>();
 
   public setConfig(config: RoomDetailConfig): void {
     if (!config.room?.key) throw new Error("Kamer ontbreekt.");
@@ -436,9 +504,13 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     this.config = config;
     this.activeDetailTab = "devices";
     this.activeEnergyPeriod = "day";
+    this.activeHistoryWindow = "24h";
     this.selectedCapability = undefined;
     this.pendingActions.clear();
     this.actionFeedback.clear();
+    this.statisticsCache.clear(); this.statisticsInFlight.clear();
+    this.historyCache.clear(); this.historyInFlight.clear();
+    this.logbookCache.clear(); this.logbookInFlight.clear();
     applyDashboardPalette(this, config.palette, config.theme_mode);
     this.signature = "";
     this.render();
@@ -455,7 +527,13 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     // again on every reconnect, so a real resolution attempt must be retried here too -- not only when the
     // room's state signature happens to change -- or a room whose entities never change state would never
     // get its photo resolved once a real connection becomes available.
-    if (this.config?.room) this.loadRoomPhoto(this.config.room);
+    if (this.config?.room) {
+      this.loadRoomPhoto(this.config.room);
+      const expanded = this.expandRoom(this.config.room);
+      this.loadStatistics(expanded);
+      this.loadHistory(expanded);
+      this.loadLogbook(expanded);
+    }
     this.shadowRoot?.querySelectorAll<LovelaceCardElement>(".embedded-card > *").forEach(card => { card.hass = value; });
   }
 
@@ -590,6 +668,234 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     }
   }
 
+  /** HD-205: generic cached WS request, mirroring `loadRoomPhoto`'s `media_source/resolve_media` pattern --
+   * a rejection or a missing connection is never cached, so the next real `hass` assignment (reconnect) or an
+   * explicit reload after a period/window change retries instead of getting stuck; a settled response
+   * (including a genuinely empty one) is cached for the component's lifetime under `key`. */
+  private cacheKey(room: RoomConfig, variant: string, ids: readonly string[]): string {
+    return `${room.key}:${variant}:${ids.join(",")}`;
+  }
+
+  private loadWsResult(cache: Map<string, unknown>, inFlight: Set<string>, key: string, message: Record<string, unknown>): void {
+    if (cache.has(key) || inFlight.has(key)) return;
+    const connection = this.currentHass?.connection;
+    if (typeof connection?.sendMessagePromise !== "function") return;
+    inFlight.add(key);
+    const generation = this.generation;
+    const roomKey = this.config?.room.key;
+    let request: Promise<unknown>;
+    try { request = connection.sendMessagePromise(message); } catch { request = Promise.reject(); }
+    void request.then((response) => {
+      inFlight.delete(key);
+      cache.set(key, response);
+      if (generation === this.generation && roomKey === this.config?.room.key && this.isConnected) this.render(true);
+    }, () => {
+      inFlight.delete(key);
+      if (generation === this.generation && roomKey === this.config?.room.key && this.isConnected) this.render(true);
+    });
+  }
+
+  /** Reuses the exact same day/month/year period + per-source entity selection as `energyPeriodGroup()`
+   * (D-058 point 3: no new period convention) so the bar chart always matches whichever single-number card
+   * is currently shown. */
+  private energyStatisticSources(room: RoomConfig): Array<{ name: string; entity: string }> {
+    const period = this.activeEnergyPeriod;
+    const roomEntity = period === "day" ? room.room_energy?.day_entity : period === "month" ? room.room_energy?.month_entity : room.room_energy?.year_entity;
+    const sources: Array<{ name: string; entity: string }> = [];
+    if (roomEntity) sources.push({ name: `${room.name} totaal`, entity: roomEntity });
+    (room.smart_plugs ?? []).forEach((plug) => {
+      const entity = period === "day" ? plug.energy_day_entity : period === "month" ? plug.energy_month_entity : plug.energy_year_entity;
+      if (entity) sources.push({ name: plug.name, entity });
+    });
+    return sources;
+  }
+
+  private loadStatistics(room: RoomConfig): void {
+    const sources = this.energyStatisticSources(room);
+    if (!sources.length) return; // nothing mapped: never issue an empty recorder call
+    const period = this.activeEnergyPeriod;
+    const key = this.cacheKey(room, period, sources.map((source) => source.entity));
+    const start = new Date(Date.now() - STATISTICS_PERIOD_SPAN[period]).toISOString();
+    this.loadWsResult(this.statisticsCache, this.statisticsInFlight, key, { type: "recorder/statistics_during_period", start_time: start, statistic_ids: sources.map((source) => source.entity), period, types: ["sum", "state"] });
+  }
+
+  private historyWindowMs(): number {
+    return this.activeHistoryWindow === "24h" ? 86_400_000 : this.activeHistoryWindow === "7d" ? 7 * 86_400_000 : 30 * 86_400_000;
+  }
+
+  private loadHistory(room: RoomConfig): void {
+    const entities = temperatureHumidityEntities(this.currentHass, room);
+    if (!entities.length) return; // HD-205/D-058 point 4 scope: nothing temperature/humidity-shaped mapped
+    const key = this.cacheKey(room, this.activeHistoryWindow, entities);
+    const start = new Date(Date.now() - this.historyWindowMs()).toISOString();
+    this.loadWsResult(this.historyCache, this.historyInFlight, key, { type: "history/history_during_period", start_time: start, entity_ids: entities, minimal_response: true, no_attributes: true });
+  }
+
+  /** D-058 point 1: `entity_ids` is always this room's own, already-mapped `roomEntities()` -- never
+   * `device_ids`, and the call is skipped entirely (not sent with an empty filter, which the HA frontend
+   * itself treats as "no filter" i.e. house-wide) when that list is empty. */
+  private loadLogbook(room: RoomConfig): void {
+    const entities = roomEntities(room);
+    if (!entities.length) return;
+    const key = this.cacheKey(room, this.activeHistoryWindow, entities);
+    const start = new Date(Date.now() - this.historyWindowMs()).toISOString();
+    this.loadWsResult(this.logbookCache, this.logbookInFlight, key, { type: "logbook/get_events", start_time: start, entity_ids: entities });
+  }
+
+  /** Builds a static, non-interactive chart SVG from a trusted inner-markup string (bar rects or line
+   * polylines assembled below from numbers only, never from entity-derived text) via `innerHTML`, which is
+   * materially more compact than one `createElementNS`/`setAttribute` call per shape. */
+  private chartSvg(inner: string, viewBoxWidth: number): SVGSVGElement {
+    const holder = document.createElement("div");
+    holder.innerHTML = `<svg viewBox="0 0 ${viewBoxWidth} 56" class="stat-svg" aria-hidden="true">${inner}</svg>`;
+    return holder.firstElementChild as unknown as SVGSVGElement;
+  }
+
+  private emptyGroup(title: string, message: string): HTMLElement {
+    return group(title, element("p", "info unavailable", message));
+  }
+
+  /** `title`/`ariaLabel` describe the figure; `body` is either the chart element or a plain fallback
+   * message (never a fabricated chart for missing/empty/loading data -- D-058 point 5). */
+  private statFigure(title: string, body: HTMLElement | SVGSVGElement | string, ariaLabel: string): HTMLElement {
+    const figure = element("figure", "energy-comparison");
+    figure.setAttribute("role", "img");
+    figure.setAttribute("aria-label", ariaLabel);
+    figure.append(element("figcaption", "", title), typeof body === "string" ? element("small", "", body) : body);
+    return figure;
+  }
+
+  private statisticBarsSvg(series: StatisticBucket[]): SVGSVGElement {
+    const max = Math.max(...series.map((bucket) => bucket.value ?? 0), 0);
+    const bars = series.map((bucket, index) => {
+      const x = index * 16 + 3;
+      if (bucket.value === undefined) return `<rect x="${x}" y="50" width="10" height="4" class="stat-bar-missing"/>`;
+      const height = max > 0 ? Math.max((bucket.value / max) * 52, 2) : 2;
+      return `<rect x="${x}" y="${54 - height}" width="10" height="${height}" class="stat-bar"/>`;
+    }).join("");
+    return this.chartSvg(bars, series.length * 16);
+  }
+
+  /** The Verbruik tab's day-by-day/month-by-month/year-by-year bar chart per device, alongside (not
+   * replacing) `energyPeriodGroup()`'s single-number cards. Absent vs. empty vs. loading/unavailable are
+   * kept visually distinct per bucket and per source -- never a fabricated zero (D-058 point 5). */
+  private energyStatisticsChart(room: RoomConfig): HTMLElement | undefined {
+    const sources = this.energyStatisticSources(room);
+    if (!sources.length) return undefined;
+    const period = this.activeEnergyPeriod;
+    const periodLabel = period === "day" ? "dag" : period === "month" ? "maand" : "jaar";
+    const key = this.cacheKey(room, period, sources.map((source) => source.entity));
+    const response = this.statisticsCache.get(key);
+    if (response === undefined) return this.emptyGroup(`Verbruik per ${periodLabel}`, "Historische verbruiksstatistiek wordt geladen of is niet beschikbaar.");
+    const wrapper = element("div", "energy-grid");
+    sources.forEach(({ name, entity }) => {
+      const series = extractStatisticSeries(response, entity);
+      wrapper.append(
+        !series ? this.statFigure(name, "Geen langetermijnstatistiek voor deze bron.", `${name}: geen langetermijnstatistiek beschikbaar.`)
+          : !series.length ? this.statFigure(name, `Geen data voor deze ${periodLabel}periode.`, `${name}: geen data in deze periode.`)
+            : this.statFigure(name, this.statisticBarsSvg(series), `${name}, ${periodLabel}-staafdiagram: ${series.map((bucket) => bucket.value !== undefined ? `${bucket.value.toLocaleString("nl-BE")} kWh` : "geen data").join("; ")}.`)
+      );
+    });
+    return group(`Verbruik per ${periodLabel}`, wrapper);
+  }
+
+  private historyLineSvg(series: Array<{ points: Array<{ t: number; v: number }> }>, minV: number, maxV: number, startMs: number, endMs: number): SVGSVGElement {
+    const span = Math.max(endMs - startMs, 1);
+    const lines = series.map((entry, index) => {
+      const points = entry.points.map((point) => `${((point.t - startMs) / span * 200).toFixed(1)},${(maxV > minV ? 54 - (point.v - minV) / (maxV - minV) * 52 : 27).toFixed(1)}`).join(" ");
+      return `<polyline points="${points}" class="${index === 0 ? "stat-line" : "stat-line-alt"}"/>`;
+    }).join("");
+    return this.chartSvg(lines, 200);
+  }
+
+  /** The Historie tab's temperature/humidity line graph (D-058 point 4: temperature/humidity only, power
+   * stays exclusively on Verbruik). Temperature and humidity get separate charts since they are different
+   * scales; never a flat fabricated line when a source has no recorded points in the window. */
+  private historyChart(room: RoomConfig): HTMLElement {
+    const entities = temperatureHumidityEntities(this.currentHass, room);
+    const title = "Temperatuur & luchtvochtigheid";
+    if (!entities.length) return this.emptyGroup(title, "Geen temperatuur- of vochtigheidsbron geconfigureerd voor deze kamer.");
+    const key = this.cacheKey(room, this.activeHistoryWindow, entities);
+    const response = this.historyCache.get(key);
+    if (response === undefined) return this.emptyGroup(title, "Historiegegevens worden geladen of zijn niet beschikbaar.");
+    const wrapper = element("div", "energy-grid");
+    const temp: Array<{ name: string; points: Array<{ t: number; v: number }> }> = [];
+    const humidity: typeof temp = [];
+    entities.forEach((entity) => {
+      const state = this.currentHass?.states?.[entity];
+      const rows = (response as Record<string, Array<{ s?: string; lu: number }>> | null | undefined)?.[entity];
+      const points = (rows ?? []).map((row) => ({ t: row.lu * 1000, v: Number(row.s) })).filter((point) => Number.isFinite(point.v));
+      const isHumidity = state?.attributes?.device_class === "humidity";
+      (isHumidity ? humidity : temp).push({ name: friendlyName(state, isHumidity ? "Luchtvochtigheid" : "Temperatuur"), points });
+    });
+    ([["Temperatuur (°C)", temp], ["Luchtvochtigheid (%)", humidity]] as const).forEach(([label, series]) => {
+      if (!series.length) return;
+      const withData = series.filter((entry) => entry.points.length > 0);
+      if (!withData.length) {
+        wrapper.append(this.statFigure(label, "Geen data in dit venster.", `${label}: geen data in dit venster.`));
+        return;
+      }
+      const allValues = withData.flatMap((entry) => entry.points.map((point) => point.v));
+      const allPoints = withData.flatMap((entry) => entry.points.map((point) => point.t));
+      const chart = this.historyLineSvg(withData, Math.min(...allValues), Math.max(...allValues), Math.min(...allPoints), Math.max(...allPoints));
+      const figure = this.statFigure(label, chart, `${label}: ${withData.map((entry) => `${entry.name} van ${entry.points[0]!.v} tot ${entry.points[entry.points.length - 1]!.v}`).join("; ")}.`);
+      figure.append(element("small", "energy-comparison-note", withData.map((entry) => entry.name).join(" · ")));
+      wrapper.append(figure);
+    });
+    return group(title, wrapper);
+  }
+
+  /** The Historie tab's chronological event list: newest first, hard-capped at 50 (D-058 point 2), and
+   * strictly limited to this room's own already-mapped entities via `filterRoomLogbookEvents()` (D-058
+   * point 1) -- never the raw entity_id or free-text message, only the resolved name and timestamp. */
+  private logbookList(room: RoomConfig): HTMLElement {
+    const entities = roomEntities(room);
+    const title = "Gebeurtenissen";
+    if (!entities.length) return this.emptyGroup(title, "Geen gemapte entiteiten voor het gebeurtenissenlogboek.");
+    const key = this.cacheKey(room, this.activeHistoryWindow, entities);
+    const response = this.logbookCache.get(key);
+    if (response === undefined) return this.emptyGroup(title, "Logboek wordt geladen of is niet beschikbaar.");
+    const events = filterRoomLogbookEvents((response as LogbookEntryLike[] | null | undefined) ?? [], entities);
+    if (!events.length) return this.emptyGroup(title, "Geen gebeurtenissen in dit venster.");
+    const list = element("div", "info-list");
+    events.forEach((entry) => {
+      // Never fall back to the raw entity_id here: a resolved name/friendly_name, or else a generic label.
+      // entry.name comes straight from HA's own logbook response — some HA versions have been known to put the
+      // entity_id itself in this field when no friendly name was ever set, so it's checked rather than trusted.
+      const serverName = entry.name && !/^[a-z_]+\.[a-z0-9_]+$/.test(entry.name) ? entry.name : undefined;
+      const name = serverName || friendlyName(entry.entity_id ? this.currentHass?.states?.[entry.entity_id] : undefined, "Onbekende bron");
+      list.append(element("div", "info", `${name} · ${formatDateTime(new Date(entry.when * 1000))}`));
+    });
+    return group(title, list);
+  }
+
+  private selectorGroup(ariaLabel: string, keyPrefix: string, options: ReadonlyArray<readonly [string, string, boolean, () => void]>): HTMLElement {
+    const selector = element("div", "period-selector");
+    selector.setAttribute("role", "group");
+    selector.setAttribute("aria-label", ariaLabel);
+    options.forEach(([value, label, pressed, onClick]) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = label;
+      button.setAttribute("aria-pressed", String(pressed));
+      button.dataset.controlKey = `${keyPrefix}:${value}`;
+      button.addEventListener("click", onClick);
+      selector.append(button);
+    });
+    return selector;
+  }
+
+  private historyWindowSelector(room: RoomConfig): HTMLElement {
+    const labels = { "24h": "24 uur", "7d": "7 dagen", "30d": "30 dagen" } as const;
+    return this.selectorGroup("Historieperiode", "history-window", (["24h", "7d", "30d"] as const).map((value) => [value, labels[value], this.activeHistoryWindow === value, () => { this.activeHistoryWindow = value; this.loadHistory(room); this.loadLogbook(room); this.render(true); }]));
+  }
+
+  private historyPanel(room: RoomConfig): HTMLElement {
+    const panel = element("div", "room-column energy");
+    panel.append(this.historyWindowSelector(room), this.historyChart(room), this.logbookList(room));
+    return panel;
+  }
+
   private command(label: string, entity: string, kind: DetailKind, command: DetailCommand, data: Record<string, unknown> = {}): HTMLButtonElement {
     const button = document.createElement("button");
     button.type = "button";
@@ -627,21 +933,15 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     return button;
   }
 
-  private informationGroup(titleText: string, sources: Array<[string, DeviceRole]>, keyPrefix = titleText): HTMLElement | undefined {
+  private informationGroup(titleText: string, sources: Array<[string, DeviceRole]>): HTMLElement | undefined {
     const unique = sources.filter(([entity]) => entity);
     if (!unique.length) return undefined;
     const list = element("div", "info-list");
     unique.forEach(([entity, role], index) => {
       const presentation = devicePresentation(this.currentHass, entity, role, index);
-      const row = document.createElement(titleText === "Historie" ? "button" : "div"); row.className = `${titleText === "Historie" ? "history-card" : "info"} ${presentation.tone}`;
+      const row = element("div", `info ${presentation.tone}`);
       row.setAttribute("aria-label", `${presentation.label}: ${presentation.value}`);
       row.textContent = `${presentation.label} · ${presentation.value}`;
-      if (titleText === "Historie") {
-        (row as HTMLButtonElement).type = "button";
-        row.dataset.historyEntity = entity;
-        row.dataset.controlKey = `${keyPrefix}:${entity}:${index}`;
-        row.addEventListener("click", () => this.openHistory(entity, row.dataset.controlKey!));
-      }
       list.append(row);
     });
     return group(titleText, list);
@@ -903,8 +1203,10 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     const stage = element("div", "stage-body");
     const power = this.informationGroup("Apparaten & energie", room.power_entities.map((entity): [string, DeviceRole] => [entity, "power"]));
     const periodEnergy = this.energyPeriodGroup(room);
+    const statisticsChart = this.energyStatisticsChart(room);
     if (power) stage.append(power);
     if (periodEnergy) stage.append(periodEnergy);
+    if (statisticsChart) stage.append(statisticsChart);
     if (!stage.childElementCount) stage.append(element("p", "info unavailable", "Geen verbruiksgegevens geconfigureerd voor deze kamer."));
     return stage;
   }
@@ -950,18 +1252,7 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     const wrapper = element("div", "energy-period energy-period-card");
     const periods = [["day", "Vandaag"], ["month", "Maand"], ["year", "Jaar"]] as const;
     const periodLabel = periods.find(([period]) => period === this.activeEnergyPeriod)?.[1] ?? "Periode";
-    const selector = element("div", "period-selector");
-    selector.setAttribute("role", "group");
-    selector.setAttribute("aria-label", "Energieperiode");
-    periods.forEach(([period, label]) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.textContent = label;
-      button.setAttribute("aria-pressed", String(this.activeEnergyPeriod === period));
-      button.dataset.controlKey = `energy-period:${period}`;
-      button.addEventListener("click", () => { this.activeEnergyPeriod = period; this.render(true); });
-      selector.append(button);
-    });
+    const selector = this.selectorGroup("Energieperiode", "energy-period", periods.map(([period, label]) => [period, label, this.activeEnergyPeriod === period, () => { this.activeEnergyPeriod = period; this.loadStatistics(room); this.render(true); }]));
     const grid = element("div", "energy-grid");
     const roomEntity = this.activeEnergyPeriod === "day" ? room.room_energy?.day_entity : this.activeEnergyPeriod === "month" ? room.room_energy?.month_entity : room.room_energy?.year_entity;
     const roomPeriod = this.activeEnergyPeriod === "day" ? room.room_energy?.day_period : this.activeEnergyPeriod === "month" ? room.room_energy?.month_period : room.room_energy?.year_period;
@@ -1083,20 +1374,6 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     return values.map((value) => element("span", "hero-pill", value));
   }
 
-  private openHistory(entity: string, controlKey: string): void {
-    const dialog = element("dialog", "history-dialog");
-    dialog.setAttribute("aria-label", `Historie ${friendlyName(this.currentHass?.states?.[entity], "bron")}`);
-    const close = document.createElement("button"); close.type = "button"; close.className = "command"; close.textContent = "Sluiten";
-    const graph = element("div", "embedded-card");
-    close.addEventListener("click", () => dialog.close());
-    dialog.addEventListener("close", () => {
-      dialog.remove();
-      Array.from(this.shadowRoot?.querySelectorAll<HTMLElement>("[data-control-key]") ?? []).find(control => control.dataset.controlKey === controlKey)?.focus();
-    });
-    dialog.append(close, graph); this.shadowRoot?.append(dialog); dialog.showModal();
-    void this.mountCard(graph, { type: "history-graph", entities: [entity], hours_to_show: 24 });
-  }
-
   private async mountCard(host: HTMLElement, config: Record<string, unknown>): Promise<void> {
     try {
       const helpers = await window.loadCardHelpers?.();
@@ -1109,25 +1386,34 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
   }
 
 
-  private render(preserveFocus = false): void {
-    if (!this.shadowRoot || !this.config) return;
-    const focusKey = preserveFocus ? (this.shadowRoot.activeElement as HTMLElement | null)?.dataset.controlKey : undefined;
-    const sourceRoom = this.config.room;
+  /** The same light/cover/media expansion `render()` has always applied to the configured room (folding
+   * in light groups, typed cover controls and the legacy single control_* entities) before building any
+   * stage. HD-205's loaders must key their caches on this SAME expanded entity set, not the raw
+   * `this.config.room` -- `roomEntities()` (used for the logbook allowlist) reads light/cover/media
+   * entities, so a mismatch here would silently stall the Historie tab on "wordt geladen" forever (a real
+   * bug caught while writing this ticket's own browser test). */
+  private expandRoom(sourceRoom: RoomConfig): RoomConfig {
     const selectedControls = sourceRoom.control_entities ?? [];
-    const room = { ...sourceRoom,
+    return { ...sourceRoom,
       light_entities: [...new Set([...sourceRoom.light_entities, ...(sourceRoom.light_groups ?? []).flatMap((groupConfig) => [groupConfig.control_entity, ...groupConfig.member_entities]), sourceRoom.control_light_entity, ...selectedControls.filter(entity => entity.startsWith("light."))].filter((value): value is string => Boolean(value)))],
       light_switch_entities: [...new Set(sourceRoom.light_switch_entities ?? [])],
       cover_entities: [...new Set([...sourceRoom.cover_entities, ...(sourceRoom.cover_controls ?? []).map((coverConfig) => coverConfig.entity), sourceRoom.control_cover_entity, sourceRoom.control_awning_entity, ...selectedControls.filter(entity => entity.startsWith("cover."))].filter((value): value is string => Boolean(value)))],
       media_entities: [...new Set([...sourceRoom.media_entities, sourceRoom.control_media_entity, ...selectedControls.filter(entity => entity.startsWith("media_player."))].filter((value): value is string => Boolean(value)))]
     };
+  }
+
+  private render(preserveFocus = false): void {
+    if (!this.shadowRoot || !this.config) return;
+    const focusKey = preserveFocus ? (this.shadowRoot.activeElement as HTMLElement | null)?.dataset.controlKey : undefined;
+    const room = this.expandRoom(this.config.room);
     const style = document.createElement("style");
     style.textContent = `
       ${roomStyles}
       .detail,.control-deck,.room-layout-primary,.room-column,.mushroom-controls,.group,.detail-panel,.stage,.stage-body{display:grid;gap:18px;min-width:0;align-content:start}.detail{width:100%}.control-deck{grid-template-columns:minmax(150px,.24fr) minmax(0,1fr);gap:12px;padding:14px;border:1px solid var(--divider-color);border-radius:18px;background:var(--room-surface);box-shadow:0 1px 2px rgb(20 35 28/.06),0 7px 24px rgb(20 35 28/.035);overflow:hidden}.capability-rail{display:grid;gap:7px;align-content:start}.capability-rail button,.detail-tabs button{min-height:44px;border:1px solid var(--divider-color);border-radius:11px;padding:9px 12px;background:var(--room-surface);color:var(--primary-text-color);font:inherit;text-align:left}.capability-rail button[aria-selected=true],.detail-tabs button[aria-selected=true]{border-color:var(--primary-color);background:color-mix(in srgb,var(--primary-color) 10%,var(--room-surface));color:var(--primary-color);font-weight:700}.deck-content{display:grid;gap:12px;min-width:0}.detail-tabs{display:flex;gap:7px;overflow-x:auto}.detail-tabs button{flex:1 0 auto;text-align:center}.detail-panel[hidden]{display:none}.room-layout-primary{grid-template-columns:1.2fr .8fr .7fr}.group{gap:10px}.group-heading{min-height:32px;display:flex;align-items:center}.details-card{display:grid}
       .info-list,.mushroom-grid,.plug-grid,.energy-grid,.group-grid,.device-grid,.cover-grid,.comfort-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:9px}.energy-period{display:grid;gap:10px}.period-selector{display:flex;gap:7px;flex-wrap:wrap}.period-selector button{min-height:44px;padding:8px 13px;border:1px solid var(--divider-color);border-radius:999px;background:var(--room-surface);color:inherit}.period-selector button[aria-pressed=true]{border-color:var(--primary-color);background:var(--primary-color);color:var(--text-primary-color,#fff);font-weight:700}.energy-card{display:grid;gap:4px}.energy-comparison{display:grid;gap:9px;margin:0;padding:12px;border:1px solid var(--divider-color);border-radius:12px;background:var(--room-surface)}.energy-comparison figcaption{font-weight:700}.energy-bars{display:grid;gap:8px}.energy-bar-row{display:grid;grid-template-columns:minmax(90px,.7fr) minmax(100px,1.4fr) auto;gap:8px;align-items:center}.energy-bar-track{height:12px;border-radius:999px;background:var(--secondary-background-color);overflow:hidden}.energy-bar{display:block;width:var(--energy-share);height:100%;border-radius:inherit;background:var(--primary-color)}.energy-bar-value{font-variant-numeric:tabular-nums}.action-feedback{margin:0;padding:10px 12px;border:1px solid var(--divider-color);border-radius:12px;background:var(--room-surface)}.action-feedback.pending{border-color:var(--primary-color)}.action-feedback.success{border-color:var(--success-color,#2e7d32)}.action-feedback.error{border-color:var(--error-color,#b3261e)}
-      .info,.state-badge,.history-card,.mushroom-card,.command,.plug-lock,.history-dialog{background:var(--room-surface);color:var(--primary-text-color);border:1px solid var(--divider-color);border-radius:12px;padding:10px;font:inherit;overflow-wrap:anywhere}.info,.state-badge,.history-card,.mushroom-card{text-align:left}.warning{border-color:var(--error-color,#b3261e)}.unavailable{opacity:.72}
+      .info,.state-badge,.mushroom-card,.command,.plug-lock{background:var(--room-surface);color:var(--primary-text-color);border:1px solid var(--divider-color);border-radius:12px;padding:10px;font:inherit;overflow-wrap:anywhere}.info,.state-badge,.mushroom-card{text-align:left}.warning{border-color:var(--error-color,#b3261e)}.unavailable{opacity:.72}
       button{cursor:pointer;min-height:44px;min-width:44px}button:disabled{cursor:default;opacity:.48;background:var(--secondary-background-color)}button:focus-visible{outline:2px solid var(--primary-color);outline-offset:2px}.mushroom-card{display:grid;grid-template-columns:40px minmax(0,1fr);gap:10px;align-items:center;min-height:76px;padding:12px;border-radius:16px}.light-card.active,.light-group-card.active{border-color:var(--primary-color);background:color-mix(in srgb,var(--primary-color) 10%,var(--room-surface))}.light-group-card.mixed{border-color:color-mix(in srgb,var(--primary-color) 45%,var(--divider-color));background:color-mix(in srgb,var(--primary-color) 5%,var(--room-surface))}.mushroom-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--secondary-background-color);color:var(--primary-color)}.mushroom-copy{display:grid;gap:2px}small{color:var(--secondary-text-color)}.commands{grid-column:1/-1}.smart-plug-card{grid-template-columns:minmax(0,1fr)}.smart-plug-card.active{border-color:var(--primary-color)}.plug-lock{color:var(--primary-color);font-weight:700}
-      .room-photo{width:110px;min-height:96px;border-radius:16px;background:linear-gradient(135deg,#ffffff33,transparent),var(--hd-hero);background-size:cover;background-position:center;flex:none;display:grid;place-items:center;gap:4px;padding:8px;box-sizing:border-box;text-align:center}.room-photo ha-icon{width:32px;height:32px;opacity:.85}.room-photo-caption{font-size:.68rem;opacity:.85}.embedded-card{min-height:120px}.embedded-card:empty::before{content:"Kaart wordt geladen…"}.history-dialog{box-sizing:border-box;width:min(720px,calc(100% - 32px));padding:16px;border:0;border-radius:18px}.history-dialog::backdrop{background:#0007}
+      .room-photo{width:110px;min-height:96px;border-radius:16px;background:linear-gradient(135deg,#ffffff33,transparent),var(--hd-hero);background-size:cover;background-position:center;flex:none;display:grid;place-items:center;gap:4px;padding:8px;box-sizing:border-box;text-align:center}.room-photo ha-icon{width:32px;height:32px;opacity:.85}.room-photo-caption{font-size:.68rem;opacity:.85}.embedded-card{min-height:120px}.embedded-card:empty::before{content:"Kaart wordt geladen…"}.stat-svg{width:100%;height:56px;display:block}.stat-bar{fill:var(--primary-color)}.stat-bar-missing{fill:var(--secondary-background-color)}.stat-line{fill:none;stroke:var(--primary-color);stroke-width:2}.stat-line-alt{fill:none;stroke:var(--error-color,#b3261e);stroke-width:2}
       .hero-pills{display:flex;flex-wrap:wrap;gap:8px}.hero-pill{padding:4px 10px;border-radius:999px;background:#ffffff26;font-size:.78rem;font-weight:600}
       .deck-title{display:grid;gap:2px}
       .stage-head{align-items:flex-start}
@@ -1272,10 +1558,9 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     const energy = element("div", "room-column energy");
     const power = this.informationGroup("Apparaten & energie", room.power_entities.map((entity): [string, DeviceRole] => [entity, "power"]));
     const periodEnergy = this.energyPeriodGroup(room);
-    const history = this.informationGroup("Historie", [...room.history_entities, ...room.hvac.history_entities].map((entity): [string, DeviceRole] => [entity, "history"]));
     if (power) energy.append(power);
     if (periodEnergy) energy.append(periodEnergy);
-    if (history) panels.get("history")?.append(history);
+    panels.get("history")?.append(this.historyPanel(room));
 
     if ((room.smart_plugs?.length ?? 0) > 0) {
       const list = element("div", "info-list");
@@ -1289,11 +1574,9 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
       panels.get("devices")?.append(group("Smart plugs & energie", list));
     }
 
-    if (room.temperature_history_entity) panels.get("history")?.append(this.informationGroup("Historie", [[room.temperature_history_entity, "history"]], "Temperatuurhistorie")!);
-
     if (energy.childElementCount) panels.get("energy")?.append(energy);
     for (const [key, panel] of panels) {
-      if (!panel.childElementCount) panel.append(element("p", "info unavailable", key === "history" ? "Geen historiebronnen geconfigureerd." : "Geen gegevens voor dit onderdeel geconfigureerd."));
+      if (!panel.childElementCount) panel.append(element("p", "info unavailable", "Geen gegevens voor dit onderdeel geconfigureerd."));
     }
     deckContent.append(tabs, ...panels.values());
     detailsCard.append(deckContent);

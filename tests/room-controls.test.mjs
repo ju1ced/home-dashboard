@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { migrateConfig, favoriteRooms, roomControlSources, planRoomControl, planEntityControl, executeRoomControl, validateConfig, validateConfigSchema, getHomeStructureSignature, resolveLightGroupState } from '../dist/home-dashboard.js';
+import { migrateConfig, favoriteRooms, roomControlSources, planRoomControl, planEntityControl, executeRoomControl, validateConfig, validateConfigSchema, getHomeStructureSignature, resolveLightGroupState, extractStatisticSeries, filterRoomLogbookEvents, temperatureHumidityEntities } from '../dist/home-dashboard.js';
 
 const ref = (domain, key) => [domain, key].join('.');
 function setup() {
@@ -177,4 +177,62 @@ test('lichtgroepstatus onderscheidt uit, aan, gedeeltelijk, onbekend en onbeschi
   }, entities), 'unavailable');
   assert.equal(resolveLightGroupState({}, entities), 'unknown');
   assert.equal(resolveLightGroupState({}, []), 'unknown');
+});
+
+test('HD-205/D-058 point 4: temperatureHumidityEntities filtert de generieke history_entities-bucket op device_class/eenheid', () => {
+  const temperature = ref('sensor', 'temp'), humidity = ref('sensor', 'hum'), battery = ref('sensor', 'battery'), explicit = ref('sensor', 'explicit_temp');
+  const hass = { states: {
+    [temperature]: { state: '21', attributes: { device_class: 'temperature', unit_of_measurement: '°C' } },
+    [humidity]: { state: '55', attributes: { device_class: 'humidity', unit_of_measurement: '%' } },
+    [battery]: { state: '80', attributes: { unit_of_measurement: '%' } } // no device_class: never matched as humidity (bare "%" risk)
+  } };
+  const room = { history_entities: [temperature, humidity, battery], hvac: { history_entities: [] }, temperature_history_entity: '' };
+  assert.deepEqual(new Set(temperatureHumidityEntities(hass, room)), new Set([temperature, humidity]));
+
+  // temperature_history_entity is always included, even when its state is unavailable and has lost its
+  // device_class/unit attributes entirely -- it must never silently disappear from the Historie chart.
+  const unavailableHass = { states: { [explicit]: { state: 'unavailable', attributes: {} } } };
+  const roomWithExplicit = { history_entities: [], hvac: { history_entities: [] }, temperature_history_entity: explicit };
+  assert.deepEqual(temperatureHumidityEntities(unavailableHass, roomWithExplicit), [explicit]);
+
+  // Nothing mapped at all: an empty, well-defined result, never a crash.
+  assert.deepEqual(temperatureHumidityEntities(undefined, { history_entities: [], hvac: { history_entities: [] }, temperature_history_entity: '' }), []);
+});
+
+test('HD-205/D-058 points 1+2: filterRoomLogbookEvents houdt alleen gemapte entiteiten, dropt automation/script/scene, sorteert nieuwste eerst en cap\'t op 50', () => {
+  const mapped = ref('light', 'mapped'), outside = ref('light', 'outside_room');
+  const entries = [
+    { when: 10, entity_id: mapped, name: 'Mapped oud' },
+    { when: 30, entity_id: mapped, name: 'Mapped nieuw' },
+    { when: 20, entity_id: outside, name: 'Niet-gemapt' }, // D-058 point 1: never leaks even if the server ever returned it
+    { when: 40, entity_id: mapped, name: 'Automatisering', domain: 'automation' } // defensive domain drop
+  ];
+  const filtered = filterRoomLogbookEvents(entries, [mapped]);
+  assert.deepEqual(filtered.map((entry) => entry.name), ['Mapped nieuw', 'Mapped oud']);
+
+  // Hard cap of 50, newest first, even with far more than 50 matching events.
+  const many = Array.from({ length: 80 }, (_, index) => ({ when: index, entity_id: mapped }));
+  const capped = filterRoomLogbookEvents(many, [mapped]);
+  assert.equal(capped.length, 50);
+  assert.equal(capped[0].when, 79);
+
+  // An empty allowlist (nothing mapped) never falls back to showing anything -- mirrors the "never call
+  // with an empty filter" guard that keeps the WS call itself from ever becoming house-wide.
+  assert.deepEqual(filterRoomLogbookEvents(entries, []), []);
+});
+
+test('HD-205: extractStatisticSeries onderscheidt afwezige langetermijnstatistiek, een lege periode en echte (ook nul-)waarden', () => {
+  const withStats = ref('sensor', 'with_stats'), emptyPeriod = ref('sensor', 'empty_period'), notInResponse = ref('sensor', 'not_in_response');
+  const response = {
+    [withStats]: [{ start: 0, sum: 1.5 }, { start: 1, sum: 0 }, { start: 2 }],
+    [emptyPeriod]: []
+  };
+  // Absent key: no long-term statistics at all for this source (never shown as a fabricated zero series).
+  assert.equal(extractStatisticSeries(response, notInResponse), undefined);
+  // Present but empty: has long-term statistics, just none in this window.
+  assert.deepEqual(extractStatisticSeries(response, emptyPeriod), []);
+  // Present with real buckets: a genuine 0 (`sum: 0`) is kept distinct from a missing bucket (`sum` absent).
+  assert.deepEqual(extractStatisticSeries(response, withStats), [
+    { start: 0, value: 1.5 }, { start: 1, value: 0 }, { start: 2, value: undefined }
+  ]);
 });

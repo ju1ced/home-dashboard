@@ -40,7 +40,18 @@ const errors = [];
 // hoofdbundel na de split: 204.856 bytes. Dit lost HD-171 structureel op in
 // plaats van de grens telkens te verhogen; de editor krijgt een eigen, los
 // budget hieronder.
-const maxBundleBytes = 210_000;
+// 210_000 -> 213_000 (D-059, HD-205): echte recorder/history/logbook-koppeling
+// voor Verbruik (statistics_during_period-staafdiagram per apparaat) en Historie
+// (temperatuur/luchtvochtigheid-lijngrafiek + strikt gemapt gebeurtenissenlogboek,
+// max 50), ter vervanging van de native history-graph-fallback. Dit is de eerste
+// verhoging sinds D-055's structurele fix; de oude per-entiteit historie-dialoog
+// is verwijderd, wat ruimte teruggaf, maar de nieuwe statistics/history/logbook-
+// laadlogica (met dezelfde cache/in-flight/generation-guard-conventie als HD-209)
+// en drie onderscheiden niet-gefabriceerde statussen (laden/geen-langetermijn-
+// statistiek/geen-data) kosten netto meer. Gemeten kandidaat: 211.638 bytes
+// (na de reviewronde die een server-geleverde ruwe entity_id in het logboek-
+// `name`-veld hardened).
+const maxBundleBytes = 213_000;
 // De editor is alleen nodig voor wie de visuele configuratie-UI opent: geen
 // runtime-performancepad, dus een ruimer budget. Gemeten op 93.887 bytes na de
 // split; dit is puur een plafond om een ongemerkte opblazing te signaleren.

@@ -281,23 +281,17 @@ assert.equal(await page.locator(".smart-plug-card:not(.protected) .command").isH
 await page.getByRole("tab", { name: "Apparaten" }).focus();
 await page.keyboard.press("ArrowRight");
 assert.equal(await page.getByRole("tab", { name: "Energie" }).evaluate((tab) => tab.getRootNode().activeElement === tab && tab.tabIndex === 0), true, "arrow navigation moves focus to the active room tab");
+// HD-205: the Historie tab is a proper tab panel (temperature/humidity line graph + logbook), not a
+// per-entity dialog. The fixture's `sendMessagePromise` rejects every non-photo WS message, so the real,
+// documented contract to prove here is the explicit "niet beschikbaar" fallback -- never a fabricated
+// chart or event -- plus a working 24u/7d/30d window toggle that re-requests rather than being stuck.
 await page.getByRole("tab", { name: "Historie" }).click();
-await page.locator(".history-card").first().click();
-assert.equal(await page.getByRole("dialog", { name: /Historie/ }).count(), 1, "history dialog has an accessible name");
-await page.keyboard.press("Escape");
-await page.locator("dialog").waitFor({ state: "detached" });
-assert.equal(await page.locator("dialog").count(), 0);
-assert.equal(await page.locator(".history-card").first().evaluate((button) => button.getRootNode().activeElement === button), true, "history returns focus to its source");
-await page.locator(".history-card").first().click();
-await page.evaluate(() => {
-  const { hass, config } = window.roomFixture;
-  hass.states[config.rooms[0].control_light_entity].state = "off";
-  document.querySelector("home-dashboard-room-detail").hass = { ...hass };
-});
-assert.equal(await page.locator("dialog[open]").count(), 1, "state updates must not dismiss history");
-await page.getByRole("button", { name: "Sluiten", exact: true }).click();
-await page.locator("dialog").waitFor({ state: "detached" });
-assert.equal(await page.locator(".history-card").first().evaluate((button) => button.getRootNode().activeElement === button), true, "history returns focus after a relevant state update replaces its invoker");
+assert.equal(await page.getByRole("group", { name: "Historieperiode" }).count(), 1, "historie tab offers the shared 24u/7d/30d window selector");
+assert.equal(await page.locator('[data-control-key="history-window:24h"]').getAttribute("aria-pressed"), "true", "24u is the default window");
+assert.match(await page.locator(".details-card").textContent(), /niet beschikbaar/i, "a rejected HD-205 statistics/history/logbook call shows an explicit unavailable state, never fabricated data");
+await page.locator('[data-control-key="history-window:7d"]').click();
+assert.equal(await page.locator('[data-control-key="history-window:7d"]').getAttribute("aria-pressed"), "true", "window toggle switches without a page reload");
+assert.equal(await page.locator('[data-control-key="history-window:24h"]').getAttribute("aria-pressed"), "false", "switching window un-presses the previous one");
 await page.getByRole("tab", { name: "Energie" }).click();
 await page.getByRole("button", { name: "Vandaag", exact: true }).click();
 assert.match(await page.locator(".energy-period-card").textContent(), /Vandaag.*0\.6 kWh/s, "day period uses its explicit energy source");
@@ -404,31 +398,44 @@ await page.evaluate(() => {
   document.querySelector("home-dashboard-room-detail").hass = { ...hass };
 });
 assert.equal(await page.locator(".climate-card .command").first().isDisabled(), true, "temperature controls require climate target-temperature support");
-await open("normal", 390);
-await page.evaluate(() => { window.loadCardHelpers = async () => { throw Error("fixture helper refusal"); }; });
-await page.getByRole("tab", { name: "Historie" }).click();
-await page.locator(".history-card").first().click();
-await page.getByText("Kaart niet beschikbaar.", { exact: true }).waitFor();
-await page.getByRole("button", { name: "Sluiten", exact: true }).click();
+// HD-205 normal case: a resolving `sendMessagePromise` (the shared fixture's default mock rejects every
+// non-photo WS call so the earlier assertions could prove the fallback) proves the chart/logbook panels
+// render real, non-fabricated content once genuine statistics/history/logbook responses settle.
 await open("normal", 390);
 await page.evaluate(() => {
-  window.historyConfigs = [];
-  window.loadCardHelpers = async () => ({ createCardElement: (config) => {
-    window.historyConfigs.push(config);
-    const card = document.createElement("div"); card.textContent = "Fictieve historiekaart"; return card;
-  } });
+  const { hass, config, ref } = window.roomFixture;
+  const temperatureEntity = config.rooms[0].temperature_history_entity;
+  const outsideRoomEntity = ref("sensor", "not_mapped_to_this_room");
+  hass.states[outsideRoomEntity] = { state: "21", attributes: { friendly_name: "Niet-gemapte sensor" } };
+  hass.connection.sendMessagePromise = async (message) => {
+    if (message.type === "recorder/statistics_during_period") {
+      const result = {};
+      for (const id of message.statistic_ids) result[id] = [{ start: 0, end: 1, sum: 1.23 }];
+      return result;
+    }
+    if (message.type === "history/history_during_period") return { [temperatureEntity]: [{ s: "20", lu: 1 }, { s: "21", lu: 2 }] };
+    if (message.type === "logbook/get_events") return [
+      { when: 2, entity_id: config.rooms[0].control_light_entity, name: "Woonkamer lichten" },
+      { when: 1, entity_id: outsideRoomEntity, name: "Niet-gemapte sensor" },
+      { when: 3, entity_id: config.rooms[0].control_light_entity, domain: "automation", name: "Automatisering" },
+      // Some HA versions put the raw entity_id itself in `name` when the entity never had a friendly_name.
+      // This must never render verbatim -- the UI must fall back to a resolved/generic label instead.
+      { when: 4, entity_id: config.rooms[0].control_cover_entity, name: config.rooms[0].control_cover_entity }
+    ];
+    throw Error("fixture media_source refusal");
+  };
+  document.querySelector("home-dashboard-room-detail").hass = { ...hass };
 });
 await page.getByRole("tab", { name: "Historie" }).click();
-await page.locator(".history-card").first().click();
-assert.equal(await page.evaluate(() => window.historyConfigs[0]?.type), "history-graph", "generic history supports sources without statistics");
-await page.evaluate(() => {
-  const detail = document.querySelector("home-dashboard-room-detail");
-  detail.remove(); document.body.append(detail);
-});
-assert.equal(await page.locator("dialog").count(), 0, "disconnect cleans up history");
-await page.locator(".history-card").first().click();
-await page.evaluate(() => document.querySelector("home-dashboard-room-detail").setConfig({ room: window.roomFixture.config.rooms[0] }));
-assert.equal(await page.locator("dialog").count(), 0, "configuration changes clean up history");
+await page.waitForFunction(() => !document.querySelector("home-dashboard-room-detail").shadowRoot.querySelector(".details-card")?.textContent?.includes("wordt geladen"));
+assert.match(await page.locator(".details-card").textContent(), /Woonkamer totaal|Mediahoek|Netwerkhoek/, "the Verbruik bar chart renders a real per-device statistics series");
+assert.equal(await page.locator(".details-card svg.stat-svg").count() > 0, true, "HD-205 renders inline SVG charts, never a fabricated native history-graph card");
+assert.match(await page.locator(".details-card").textContent(), /Woonkamer lichten/, "the logbook list shows the room's own mapped entity");
+assert.doesNotMatch(await page.locator(".details-card").textContent(), /Niet-gemapte sensor/, "an entity outside this room's own mapping never leaks into its logbook (D-058 point 1)");
+await page.evaluate(() => { window.roomFixtureCoverEntity = window.roomFixture.config.rooms[0].control_cover_entity; });
+const detailsCardText = await page.locator(".details-card").textContent();
+const rawCoverEntityId = await page.evaluate(() => window.roomFixtureCoverEntity);
+assert.doesNotMatch(detailsCardText, new RegExp(rawCoverEntityId.replace(".", "\\.")), "a raw entity_id in the logbook server response's own name field never renders verbatim; a resolved or generic label is used instead");
 await open("normal", 390);
 await selectCapability("Verlichting");
 await page.evaluate(() => {
@@ -548,7 +555,10 @@ const unusablePhotoBefore = await page.evaluate(async () => {
 });
 assert.equal(unusablePhotoBefore.ariaHidden, "true", "a never-resolving media_content_id falls back to the placeholder instead of crashing");
 assert.equal(unusablePhotoBefore.role, null, "a never-resolving media_content_id never gets role=img");
-assert.equal(unusablePhotoBefore.resolveCount, 1, "the first connection assignment attempts exactly one resolve");
+// HD-205: the same `hass` assignment that attempts the photo resolve also attempts this room's logbook
+// fetch (`roomEntities()` -- the logbook allowlist -- includes `image_entity`, the only entity this
+// fixture room maps), so two WS calls go out per assignment now, not one.
+assert.equal(unusablePhotoBefore.resolveCount, 2, "the first connection assignment attempts exactly one media_source/resolve_media and one logbook/get_events call");
 assert.deepEqual(errors, []);
 const unusablePhotoAfterReconnect = await page.evaluate(async () => {
   const fixture = window.roomFixture;
@@ -562,7 +572,7 @@ const unusablePhotoAfterReconnect = await page.evaluate(async () => {
 });
 assert.equal(unusablePhotoAfterReconnect.ariaHidden, "true", "after reconnect, the still-unresolvable photo remains on the placeholder rather than crashing");
 assert.equal(unusablePhotoAfterReconnect.role, null, "after reconnect, a still-failing resolution still shows no role=img");
-assert.equal(unusablePhotoAfterReconnect.resolveCount, 2, "a reconnect (hass reassigned again) attempts a fresh resolve instead of being permanently stuck on the first rejection (HD-209 bug #1 regression)");
+assert.equal(unusablePhotoAfterReconnect.resolveCount, 4, "a reconnect (hass reassigned again) attempts a fresh resolve and a fresh logbook fetch instead of being permanently stuck on the first rejection (HD-209 bug #1 regression; HD-205 extends the same guarantee to its own WS calls)");
 assert.deepEqual(errors, []);
 
 assert.deepEqual(errors, []);
