@@ -130,6 +130,10 @@ for (const variant of ["normal", "dark", "warning", "missing", "unknown", "unava
       assert.equal(comfortBadge.text, "Aandacht", `${label}: the warning badge shows the Aandacht copy rather than a fabricated Beschikbaar`);
       await selectCapability("Verlichting");
     }
+    // Captured here, before any of the ad-hoc fixture remounts below replace document.body's contents — otherwise
+    // the unavailable/1440 screenshot would document whichever of those fixtures happened to mount last instead of
+    // the actual unavailable-variant room (HD-207).
+    await page.screenshot({ path: `${directory}/${variant}-${width}.png`, fullPage: true });
     if (variant === "unavailable" && width === 1440) {
       // HD-206 fix regression: a plugs-only energy room whose only checkable entity is currently unavailable must
       // show "Deels niet beschikbaar", never fabricate "Beschikbaar" from an incomplete entity check.
@@ -144,6 +148,16 @@ for (const variant of ["normal", "dark", "warning", "missing", "unknown", "unava
       });
       assert.equal(plugsOnlyBadge, true, `${label}: plugs-only energy room detail mounted`);
       await page.waitForFunction(() => document.querySelector("home-dashboard-room-detail")?.shadowRoot?.querySelector(".control-deck"));
+      // HD-207 fix: the plugs-stage badge itself must also degrade when a configured plug's energy sensor is
+      // unavailable, not just the separate Verbruik-stage badge checked below — capabilityEntityRoles()'s "plugs"
+      // branch previously only checked switch_entity/power_entity, missing energy_day/month/year_entity entirely.
+      await selectCapability("Smart plugs");
+      const plugsOnlyPlugsBadge = await page.evaluate(() => {
+        const badge = document.querySelector("home-dashboard-room-detail").shadowRoot.querySelector(".stage-head .state-badge");
+        return { text: badge?.textContent, degraded: badge?.classList.contains("unavailable") ?? false };
+      });
+      assert.equal(plugsOnlyPlugsBadge.degraded, true, `${label}: a plugs-only energy room's Smart plugs badge degrades when its plug's energy sensor is unavailable`);
+      assert.equal(plugsOnlyPlugsBadge.text, "Deels niet beschikbaar", `${label}: the degraded Smart plugs badge shows the unavailable-state copy, not a fabricated Beschikbaar`);
       await selectCapability("Verbruik");
       const plugsOnlyEnergyBadge = await page.evaluate(() => {
         const badge = document.querySelector("home-dashboard-room-detail").shadowRoot.querySelector(".stage-head .state-badge");
@@ -151,6 +165,8 @@ for (const variant of ["normal", "dark", "warning", "missing", "unknown", "unava
       });
       assert.equal(plugsOnlyEnergyBadge.degraded, true, `${label}: a plugs-only energy room's Verbruik badge degrades when its only sensor is unavailable`);
       assert.equal(plugsOnlyEnergyBadge.text, "Deels niet beschikbaar", `${label}: the plugs-only energy badge shows the unavailable-state copy, not a fabricated Beschikbaar`);
+      // Own, separately named evidence (HD-207) — this fixture no longer overwrites the unavailable-1440.png above.
+      await page.screenshot({ path: `${directory}/plugs-only-energy-${width}.png`, fullPage: true });
 
       // HD-208: a room with only a generic power_entities entry (no smart_plugs, no room_energy) must still show a
       // combined current-wattage figure in the Energie tab's room-total card, proving roomCurrentWatts() counts it.
@@ -165,6 +181,13 @@ for (const variant of ["normal", "dark", "warning", "missing", "unknown", "unava
       });
       assert.equal(aircoOnlyMounted, true, `${label}: airco-only energy room detail mounted`);
       await page.waitForFunction(() => document.querySelector("home-dashboard-room-detail")?.shadowRoot?.querySelector(".control-deck"));
+      // HD-207 fix: an energy-only room (no lamps/openings/plugs at all) has nothing for countParts to count, so the
+      // deck-head must omit the trailing count span entirely rather than render an empty, dangling label.
+      const aircoOnlyDeckHead = await page.evaluate(() => {
+        const deckHead = document.querySelector("home-dashboard-room-detail").shadowRoot.querySelector(".deck-head");
+        return { spanCount: deckHead?.querySelectorAll("span").length ?? -1 };
+      });
+      assert.equal(aircoOnlyDeckHead.spanCount, 1, `${label}: an energy-only room's deck-head renders only the eyebrow span, no empty trailing count span`);
       await selectCapability("Verbruik");
       const aircoOnlyTotalText = await page.evaluate(() => document.querySelector("home-dashboard-room-detail").shadowRoot.querySelector(".energy-card")?.textContent ?? "");
       assert.match(aircoOnlyTotalText, /650 W/, `${label}: the room-total card combines a power_entities-only reading into the current-wattage figure`);
@@ -192,7 +215,6 @@ for (const variant of ["normal", "dark", "warning", "missing", "unknown", "unava
       const comboTotalText = await page.evaluate(() => document.querySelector("home-dashboard-room-detail").shadowRoot.querySelector(".energy-card")?.textContent ?? "");
       assert.match(comboTotalText, /700 W/, `${label}: the Energie tab's room-total card shows the same combined wattage as the plugs-stage summary and rail, not a blank value`);
     }
-    await page.screenshot({ path: `${directory}/${variant}-${width}.png`, fullPage: true });
   }
 }
 await open("normal", 1440);
