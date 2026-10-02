@@ -48,11 +48,15 @@ Volledige lokale suite plus gerichte runtimehertest na nieuwe toestemming.
 ### HD-171 — Performancebaseline en budgetten vastleggen
 
 - **Epic:** Performance
-- **Status:** Backlog
+- **Status:** Klaar — candidate `v0.8.0-alpha.28`, lokaal geverifieerd op 2 oktober 2026 ([D-060](../design/decision-log.md#d-060--performancebaseline-en-budgetten-vastgelegd-hd-171)). Geen Home Assistant-write of deployment goedgekeurd.
 - **Prioriteit:** P1
 - **Omvang:** L
 - **Eigenaar:** Performance, privacy & release-QA-agent
-- **Afhankelijkheden:** featurefreeze; specialistset gereed of expliciet uitgesteld
+- **Afhankelijkheden:** featurefreeze; specialistset gereed of expliciet uitgesteld (voldaan: HD-200/203/205/207 afgerond; HD-131/141/152 blijven afzonderlijk Geblokkeerd op externe bronrepo's, wat al een expliciete deferral is)
+
+**Resultaat**
+
+Nieuwe meettooling (`scripts/check-performance-baseline.mjs`) en rapport (`docs/quality/performance-baseline.md`) leggen DOM-grootte, long tasks, koude/warme parse/eval en rerendercost (relevant/irrelevant) vast voor Home, Kamers, lichte/zware kamerdetail, Energie en een specialistview, met budgetten afgeleid van echte metingen. Eén reële bevinding (Home/Energie/pool herschrijven DOM onvoorwaardelijk bij irrelevante updates) is niet zelf gefixt maar vastgelegd als apart [HD-213](#hd-213--diff-voor-schrijven-toevoegen-aan-home-energie-en-pool-specialist-renderpaden). Geen wijziging aan `src/`; bundel bevestigd byte-identiek.
 
 **Doel**
 
@@ -361,6 +365,40 @@ Gevonden tijdens [HD-203](#hd-203--linak-bureaucard-contract-en-documentatiereco
 **Validatie**
 
 `pnpm test`, `pnpm run test:browser`, `git diff --check`.
+
+---
+
+### HD-213 — Diff-voor-schrijven toevoegen aan Home, Energie en pool-specialist renderpaden
+
+- **Epic:** Performance
+- **Status:** Backlog
+- **Prioriteit:** P2
+- **Omvang:** S
+- **Eigenaar:** Home & security-agent + Energy & domains-agent + Specialist-agent
+- **Afhankelijkheden:** geen
+
+**Doel**
+
+`HomeDashboardHomeOverview.set hass` (`src/cards/home-dashboard-home-overview.ts:434-444`, via `updateLiveState()`), `HomeDashboardEnergyOverview.updateValues()` (`src/cards/home-dashboard-energy-domain-cards.ts`) en de pool-specialist herschrijven DOM-tekst/attributen onvoorwaardelijk op élke `hass`-toewijzing, ook wanneer de gewijzigde entity volledig irrelevant is voor wat die component toont.
+
+**Achtergrond**
+
+Gevonden tijdens [HD-171](#hd-171--performancebaseline-en-budgetten-vastleggen)'s performancebaseline: 500 volledig irrelevante stateupdates produceerden 32.000 DOM-mutaties voor Home (64/update, op een 513-node boom), 6.000 voor Energie (12/update, op een 37-node boom) en 4.500 voor de pool-specialist (9/update, op een 30-node boom). Geen van de drie vervangt de hoofd-DOM-subtree — dit is geen "brede rerender" in de zin van een volledige remount — maar het is onverklaarde, herhaalde schrijfactiviteit op elke tick, onafhankelijk van relevantie. Ter contrast diffen `home-dashboard-room-detail` en `home-dashboard-room-overview` al correct (0 en 6 mutaties over dezelfde 500 updates) — dit ticket brengt Home/Energie/pool naar hetzelfde niveau.
+
+**Scope**
+
+- `updateLiveState()`, `updateValues()` en het pool-specialistrenderpad krijgen elk een before-write gelijkheidscheck (bijv. `if (element.textContent !== nextValue) element.textContent = nextValue;`) vóór elke DOM-schrijfactie die ze nu onvoorwaardelijk uitvoeren.
+- Geen wijziging aan wélke waarden getoond worden, alleen aan óf er geschreven wordt wanneer de waarde niet veranderde.
+
+**Acceptatiecriteria**
+
+- Dezelfde 500-irrelevante-updates-meting uit `scripts/check-performance-baseline.mjs` daalt voor alle drie views naar een klein, begrensd aantal mutaties (orde van grootte van `home-dashboard-room-detail`'s huidige 6, niet 0 per se — sommige componenten kunnen een onvermijdelijke klein-aantal state-sync hebben).
+- Eén relevante update blijft het display correct bijwerken (geen regressie op de bestaande normal/warning/missing/unavailable-fixtures voor deze drie views).
+- `scripts/check-performance-baseline.mjs`'s bestaande `FINDING:`-regels voor deze drie views verdwijnen of dalen significant; het script zelf hoeft niet aangepast te worden tenzij de drempel moet wijzigen.
+
+**Validatie**
+
+`pnpm test`, `pnpm run test:browser` (inclusief de performancebaseline-sectie als regressiebewijs), `git diff --check`.
 
 ---
 
