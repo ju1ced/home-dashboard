@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.0-alpha.26 — 2026-10-02
+
+- Het herhaaldelijk opgetrokken bundlebudget (245 kB → 254 kB → 258 kB → 260 kB over vier Control Deck-tickets) is structureel opgelost in plaats van opnieuw verhoogd: de configuratie-editor (`src/editor/home-dashboard-editor.ts` + `fields.ts`) is uitgesplitst naar een eigen, zelfstandige bundle (`dist/home-dashboard-editor.js`), die pas on-demand geladen wordt wanneer iemand de dashboardconfiguratie daadwerkelijk opent. `HomeDashboardStrategy.getConfigElement()` is nu asynchroon en haalt de editor dan pas op via een dynamische import — Home Assistants eigen `hui-element-editor.ts` await't dit al voor elke strategy-editor, dus dit is bevestigd bestaand HA-gedrag, geen aanname.
+- Twee ontwerpen gemeten vóór de keuze: esbuild `splitting: true` gaf een kleinere hoofdbundel (165 kB) maar met een gedeelde chunk (39,5 kB) die de hoofdbundel nog altijd eager importeert — vrijwel dezelfde downloadkost (204,8 kB) als twee volledig zelfstandige bundles, met een slechter faalgedrag. Gekozen: twee zelfstandige bundles, zodat een verouderd of ontbrekend editorbestand na een upgrade hoogstens de editor breekt, nooit het volledige dashboard.
+- De hoofdbundel-grens daalt van 260 kB naar **210 kB** (uitgebrachte kandidaat: 204.856 bytes). De editor krijgt een eigen, ruimer budget van 160 kB (uitgebrachte kandidaat: 93.887 bytes).
+- HACS' downloadbronlogica rechtstreeks nagelezen: voor deze plugin-repo (vastgezet op een releasetag) haalt HACS alle release-assets op, niet enkel het `hacs.json`-bestand — de releaseworkflow geeft de nieuwe editor-bundle en checksum daarom mee in de asset-lijst.
+- Geen regressie op awning-confirmation, plug-tweestapsbevestiging, de HD-206/208-statuslogica of de HD-209-fotoflow (geverifieerd: geen wijzigingen in die bestanden t.o.v. alpha.25).
+- [Testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.26.md). Live Home Assistant-acceptatie blijft een afzonderlijke menselijke gate.
+
 ## 0.8.0-alpha.25 — 2026-10-01
 
 - Een kamerfoto kan nu rechtstreeks geüpload worden vanuit de kamereditor, via Home Assistants native media-selector (`image_upload`) — geen HA-hulpmiddel meer nodig vooraf. De bestaande `image_entity`-koppeling blijft gewoon werken; is beide geconfigureerd, dan krijgt de upload voorrang, met terugval naar `image_entity` en daarna de bestaande placeholder.
