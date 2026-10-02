@@ -21,6 +21,7 @@ Kia-, robot- en tuinlogica blijft in de drie bronrepositories. Voor zwembad word
 | `custom:garden-dashboard-card` | full-width op `specialist-garden` | tuinrepo | zone/irrigatiemapping, unavailable, confirmations, relevante-state gating |
 | `custom:pool-dashboard-card` | full-width op `specialist-pool` | nieuwe zwembadrepo | waterkwaliteit, filter/verwarming, veilige modi, unavailable en diagnostics |
 | Geen (native) — `home-dashboard-printer-summary` + sectie-/tile-/picture-entity-kaarten | full-width op `specialist-printer` | `home-dashboard` zelf | mapping incompleet/unavailable-fallback; geen servicecalls, dus geen confirmationcontract nodig |
+| `custom:linak-desk-card` | opt-in, embedded in de Comfort-stage van de kamerdetail (geen eigen `specialist-*`-route) | LINAK-bureaucardrepo | transparante passthrough, generieke resource-fallback via `mountCard()` |
 
 De specialistische resources zijn onafhankelijk geversioneerd via HACS. `home-dashboard` legt een compatibiliteitsmatrix vast; het bundelt of forkt hun code niet. Globale registratie kan nog download-/parsekosten veroorzaken, ook als een card alleen op een subview wordt gemount. Dat wordt gemeten. De printerintegratie heeft geen externe HACS-resource en valt dus buiten deze compatibiliteitsmatrix; haar bundelkost wordt in plaats daarvan bewaakt via het bundlebudget (`scripts/verify-dist.mjs`, D-055).
 
@@ -124,6 +125,20 @@ De vijf gates uit de Robotstofzuiger-sectie zijn geschreven voor een aparte bron
 
 Tot HD-211 opgelost is, blijft de printersummary functioneel correct maar zonder de rerender-efficiëntie die de kamerdetailkaarten al hebben.
 
+## LINAK-bureaucard
+
+### Embedding
+
+Anders dan de andere vier specialisten heeft de LINAK-bureaucard (`custom:linak-desk-card`) geen eigen `specialist-*`-route en geen summary op Home: een kamer met `room.desk` geconfigureerd toont de kaart rechtstreeks, embedded in de Comfort-stage van diezelfde kamerdetail (`buildCapabilityStage("comfort", ...)` in `home-dashboard-room-cards.ts`), naast comfort/media/safety/camera-informatie. Dit is een lichtere categorie dan Kia/robot/tuin/zwembad: een pure, transparante passthrough zonder eigen productiepoort, mappinglaag of centrale statuslogica — `card_config` wordt ongewijzigd doorgegeven aan de generieke `mountCard()`-helper.
+
+### Resourcefallback
+
+`mountCard()` is dezelfde gedeelde helper die ook `history-graph` mount: hij laadt de kaart via Home Assistants officiële `window.loadCardHelpers()`/`createCardElement()`-pad en vangt elke fout (ontbrekende resource, onbekend `card_type`, exception tijdens constructie) op met een generieke `"Kaart niet beschikbaar."`-tekst in plaats van een crash of stille lege ruimte. Dit dekt het "missing resource"-risicoprofiel dat Kia/printer/pool ook hebben.
+
+**Gevonden gat:** dit vangnet wordt momenteel door geen enkele test uitgeoefend — noch voor de bureaucard, noch voor `history-graph`. Alleen de doorgave van `card_config` zelf is getest (`tests/room-cards-source.test.mjs`, regex op de aanroep), niet het daadwerkelijke fallbackgedrag bij een ontbrekende resource. Vastgelegd als een apart, geïsoleerd vervolgticket: [HD-212](../planning/tickets.md#hd-212--mountcard-resourcefallback-met-een-echte-test-bewijzen).
+
+**Niet van toepassing:** versiemismatchdetectie (anders dan bij Kia/robot/tuin/zwembad) is bewust geen centrale verantwoordelijkheid — er is geen mappingcontract of health-check, dus er is ook geen versie om te vergelijken. Dat blijft, net als bij de andere bronrepo's, eigendom van de LINAK-kaart zelf.
+
 ## Theming- en navigatiecontract
 
 - Shell bezit viewtitel, `back_path`, achtergrond, buitenmarge en contentbreedte.
@@ -162,6 +177,7 @@ Een versie-mismatch toont een duidelijke fallback; hij mag Home of andere routes
 | visuele integratierenders | kaartfixtures ondersteunen | ja |
 | zwembadcard bouwen en releasen | nieuwe zwembadrepo | alleen consument/integratietest |
 | printersummary en -detailkaarten | n.v.t. (geen bronrepo) | ja, volledig native |
+| LINAK-bureaucardlogica en mapping health | ja | alleen transparante passthrough + generieke resourcefallback |
 
 ## Resource-audit
 

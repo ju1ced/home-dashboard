@@ -377,3 +377,13 @@
   5. Mobiel/toetsenbord/screenreadergedrag: **bevestigd** via de bestaande gedeelde routematrix (`scripts/check-prototype-browser.mjs`), dezelfde bewijsstandaard als bij Kia/robot/tuin.
 - **Geen bronlogica gekopieerd:** dit besluit verandert geen gedrag en kopieert geen printerlogica; het erkent alleen wat al bestond. HD-160 kan zonder documentatie-inconsistentie doorlopen.
 - **Openstaand:** [HD-211](../planning/tickets.md#hd-211--printersummary-relevante-state-gating-toevoegen) (relevante-state gating) blijft een apart ticket. Live Home Assistant-acceptatie blijft ongewijzigd een afzonderlijke gate.
+
+## D-057 — LINAK-bureaucard retroactief erkend als transparante passthrough (HD-203)
+
+- **Status:** documentatiereconciliatie, geen codewijziging; vastgelegd op 2 oktober 2026. Geen Home Assistant-write of deployment betrokken.
+- **Besluit:** de LINAK-bureaucard (`room.desk`, `custom:linak-desk-card`) wordt formeel erkend als specialistintegratie, maar expliciet in een lichtere categorie dan Kia, robot, tuin, zwembad en de printer: een pure, transparante passthrough zonder eigen `specialist-*`-route, zonder centrale mappinglaag en zonder productiepoort. Gevonden tijdens de onafhankelijke herreview van de alpha.20 Control Deck-slice — `src/config/types.ts` (`RoomDeskConfig`), `migrate.ts` en `home-dashboard-room-cards.ts` bevatten een volledig werkende integratie die nergens gedocumenteerd of geticket was.
+- **Waarom een lichtere categorie:** de kaart wordt embedded in de Comfort-stage van de kamerdetail (niet op Home, geen eigen route), `card_config` wordt ongewijzigd doorgegeven, en er is geen centrale statuslogica om te onderhouden — alleen een generieke resourcefallback via de bestaande `mountCard()`-helper (dezelfde die ook `history-graph` mount).
+- **Resourcefallback bevestigd, maar ongetest:** `mountCard()`'s `try/catch` vangt elke ontbrekende resource of constructiefout op met `"Kaart niet beschikbaar."` in plaats van een crash — dit dekt hetzelfde "missing resource"-risicoprofiel als Kia/printer/pool. Geen enkele test oefent dit catch-pad echter daadwerkelijk uit (alleen de doorgave van `card_config` is getest). Vastgelegd als een apart, geïsoleerd vervolgticket (HD-212), niet stilzwijgend binnen dit documentatieticket opgelost.
+- **Niet van toepassing:** versiemismatchdetectie is, zoals bij de andere bronrepo's, bewust geen centrale verantwoordelijkheid — er is geen mappingcontract om tegen te vergelijken.
+- **Geen bronlogica gekopieerd:** dit besluit verandert geen gedrag; het erkent alleen wat al bestond.
+- **Openstaand:** [HD-212](../planning/tickets.md#hd-212--mountcard-resourcefallback-met-een-echte-test-bewijzen) blijft een apart ticket.

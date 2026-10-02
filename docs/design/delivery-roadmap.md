@@ -128,6 +128,8 @@ Bugfixes tijdens een teststap gebruiken dezelfde minorlijn met een volgende prer
 
 **Retroactief vastgelegd (HD-200, 2 oktober 2026):** de 3D-printerspecialist is niet via een eigen PR-nummer uit deze tabel geleverd, maar als onderdeel van de daadwerkelijke GitHub-PR's #39 en #41 (`v0.8.0-alpha.11`/`.12`), buiten deze oorspronkelijk geplande volgorde om. Dit document legde dat nooit vast, waardoor de printer buiten de hier beschreven v1-scope leek te vallen terwijl hij al in `main` draaide. Zie [D-056](decision-log.md#d-056--3d-printerspecialist-retroactief-erkend-als-vijfde-eersteklas-specialist-hd-200).
 
+**Retroactief vastgelegd (HD-203, 2 oktober 2026):** de LINAK-bureaucard (`room.desk`) kwam eveneens zonder eigen PR-nummer, ticket of beslislogregel mee in `main`, als transparante passthrough naast de Control Deck-slice. Anders dan de vier specialisten hierboven is dit geen eigen roadmapstap: geen `specialist-*`-route, geen activatie via de Specialisten-sectie, geen centrale mappinglaag. Zie [D-057](decision-log.md#d-057--linak-bureaucard-retroactief-erkend-als-transparante-passthrough-hd-203).
+
 ## Releasecontract
 
 Iedere testrelease is een echte GitHub release en bevat:

@@ -295,11 +295,15 @@ Privacyguard over de volledige tracked bron, gerichte codereview per informaties
 ### HD-203 — LINAK-bureaucard: contract en documentatiereconciliatie
 
 - **Epic:** Specialisten
-- **Status:** Backlog
+- **Status:** Klaar — documentatiereconciliatie vastgelegd op 2 oktober 2026 ([D-057](../design/decision-log.md#d-057--linak-bureaucard-retroactief-erkend-als-transparante-passthrough-hd-203)). Geen Home Assistant-write, geen release nodig.
 - **Prioriteit:** P2
 - **Omvang:** S
 - **Eigenaar:** Specialist-agent + Lead / integrator
 - **Afhankelijkheden:** geen
+
+**Resultaat**
+
+Bureaucard erkend als specialistintegratie in een lichtere categorie (geen eigen route, geen productiepoort) in `requirements.md`, `delivery-roadmap.md` en `integration-strategy.md`. Resourcefallback bestaat al (gedeelde `mountCard()`-helper) maar is ongetest; vastgelegd als apart [HD-212](#hd-212--mountcard-resourcefallback-met-een-echte-test-bewijzen) in plaats van stilzwijgend "bevestigd" verklaard.
 
 **Doel**
 
@@ -324,6 +328,39 @@ Gevonden tijdens de onafhankelijke herreview van de alpha.20 Control Deck-slice:
 **Validatie**
 
 Documentreview, linkcheck, en een gerichte browsercheck van de bestaande fallback (indien aanwezig).
+
+---
+
+### HD-212 — `mountCard()`-resourcefallback met een echte test bewijzen
+
+- **Epic:** Quality engineering
+- **Status:** Backlog
+- **Prioriteit:** P2
+- **Omvang:** S
+- **Eigenaar:** Rooms-agent
+- **Afhankelijkheden:** geen
+
+**Doel**
+
+`src/cards/home-dashboard-room-cards.ts`'s gedeelde `mountCard()`-helper (gebruikt door zowel de LINAK-bureaucard als `history-graph`) vangt een ontbrekende resource of constructiefout op met `"Kaart niet beschikbaar."` in plaats van een crash — maar dit catch-pad wordt door geen enkele test daadwerkelijk uitgeoefend.
+
+**Achtergrond**
+
+Gevonden tijdens [HD-203](#hd-203--linak-bureaucard-contract-en-documentatiereconciliatie)'s resourcefallback-beoordeling: `tests/room-cards-source.test.mjs` controleert alleen dat `card_config` correct wordt doorgegeven aan `mountCard()` (een regex op de aanroep), niet wat er gebeurt wanneer `window.loadCardHelpers()` ontbreekt of `createCardElement()` faalt. Hetzelfde geldt voor `history-graph`, dat dezelfde helper gebruikt.
+
+**Scope**
+
+- Een browsertest (of een gerichte unit-achtige test met een gemockte/ontbrekende `loadCardHelpers`) die aantoont dat een niet-geïnstalleerde `custom:linak-desk-card` resulteert in zichtbare `"Kaart niet beschikbaar."`-tekst, niet in een crash of stille lege ruimte.
+- Dezelfde assertie voor het `history-graph`-pad, als dat goedkoop meeligt.
+
+**Acceptatiecriteria**
+
+- Een test faalt wanneer `mountCard()`'s catch-pad per ongeluk verwijderd of stilzwijgend gewijzigd wordt.
+- Geen regressie op de bestaande bureaucard-/history-graph-doorgavetest.
+
+**Validatie**
+
+`pnpm test`, `pnpm run test:browser`, `git diff --check`.
 
 ---
 
