@@ -387,3 +387,15 @@
 - **Niet van toepassing:** versiemismatchdetectie is, zoals bij de andere bronrepo's, bewust geen centrale verantwoordelijkheid — er is geen mappingcontract om tegen te vergelijken.
 - **Geen bronlogica gekopieerd:** dit besluit verandert geen gedrag; het erkent alleen wat al bestond.
 - **Openstaand:** [HD-212](../planning/tickets.md#hd-212--mountcard-resourcefallback-met-een-echte-test-bewijzen) blijft een apart ticket.
+
+## D-058 — HD-205 privacy- en logbookscope door de eigenaar goedgekeurd
+
+- **Status:** menselijke gate opgelost op 2 oktober 2026; implementatie mag starten. Geen Home Assistant-write of deployment betrokken in deze beslissing zelf.
+- **Besluit:** de eigenaar heeft de in HD-205 vereiste menselijke privacy-/logbookgate expliciet beantwoord vóór enige implementatie:
+  1. **Logbookscope:** strikt beperkt tot de al in de kamerconfiguratie expliciet gemapte entiteiten, nooit een woningbrede `logbook/get_events`-aanroep. Bevestigd zoals voorgesteld.
+  2. **Maximum aantal gebeurtenissen:** hard **50** per kamer.
+  3. **Statistics-periodesemantiek:** geen afwijking van de bestaande Energie-periodeconventie (D-021) — hergebruikt exact dag/week/maand/jaar.
+  4. **Historie-lijngrafiek scope:** **uitsluitend temperatuur- en luchtvochtigheidssensoren.** Vermogen/energie wordt hier expliciet **niet** getoond — die cijfers staan al op de Verbruik-tab; een tweede voorstelling van hetzelfde cijfer op een ander tabblad zou dubbel werk zijn en het risico op een inconsistente weergave introduceren. Dit is een scopereductie ten opzichte van de oorspronkelijke ticketformulering ("vermogens- en temperatuurverloop"), die enkel temperatuur noemde.
+  5. **Missing/unavailable-gedrag:** ongewijzigd bevestigd — geen data betekent een duidelijke lege status, nooit een gefabriceerde nulwaarde.
+- **Gevolg:** [HD-205](../planning/tickets.md#hd-205--verbruik-en-historie-op-echte-ha-statistics-en-logbook-data)'s scope is bijgewerkt met deze vijf antwoorden; de ticket-afhankelijkheid op de menselijke gate is vervallen. Implementatie kan nu starten.
+- **Openstaand:** de daadwerkelijke implementatie (statistics/history/logbook WebSocket-koppeling, fixtures, tests) blijft het eigenlijke, nog te doen werk van HD-205.

@@ -408,34 +408,34 @@ Sessie-analyse op 28 september 2026 vond geen enkele decision-logregel, v4-mocku
 ### HD-205 — Verbruik en Historie op echte HA-statistics en logbook-data
 
 - **Epic:** Kamers / Energie en domeinen
-- **Status:** Backlog
+- **Status:** Backlog — menselijke privacy-/logbookgate opgelost op 2 oktober 2026 door de eigenaar ([D-058](../design/decision-log.md#d-058--hd-205-privacy--en-logbookscope-door-de-eigenaar-goedgekeurd)); implementatie mag starten.
 - **Prioriteit:** P2
 - **Omvang:** XL
 - **Eigenaar:** Rooms-agent + Energy & domains-agent
-- **Afhankelijkheden:** HD-204; menselijke gate voor de privacy-/logbookscope vóór implementatie
+- **Afhankelijkheden:** HD-204 (gemerged)
 
 **Doel**
 
-De v3-ontwerpstudie's "Verbruik"-dagstaafdiagram (per apparaat, 7 dagen/maand/jaar) en de "Historie"-tab (vermogen/temperatuur-lijngrafiek plus gebeurtenissenlijst) met echte Home Assistant-data implementeren, in plaats van de huidige native `history-graph`-fallback.
+De v3-ontwerpstudie's "Verbruik"-dagstaafdiagram (per apparaat, 7 dagen/maand/jaar) en de "Historie"-tab (temperatuur-/luchtvochtigheidslijngrafiek plus gebeurtenissenlijst) met echte Home Assistant-data implementeren, in plaats van de huidige native `history-graph`-fallback.
 
 **Achtergrond**
 
 De huidige `v0.8.0-alpha.21`-implementatie koos bewust voor de native history-graph om geen gefabriceerde tijdreeksen te tonen (zie de "bekende en bewuste grenzen" in de testchecklists en het Control Deck-contract). Dat was een geldige, gedocumenteerde afweging — dit ticket doet de echte koppeling zorgvuldig en apart, niet als bijvangst van HD-204.
 
-**Scope**
+**Scope (na de eigenaarsgate van 2 oktober 2026, zie D-058)**
 
-- `recorder/statistics_during_period` (WebSocket) voor per-dag/maand/jaar-verbruik per smart plug en kamerbron, met een periode-toggle (7 dagen/maand/jaar) zoals v3.
-- `history/history_during_period` voor het vermogens- en temperatuurverloop (24u/7d/30d).
-- `logbook/get_events`, strikt gefilterd tot de expliciet gemapte entiteiten van de kamer (geen woningbrede logboekregels), met een vast maximumaantal getoonde gebeurtenissen.
+- `recorder/statistics_during_period` (WebSocket) voor per-dag/maand/jaar-verbruik per smart plug en kamerbron, met een periode-toggle (7 dagen/maand/jaar) zoals v3. Hergebruikt exact de bestaande Energie-periodesemantiek (D-021), geen nieuwe conventie.
+- `history/history_during_period` voor het Historie-tab-lijngrafiek, **uitsluitend temperatuur-/luchtvochtigheidssensoren** (24u/7d/30d). Vermogen/energie wordt hier expliciet **niet** getoond — dat staat al op de Verbruik-tab en zou dubbel werk en een tweede, mogelijk inconsistente voorstelling van hetzelfde cijfer zijn.
+- `logbook/get_events`, strikt gefilterd tot de expliciet gemapte entiteiten van de kamer (geen woningbrede logboekregels), met een vast maximum van **50** getoonde gebeurtenissen.
 - Privacyscope: geen entity-ID's, automatiseringsinterne details of ongerelateerde huishoudactiviteit lekt in de getoonde gebeurtenissen; alleen al-gemapte entiteiten komen in aanmerking.
 - Missing/unavailable/lege-statistics fallback: geen data betekent een duidelijke lege status, nooit een gefabriceerde nulwaarde.
 
 **Acceptatiecriteria**
 
 - Geen enkele getoonde grafiekwaarde of gebeurtenis is gefabriceerd; alles komt van een echte HA-call of toont expliciet "niet beschikbaar".
-- Het logbookfilter toont uitsluitend entiteiten die al in de kamerconfiguratie zijn opgenomen.
+- Het logbookfilter toont uitsluitend entiteiten die al in de kamerconfiguratie zijn opgenomen, met een hard maximum van 50 gebeurtenissen.
+- Het Historie-lijngrafiek toont uitsluitend temperatuur-/luchtvochtigheidssensoren; geen vermogens- of energiewaarde verschijnt hier.
 - Periodewissel (7 dagen/maand/jaar, 24u/7d/30d) hergebruikt de bestaande datum-/periodesemantiek uit Energie (D-021).
-- Een nieuwe decision-logregel legt deze uitbreiding van "alleen native fallback" naar "eigen statistics/logbook-raadpleging" vast, inclusief de privacyafweging.
 - Normal/missing/unavailable/lege-periode fixtures en tests voor beide panelen.
 
 **Validatie**
