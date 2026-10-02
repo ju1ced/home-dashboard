@@ -238,6 +238,7 @@ Niet parallel schrijven:
 - Alle bevestigde kamers en domeinen hebben een consistente, conditionele pagina.
 - Kia, robot en tuin hebben summary, hun volledige bestaande card, fallback en compatibiliteitsbewijs; robotgate is groen.
 - Zwembad heeft een zelfstandige volledige card, specialistview, veilige acties, fallback en HACS-/versiecontract.
+- 3D-printer heeft summary, native detailweergave en fallback; geen servicecalls dus geen confirmationcontract nodig. Relevante-state gating op de summary is een bekend, apart vastgelegd gat (HD-211).
 - Home bevat Vandaag, privacyveilige person cards, alarmstatus en alle gekozen camerakaarten met afzonderlijke privacystand; Kamers bevat alle bevestigde kamers met passende quick actions; zware kamerdetails behouden HVAC, comfort/safety, apparaten/power en historie; Energie slaagt op het standaard-HA-plus-lokaal paritymanifest.
 - Light/dark, mobiel/tablet/desktop, keyboard/screenreader, contrast en touch targets zijn gevalideerd.
 - Performance is gemeten met vaste methode en binnen goedgekeurde budgets.

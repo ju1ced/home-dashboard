@@ -55,7 +55,7 @@ De normale gebruiker hoeft geen YAML of JSON te schrijven. De grafische strategy
 | Klimaat | klimaatbron, modes, presets, fan, swing, comfort- en historybronnen per kamer |
 | Energie | standaard Energy-bronnen, datumcollectie, solar, batterij, water/gas, apparatenhiërarchie en lokale KPI's |
 | Acties | expliciete actionallowlist, script/service, target, confirmation, hold en resultaatverificatie |
-| Specialisten | Kia, robot, tuin en zwembad activeren, cardversie/availability en mappings controleren |
+| Specialisten | Kia, robot, tuin, zwembad en 3D-printer activeren, cardversie/availability (n.v.t. voor de native printer) en mappings controleren |
 | Layout | viewvolgorde binnen toegestane grenzen, mobiel disclosuregedrag en optionele secties |
 | Diagnose | configuratiegezondheid, ontbrekende resources/mappings, stale data en export/import |
 
@@ -125,6 +125,8 @@ PR 0 is deze roadmap en heeft geen runtimeartifact. Vanaf PR 1 krijgt iedere sta
 | 14 | Lead + docs/release | compatibilitymatrix, supportbeleid, upgradepad en productiereadiness | `v1.0.0` na aparte goedkeuring | schone HACS-installatie, upgrade vanaf laatste RC, rollback en documentatie |
 
 Bugfixes tijdens een teststap gebruiken dezelfde minorlijn met een volgende prerelease, bijvoorbeeld `v0.6.0-alpha.2`. Er wordt niet naar de volgende stap gegaan zolang de vorige release een open blocker heeft.
+
+**Retroactief vastgelegd (HD-200, 2 oktober 2026):** de 3D-printerspecialist is niet via een eigen PR-nummer uit deze tabel geleverd, maar als onderdeel van de daadwerkelijke GitHub-PR's #39 en #41 (`v0.8.0-alpha.11`/`.12`), buiten deze oorspronkelijk geplande volgorde om. Dit document legde dat nooit vast, waardoor de printer buiten de hier beschreven v1-scope leek te vallen terwijl hij al in `main` draaide. Zie [D-056](decision-log.md#d-056--3d-printerspecialist-retroactief-erkend-als-vijfde-eersteklas-specialist-hd-200).
 
 ## Releasecontract
 

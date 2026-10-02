@@ -10,7 +10,7 @@
 - theme- en statuscontract;
 - compatibiliteitsmetadata, fallbacks en integratietests.
 
-Kia-, robot- en tuinlogica blijft in de drie bronrepositories. Voor zwembad wordt een vierde zelfstandige bronrepo/card voorzien. De centrale repo kopieert geen serviceflows, berekeningen, mappingheuristiek, kaart/SVG, zonecommando's, trips, drempels of editorcode.
+Kia-, robot- en tuinlogica blijft in de drie bronrepositories. Voor zwembad wordt een vierde zelfstandige bronrepo/card voorzien. De 3D-printerintegratie (HD-008/HD-200) is de uitzondering: er is geen externe bronrepo om renderlogica naar uit te besteden, dus de volledige summary en detailweergave zijn native in `home-dashboard` gebouwd, met bestaande sectie-, tile- en picture-entity-kaarttypes. De centrale repo kopieert geen serviceflows, berekeningen, mappingheuristiek, kaart/SVG, zonecommando's, trips, drempels of editorcode van de overige vier.
 
 ## Dependencygrenzen
 
@@ -20,8 +20,9 @@ Kia-, robot- en tuinlogica blijft in de drie bronrepositories. Voor zwembad word
 | `custom:robot-vacuum-dashboard-card` | full-width op `specialist-robot` | robotrepo | expliciete mapping, confirmations, foutfeedback, relevante-state gating |
 | `custom:garden-dashboard-card` | full-width op `specialist-garden` | tuinrepo | zone/irrigatiemapping, unavailable, confirmations, relevante-state gating |
 | `custom:pool-dashboard-card` | full-width op `specialist-pool` | nieuwe zwembadrepo | waterkwaliteit, filter/verwarming, veilige modi, unavailable en diagnostics |
+| Geen (native) — `home-dashboard-printer-summary` + sectie-/tile-/picture-entity-kaarten | full-width op `specialist-printer` | `home-dashboard` zelf | mapping incompleet/unavailable-fallback; geen servicecalls, dus geen confirmationcontract nodig |
 
-De specialistische resources zijn onafhankelijk geversioneerd via HACS. `home-dashboard` legt een compatibiliteitsmatrix vast; het bundelt of forkt hun code niet. Globale registratie kan nog download-/parsekosten veroorzaken, ook als een card alleen op een subview wordt gemount. Dat wordt gemeten.
+De specialistische resources zijn onafhankelijk geversioneerd via HACS. `home-dashboard` legt een compatibiliteitsmatrix vast; het bundelt of forkt hun code niet. Globale registratie kan nog download-/parsekosten veroorzaken, ook als een card alleen op een subview wordt gemount. Dat wordt gemeten. De printerintegratie heeft geen externe HACS-resource en valt dus buiten deze compatibiliteitsmatrix; haar bundelkost wordt in plaats daarvan bewaakt via het bundlebudget (`scripts/verify-dist.mjs`, D-055).
 
 ## Kia
 
@@ -105,6 +106,24 @@ De latere bouwfase maakt een zelfstandige `custom:pool-dashboard-card` in dezelf
 
 De card krijgt een eigen configuratiecontract, tests en HACS-release. `home-dashboard` bevat alleen summary, route, mappingcontract en integratietests.
 
+## 3D-printer
+
+### Summary en route
+
+Native summary (`home-dashboard-printer-summary`) toont titel, status, voortgang, nozzle-/bedtemperatuur en resterende tijd. `Open details` navigeert naar `specialist-printer`. Anders dan Kia, robot, tuin en zwembad is er geen onafhankelijk geteste HACS-kaart om naar uit te besteden: de volledige detailweergave (printtaak, lagen, doeltemperaturen, laatste fout, filamentslots, camera/jobpreview) wordt native opgebouwd met bestaande sectie-, tile- en picture-entity-kaarttypes.
+
+### Productiegate (aangepast aan de native architectuur)
+
+De vijf gates uit de Robotstofzuiger-sectie zijn geschreven voor een aparte bronrepo met een centrale adapter. Omdat de printer geen bronrepo heeft, is elke gate rechtstreeks tegen de native implementatie beoordeeld (`src/cards/home-dashboard-printer-integration.ts`):
+
+1. **Relevante-state gating:** **niet geïmplementeerd.** De `hass`-setter roept bij elke toewijzing onvoorwaardelijk `updateValues()` aan, zonder te controleren of een van de vijf gemapte entiteiten daadwerkelijk veranderde. Vastgelegd als [HD-211](../planning/tickets.md#hd-211--printersummary-relevante-state-gating-toevoegen); de bestaande 100-irrelevante-updates-perfgate (`scripts/render-room-controls.mjs`) dekt alleen de kamerdetail-DOM, niet deze summary.
+2. **Zichtbare servicefouten:** **niet van toepassing.** De integratie doet geen enkele Home Assistant-servicecall, configuratiewrite of externe netwerkcall — puur read-only weergave (bevestigd in `docs/releases/testing-printer-specialist.md`).
+3. **Confirmations voor riskante acties:** **niet van toepassing**, zelfde reden als gate 2; de enige interactieve elementen (camera/jobpreview-afbeeldingen) hebben expliciet `noAction()` op tap/hold/double-tap.
+4. **Missing/unavailable-fallback:** **bevestigd.** `mappingIncomplete`, `valuesUnavailable`, `resourceAvailable()` en `hasPrinterSummaryMapping()` geven elk een eigen, native fallbacktekst (nooit een verzonnen waarde); afgedekt met normal/warning/missing/unavailable-fixtures in de browsermatrix.
+5. **Mobiel/toetsenbord/screenreadergedrag:** **bevestigd via de gedeelde routematrix**, niet via een printerspecifieke test — zelfde bewijsstandaard als bij Kia/robot/tuin: `scripts/check-prototype-browser.mjs` rendert `specialist-printer` op 390×844/1024×900/1440×900, light/dark en normal/warning/unavailable, en controleert actieve-routestatus (`aria-current`) en zichtbare toetsenbordfocus dashboardbreed.
+
+Tot HD-211 opgelost is, blijft de printersummary functioneel correct maar zonder de rerender-efficiëntie die de kamerdetailkaarten al hebben.
+
 ## Theming- en navigatiecontract
 
 - Shell bezit viewtitel, `back_path`, achtergrond, buitenmarge en contentbreedte.
@@ -142,6 +161,7 @@ Een versie-mismatch toont een duidelijke fallback; hij mag Home of andere routes
 | HACS release en kaartlicentie | ja | compatibiliteitsregister |
 | visuele integratierenders | kaartfixtures ondersteunen | ja |
 | zwembadcard bouwen en releasen | nieuwe zwembadrepo | alleen consument/integratietest |
+| printersummary en -detailkaarten | n.v.t. (geen bronrepo) | ja, volledig native |
 
 ## Resource-audit
 
