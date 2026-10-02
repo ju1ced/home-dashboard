@@ -665,7 +665,7 @@ test("visuele cards houden bediening op de kamerpagina naast secundaire HA-detai
   const bundle = await readFile(new URL("../dist/home-dashboard.js", import.meta.url), "utf8");
   assert.match(bundle, /hass-more-info/);
   assert.match(bundle, /mushroom-controls/);
-  assert.match(bundle, /history-dialog/);
+  assert.match(bundle, /logbook\/get_events/);
   assert.match(bundle, /open_cover/);
   assert.match(bundle, /Ontgrendel om te schakelen/);
   assert.match(bundle, /Samenhangend Home-overzicht/);

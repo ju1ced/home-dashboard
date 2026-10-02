@@ -38,11 +38,11 @@ test("release assets are deterministic for a given bundle", async () => {
   const packageJson = JSON.parse(await readFile(new URL("package.json", root), "utf8"));
   const commit = "01234567".repeat(5);
   const tag = `v${packageJson.version}`;
-  // Zie scripts/verify-dist.mjs en D-055 (HD-210): de editor is uitgesplitst
-  // naar dist/home-dashboard-editor.js, dus de hoofdbundel krijgt een nieuw,
-  // veel lager budget (210_000, gemeten 204.856 bytes). De editorbundle heeft
-  // een eigen, ruimer budget (160_000, gemeten 93.887 bytes) in verify-dist.mjs.
-  assert.ok(bundle.length <= 210_000);
+  // Zie scripts/verify-dist.mjs. D-055 (HD-210) splitste de editor uit naar
+  // dist/home-dashboard-editor.js (eigen budget 160_000, gemeten 93.887 bytes).
+  // D-059 (HD-205) verhoogt de hoofdbundel opnieuw voor de echte statistics/
+  // history/logbook-koppeling: 210_000 -> 213_000, gemeten 211.638 bytes.
+  assert.ok(bundle.length <= 213_000);
   assert.equal(bundle.includes(Buffer.from("sourceMappingURL")), false);
   assert.equal(editorBundle.includes(Buffer.from("sourceMappingURL")), false);
   const result = spawnSync(process.execPath, ["scripts/create-release-assets.mjs"], { cwd: rootPath, encoding: "utf8", env: { ...process.env, GITHUB_SHA: commit, RELEASE_TAG: tag } });

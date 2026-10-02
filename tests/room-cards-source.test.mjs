@@ -28,7 +28,7 @@ test("HD-209 kamerfoto: image_upload resolutie heeft prioriteit boven image_enti
 
   // setConfig() rendert synchroon voordat Lovelace `hass` toewijst; de hass-setter moet een echte
   // retry triggeren zodra een connectie beschikbaar komt, niet alleen wanneer de state-signature wijzigt.
-  assert.match(source, /if \(this\.config\?\.room\) this\.loadRoomPhoto\(this\.config\.room\);/);
+  assert.match(source, /if \(this\.config\?\.room\) \{\s*this\.loadRoomPhoto\(this\.config\.room\);/);
 
   assert.match(types, /image_upload\?:\s*\{\s*media_content_id:\s*string;\s*media_content_type:\s*string\s*\}/);
 });
@@ -104,7 +104,7 @@ test("kamerdetail gebruikt afzonderlijke mushroom-achtige capabilitykaarten", as
   assert.match(source, /mushroomCard\(entity, "cover"/);
   assert.match(source, /mushroomCard\(room\.hvac\.entity, "climate"/);
   assert.match(source, /smart-plug-card/);
-  assert.match(source, /history-dialog/);
+  assert.match(source, /historyPanel\(room\)/);
   assert.doesNotMatch(source, /Nu bedienen/);
 });
 
@@ -201,7 +201,7 @@ test("kamerdetail behoudt niet-bedienbare kamerbronnen als zichtbare status", as
   assert.match(source, /room\.history_entities/);
 });
 
-test("kamerdetail houdt bediening op de pagina met beveiligde smart plugs en een historiedialoog", async () => {
+test("kamerdetail houdt bediening op de pagina met beveiligde smart plugs en echte HD-205 historie-WS-calls", async () => {
   const source = await readFile(sourceUrl, "utf8");
   const types = await readFile(new URL("../src/config/types.ts", import.meta.url), "utf8");
 
@@ -210,7 +210,9 @@ test("kamerdetail houdt bediening op de pagina met beveiligde smart plugs en een
   assert.match(source, /Smart plugs & energie/);
   assert.match(source, /Ontgrendel om te schakelen/);
   assert.match(source, /temperature_history_entity/);
-  assert.match(source, /history-graph/);
+  assert.match(source, /history\/history_during_period/);
+  assert.match(source, /logbook\/get_events/);
+  assert.match(source, /recorder\/statistics_during_period/);
   assert.match(source, /room\.image_entity/);
   assert.match(source, /linak-desk-card/);
   assert.match(source, /\.\.\.room\.desk\.card_config, type: "custom:linak-desk-card"/);
