@@ -9,7 +9,6 @@ De kolom **Volgorde** vertaalt afhankelijkheden naar de aanbevolen uitvoering: f
 | Ticket | Prioriteit | Categorie | Volgorde | Toelichting |
 |---|---|---|---|---|
 | [HD-112 Runtimebevindingen oplossen](tickets.md#hd-112--runtimebevindingen-oplossen) | P1 | Runtimeacceptatie | 1d · Voorwaardelijk | Live gevonden bevindingen oplossen in kleine, geïsoleerde regressieslices |
-| [HD-171 Performancebaseline en budgetten vastleggen](tickets.md#hd-171--performancebaseline-en-budgetten-vastleggen) | P1 | Performance | 5a | Meetbare budgetten voor bundle, DOM, long tasks en rerenders |
 | [HD-172 Multi-dashboard resource-audit uitvoeren](tickets.md#hd-172--multi-dashboard-resource-audit-uitvoeren) | P1 | Performance | 5b | Globale dashboardresources en hun consumenten inventariseren vóór opschoning |
 | [HD-180 HACS lifecycle en compatibiliteitsmatrix bijwerken](tickets.md#hd-180--hacs-lifecycle-en-compatibiliteitsmatrix-bijwerken) | P1 | Release engineering | 6a | Install/update/downgrade/verwijderen opnieuw bewijzen voor de actuele productvorm |
 | [HD-181 Admin-dashboardgrens uitwerken](tickets.md#hd-181--admin-dashboardgrens-uitwerken) | P2 | Diagnostiek | 2b | `require_admin`-grens voor diagnostiek/beheer, los van het gezinsdashboard |
@@ -17,6 +16,7 @@ De kolom **Volgorde** vertaalt afhankelijkheden naar de aanbevolen uitvoering: f
 | [HD-201 Volledige productaudit voor privacy en beveiliging](tickets.md#hd-201--volledige-productaudit-voor-privacy-en-beveiliging) | P0 | Quality engineering | 5c | Eén privacy-/securityaudit over het volledige samengevoegde product; inventarisatie mag in fase 2 starten |
 | [HD-211 Printersummary: relevante-state gating toevoegen](tickets.md#hd-211--printersummary-relevante-state-gating-toevoegen) | P2 | Performance | 2a-vervolg | Gevonden tijdens HD-200: `set hass` rendert onvoorwaardelijk, geen diffing tegen de vijf gemapte entiteiten |
 | [HD-212 mountCard()-resourcefallback met een echte test bewijzen](tickets.md#hd-212--mountcard-resourcefallback-met-een-echte-test-bewijzen) | P2 | Quality engineering | 2d-vervolg | Gevonden tijdens HD-203: het "Kaart niet beschikbaar."-catchpad is nooit door een test uitgeoefend |
+| [HD-213 Diff-voor-schrijven toevoegen aan Home, Energie en pool-specialist renderpaden](tickets.md#hd-213--diff-voor-schrijven-toevoegen-aan-home-energie-en-pool-specialist-renderpaden) | P2 | Performance | 5a-vervolg | Gevonden tijdens HD-171: 500 irrelevante updates geven 32.000/6.000/4.500 DOM-mutaties voor Home/Energie/pool |
 
 
 ## In uitvoering
@@ -58,6 +58,7 @@ Geen tickets.
 | [HD-209 Kamerafbeelding rechtstreeks kunnen uploaden](tickets.md#hd-209--kamerafbeelding-rechtstreeks-kunnen-uploaden) | P1 | Kamers | PR #57 · `v0.8.0-alpha.25` |
 | [HD-207 Control Deck-omkadering: drie resterende hiaten](tickets.md#hd-207--control-deck-omkadering-drie-resterende-hiaten) | P2 | Kamers | PR #63 · nog niet gereleased |
 | [HD-205 Verbruik en Historie op echte HA-statistics en logbook-data](tickets.md#hd-205--verbruik-en-historie-op-echte-ha-statistics-en-logbook-data) | P2 | Kamers / Energie en domeinen | PR #66 · `v0.8.0-alpha.27` candidate |
+| [HD-171 Performancebaseline en budgetten vastleggen](tickets.md#hd-171--performancebaseline-en-budgetten-vastleggen) | P1 | Performance | PR #67 · candidate `v0.8.0-alpha.28` |
 
 ## Geblokkeerd
 
