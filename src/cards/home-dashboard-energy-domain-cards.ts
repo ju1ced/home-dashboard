@@ -214,10 +214,15 @@ export class HomeDashboardEnergyOverview extends HTMLElementBase {
       const label = stateLabel(this.hassValue, spec);
       const labelElement = element.querySelector<HTMLElement>(".label");
       const valueElement = element.querySelector<HTMLElement>(".value");
-      if (labelElement) labelElement.textContent = label;
-      if (valueElement) valueElement.textContent = value;
-      element.classList.toggle("is-unavailable", value === "Niet beschikbaar");
-      element.setAttribute("aria-label", `${label}: ${value}`);
+      // HD-213: before-write checks -- setAttribute/classList/textContent all fire a mutation even
+      // when written to their current value, so a fully irrelevant hass update (none of this card's
+      // mapped entities changed) must never reach the DOM at all.
+      if (labelElement && labelElement.textContent !== label) labelElement.textContent = label;
+      if (valueElement && valueElement.textContent !== value) valueElement.textContent = value;
+      const unavailable = value === "Niet beschikbaar";
+      if (element.classList.contains("is-unavailable") !== unavailable) element.classList.toggle("is-unavailable", unavailable);
+      const ariaLabel = `${label}: ${value}`;
+      if (element.getAttribute("aria-label") !== ariaLabel) element.setAttribute("aria-label", ariaLabel);
     }
   }
 }

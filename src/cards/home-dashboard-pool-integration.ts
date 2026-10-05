@@ -160,14 +160,23 @@ export class HomeDashboardPoolSummary extends HTMLElementBase {
   private updateValues(): void {
     if (!this.config || !this.shadowRoot) return;
     const presentation = getPoolPresentation(this.hassValue, this.config.pool);
+    // HD-213: before-write checks on the rendered output, not the input entities -- getPoolPresentation()
+    // depends on a dynamic, config-driven entity set (salt system, compressor, pumps) that's awkward to
+    // enumerate separately and keep in sync; comparing what's about to be written is simpler and can't
+    // drift out of date the way a hand-rolled relevant-entity list could.
     for (const key of ["title", "status", "waterTemperature", "targetTemperature", "ambientTemperature", "heaterPowerText"] as const) {
       const element = this.shadowRoot.querySelector<HTMLElement>(`[data-field="${key}"]`);
-      if (element) element.textContent = presentation[key];
+      if (element && element.textContent !== presentation[key]) element.textContent = presentation[key];
     }
     const status = this.shadowRoot.querySelector<HTMLElement>("[data-field=status]");
-    status?.classList.remove("warning", "error", "unavailable");
-    if (presentation.tone !== "normal") status?.classList.add(presentation.tone);
-    this.setAttribute("aria-label", `${presentation.title}: ${presentation.status}.`);
+    if (status) {
+      const toneClass = presentation.tone !== "normal" ? presentation.tone : "";
+      for (const tone of ["warning", "error", "unavailable"] as const) {
+        if (status.classList.contains(tone) !== (tone === toneClass)) status.classList.toggle(tone, tone === toneClass);
+      }
+    }
+    const ariaLabel = `${presentation.title}: ${presentation.status}.`;
+    if (this.getAttribute("aria-label") !== ariaLabel) this.setAttribute("aria-label", ariaLabel);
   }
 }
 

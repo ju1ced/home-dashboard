@@ -387,11 +387,15 @@ Gevonden tijdens [HD-203](#hd-203--linak-bureaucard-contract-en-documentatiereco
 ### HD-213 — Diff-voor-schrijven toevoegen aan Home, Energie en pool-specialist renderpaden
 
 - **Epic:** Performance
-- **Status:** Backlog
+- **Status:** Klaar — candidate, lokaal geverifieerd op 5 oktober 2026 ([D-065](../design/decision-log.md#d-065--diff-voor-schrijven-toegevoegd-aan-home-energie-en-pool-specialist-hd-213)). Geen Home Assistant-write of deployment goedgekeurd.
 - **Prioriteit:** P2
 - **Omvang:** S
 - **Eigenaar:** Home & security-agent + Energy & domains-agent + Specialist-agent
 - **Afhankelijkheden:** geen
+
+**Resultaat**
+
+Home 32.000→2.000 mutaties (64→4/update, -94%), Energie 6.000→0, pool-specialist 4.500→0, bij 500 irrelevante updates. Ook `updateWeather()`'s onvoorwaardelijke `replaceChildren()` gefixt (grootste afzonderlijke bijdrage aan Home's cijfer). Resterende 4/update op Home komt van `childCards`-doorgave (camerastrook, Home-quickcontrols) — buiten scope, bewust niet nagejaagd. Geen wijziging aan wélke waarden getoond worden; volledige bestaande fixture-matrix blijft groen.
 
 **Doel**
 
