@@ -350,11 +350,15 @@ Documentreview, linkcheck, en een gerichte browsercheck van de bestaande fallbac
 ### HD-212 — `mountCard()`-resourcefallback met een echte test bewijzen
 
 - **Epic:** Quality engineering
-- **Status:** Backlog
+- **Status:** Klaar — candidate, lokaal geverifieerd op 5 oktober 2026 ([D-064](../design/decision-log.md#d-064--mountcards-resourcefallback-bewezen-met-een-echte-test-hd-212)). Geen Home Assistant-write of deployment goedgekeurd.
 - **Prioriteit:** P2
 - **Omvang:** S
 - **Eigenaar:** Rooms-agent
 - **Afhankelijkheden:** geen
+
+**Resultaat**
+
+Twee nieuwe browserscenario's in `scripts/check-room-detail-browser.mjs` monteren de echte bureau-fixtuurkamer met `window.loadCardHelpers` tijdelijk overschreven, en bevestigen dat beide echte faalmodi (ontbrekende helpers, werpende `createCardElement`) de `"Kaart niet beschikbaar."`-fallback laten renderen. Geen `src/`-wijziging.
 
 **Doel**
 

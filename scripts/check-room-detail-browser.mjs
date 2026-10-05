@@ -214,6 +214,45 @@ for (const variant of ["normal", "dark", "warning", "missing", "unknown", "unava
       await selectCapability("Verbruik");
       const comboTotalText = await page.evaluate(() => document.querySelector("home-dashboard-room-detail").shadowRoot.querySelector(".energy-card")?.textContent ?? "");
       assert.match(comboTotalText, /700 W/, `${label}: the Energie tab's room-total card shows the same combined wattage as the plugs-stage summary and rail, not a blank value`);
+
+      // HD-212: mountCard()'s fallback catch-path (shared by the LINAK desk card and history-graph)
+      // was never actually exercised by any test -- only the card_config pass-through was checked
+      // (tests/room-cards-source.test.mjs). Simulate both real failure modes: loadCardHelpers()
+      // resolving to nothing, and createCardElement() throwing. Reloaded on the next open(), so no
+      // manual restore is needed -- this is the last scenario in this block.
+      const deskNoHelpers = await page.evaluate(() => {
+        window.loadCardHelpers = async () => undefined;
+        const fixture = window.roomFixture;
+        const room = fixture.config.rooms.find((candidate) => candidate.key === "room_1");
+        const detail = document.createElement("home-dashboard-room-detail");
+        detail.setConfig({ type: "custom:home-dashboard-room-detail", room });
+        detail.hass = fixture.hass;
+        document.body.replaceChildren(detail);
+        return Boolean(room?.desk?.card_config && Object.keys(room.desk.card_config).length > 0);
+      });
+      assert.equal(deskNoHelpers, true, `${label}: room_1 (Bureau) has a non-empty desk config, so the desk card attempts to mount`);
+      await page.waitForFunction(() => document.querySelector("home-dashboard-room-detail")?.shadowRoot?.querySelector(".control-deck"));
+      await selectCapability("Comfort");
+      await page.waitForFunction(() => document.querySelector("home-dashboard-room-detail")?.shadowRoot?.querySelector(".desk-card")?.textContent?.trim());
+      const deskNoHelpersText = await page.evaluate(() => document.querySelector("home-dashboard-room-detail").shadowRoot.querySelector(".desk-card")?.textContent ?? "");
+      assert.equal(deskNoHelpersText, "Kaart niet beschikbaar.", `${label}: a missing loadCardHelpers() falls back to the native "not available" text, never a crash or a silently empty card`);
+
+      const deskThrowingHelpers = await page.evaluate(() => {
+        window.loadCardHelpers = async () => ({ createCardElement: () => { throw new Error("fixture: card constructor failure"); } });
+        const fixture = window.roomFixture;
+        const room = fixture.config.rooms.find((candidate) => candidate.key === "room_1");
+        const detail = document.createElement("home-dashboard-room-detail");
+        detail.setConfig({ type: "custom:home-dashboard-room-detail", room });
+        detail.hass = fixture.hass;
+        document.body.replaceChildren(detail);
+        return true;
+      });
+      assert.equal(deskThrowingHelpers, true, `${label}: room_1 (Bureau) detail remounted`);
+      await page.waitForFunction(() => document.querySelector("home-dashboard-room-detail")?.shadowRoot?.querySelector(".control-deck"));
+      await selectCapability("Comfort");
+      await page.waitForFunction(() => document.querySelector("home-dashboard-room-detail")?.shadowRoot?.querySelector(".desk-card")?.textContent?.trim());
+      const deskThrowingHelpersText = await page.evaluate(() => document.querySelector("home-dashboard-room-detail").shadowRoot.querySelector(".desk-card")?.textContent ?? "");
+      assert.equal(deskThrowingHelpersText, "Kaart niet beschikbaar.", `${label}: a throwing createCardElement() also falls back to the native "not available" text, not an unhandled exception`);
     }
   }
 }
