@@ -652,6 +652,19 @@ test("camerastrook onderscheidt privacy, beeld en verborgen fallback", () => {
   assert.equal(getCameraPresentation("unavailable", "off", "last_image"), "camera");
 });
 
+test("HD-201: een geconfigureerde privacy-entiteit die niet bevestigd 'uit' is, faalt dicht in plaats van open", () => {
+  // Een privacysensor die tijdens een Zigbee-/Z-Wave-uitval of HA-herstart naar unavailable/unknown
+  // valt, mag nooit hetzelfde resultaat geven als een bevestigde "privacy uit" -- anders toont de
+  // strook alsnog een live beeld terwijl de privacystatus feitelijk onbekend is.
+  assert.equal(getCameraPresentation("idle", "unavailable", "placeholder", true), "privacy");
+  assert.equal(getCameraPresentation("idle", "unknown", "placeholder", true), "privacy");
+  assert.equal(getCameraPresentation("idle", undefined, "placeholder", true), "privacy");
+  // Bevestigd "uit" blijft wel degelijk de camera tonen.
+  assert.equal(getCameraPresentation("idle", "off", "placeholder", true), "camera");
+  // Geen privacy_entity geconfigureerd: niets om dicht te faalen, ongewijzigd gedrag.
+  assert.equal(getCameraPresentation("idle", undefined, "placeholder", false), "camera");
+});
+
 test("cameracarrousel rendert één beeldbreedte en een compacte privacyrail", async () => {
   const bundle = await readFile(new URL("../dist/home-dashboard.js", import.meta.url), "utf8");
   assert.match(bundle, /flex:0 0 100%/);

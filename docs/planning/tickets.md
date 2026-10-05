@@ -269,11 +269,15 @@ Gevonden tijdens [HD-200](#hd-200--3d-printerspecialist-contract-productiegate-e
 ### HD-201 — Volledige productaudit voor privacy en beveiliging
 
 - **Epic:** Quality engineering
-- **Status:** Backlog
+- **Status:** Klaar — audit uitgevoerd en het enige P0/P1 gevonden probleem gefixt op 5 oktober 2026 ([D-062](../design/decision-log.md#d-062--volledige-productaudit-privacybeveiliging-één-p1-gevonden-en-gefixt-hd-201)). Specialistset-gate behandeld als voldaan (HD-200 afgerond; HD-131/141/152 blijven afzonderlijk Geblokkeerd op externe bronrepo's, wat al een expliciete deferral is — zelfde redenering als D-060/HD-171). Geen Home Assistant-write of deployment goedgekeurd.
 - **Prioriteit:** P0
 - **Omvang:** L
 - **Eigenaar:** Performance, privacy & release-QA-agent + Lead / integrator
 - **Afhankelijkheden:** featurefreeze (definitieve specialistset: HD-131, HD-141, HD-152, HD-200 of expliciete deferrals) voor de finale ronde; een eerste read-only inventarisatie kan eerder starten
+
+**Resultaat**
+
+Volledig auditdocument in [docs/quality/privacy-security-audit.md](../quality/privacy-security-audit.md). Eén P1 gevonden en gefixt: de camerastrook (`getCameraPresentation()`) faalde open bij een privacy-entiteit in `unavailable`/`unknown`/ontbrekende toestand — toonde alsnog het live beeld in plaats van dicht te faalen. Gefixt met een nieuwe regressietest. Twee P2-bevindingen vastgelegd zonder te blokkeren: een ongebruikt `ActionConfig`/`privacy_action_key`-schemaoppervlak (apart ticket [HD-214](#hd-214--centrale-actionallowlist-actionconfigprivacy_action_key-is-gedefinieerd-maar-nergens-uitgevoerd), vereist een architectuurbeslissing) en de printerwebcam zonder privacy-gating (ingeschat als bewuste productkeuze, geen ticket). Overige onderzoeksgebieden (entity-ID's/secrets, personencardprecisie, GUI-export) schoon. [HD-190](#hd-190--testmigratie-en-rollback-bewijzen) mag nu starten wat deze gate betreft.
 
 **Doel**
 
@@ -403,6 +407,41 @@ Gevonden tijdens [HD-171](#hd-171--performancebaseline-en-budgetten-vastleggen)'
 **Validatie**
 
 `pnpm test`, `pnpm run test:browser` (inclusief de performancebaseline-sectie als regressiebewijs), `git diff --check`.
+
+---
+
+### HD-214 — Centrale actionallowlist (`ActionConfig`/`privacy_action_key`) is gedefinieerd maar nergens uitgevoerd
+
+- **Epic:** Quality engineering
+- **Status:** Backlog
+- **Prioriteit:** P2
+- **Omvang:** M
+- **Eigenaar:** Lead / integrator (architectuurbeslissing nodig vóór implementatie)
+- **Afhankelijkheden:** geen
+
+**Doel**
+
+`ActionConfig` (`src/config/types.ts:187-197`, met `risk`/`confirmation_text`/`hold_required`/`sequence`) en `CameraConfig.privacy_action_key`/`confirm_privacy_disable` (`src/config/types.ts:60,62`) zijn volledig gedefinieerd, GUI-editable (`src/editor/home-dashboard-editor.ts:133-135`) en schema-gevalideerd (`src/config/validate.ts:198-201`, met round-trip-tests in `tests/config.test.mjs:267-293` en `tests/editor-behavior.test.mjs:230-235`) — maar wordt door geen enkele kaart in `src/cards/` of `src/strategy/` ooit gelezen of uitgevoerd. `executeRoomControl` (`src/cards/home-dashboard-room-controls.ts:86-91`) implementeert het juiste `risk`-gestuurde confirmation-patroon correct en is zelfs los getest, maar wordt door geen enkele UI-klasse aangeroepen — de echte klikhandler (`perform()`, zelfde bestand, regel 137) herimplementeert een equivalente (en zelf ook correct afgeschermde) check inline in plaats van de geëxporteerde functie te gebruiken.
+
+**Achtergrond**
+
+Gevonden tijdens [HD-201](#hd-201--volledige-productaudit-voor-privacy-en-beveiliging)'s volledige productaudit. Dit faalt vandaag niet open — er is simpelweg geen pad waarlangs een eigenaar camera-privacy vanuit het dashboard kan omschakelen, dus `privacy_action_key` heeft geen enkel effect, veilig of onveilig. Het echte probleem is misleidend productoppervlak: de editor accepteert en bewaart een `privacy_action_key`/`confirm_privacy_disable`-configuratie alsof die een werkende actie beschrijft, terwijl er geen bijbehorende bediening bestaat.
+
+**Scope (architectuurbeslissing eerst, dan pas code)**
+
+- De eigenaar beslist: (a) `ActionConfig`/`privacy_action_key` daadwerkelijk aansluiten op een echte bediening (bv. een privacy-toggleknop in de camerastrook die `executeRoomControl`-stijl logica aanroept), of (b) het ongebruikte schemaoppervlak verwijderen tot er een concreet gebruik is.
+- Bij keuze (a): `home-dashboard-camera-strip.ts` roept de bestaande, al-geteste `executeRoomControl`/allowlist-logica aan in plaats van een nieuw, parallel pad te bouwen; `perform()`'s inline herimplementatie in `home-dashboard-room-controls.ts` wordt vervangen door een aanroep van de geëxporteerde functie, zodat er weer één bron van waarheid is.
+- Bij keuze (b): schema, editor-UI, validatie en tests voor het ongebruikte veld worden verwijderd, niet alleen gedocumenteerd als "nog niet geïmplementeerd".
+
+**Acceptatiecriteria**
+
+- Geen enkel GUI-configuratieveld impliceert een werkende actie die niet bestaat.
+- Als (a) gekozen wordt: `perform()` en elke nieuwe privacy-actiebediening gebruiken dezelfde geëxporteerde allowlist-/confirmationfunctie, niet twee parallelle implementaties.
+- Als (b) gekozen wordt: geen enkele test of fixture verwijst nog naar het verwijderde veld.
+
+**Validatie**
+
+`pnpm test`, `pnpm run test:browser`, `git diff --check`.
 
 ---
 
