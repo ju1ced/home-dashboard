@@ -181,9 +181,9 @@ Een versie-mismatch toont een duidelijke fallback; hij mag Home of andere routes
 
 ## Resource-audit
 
-De huidige 52 resources zijn globaal en kunnen door andere dashboards worden gebruikt. Verwijdering gebeurt pas na:
+De huidige 48 resources (HD-172, 5 oktober 2026 — zie [docs/quality/resource-audit.md](../quality/resource-audit.md) voor de volledige consumentenmatrix; het eerder vermelde getal van 52 was al drie resources achterhaald vóór deze audit) zijn globaal en kunnen door andere dashboards worden gebruikt. Verwijdering gebeurt pas na:
 
-1. inventaris van alle dashboards en gebruik per resource;
+1. inventaris van alle dashboards en gebruik per resource (stap 1 is nu gedaan — zie hierboven);
 2. gemeten nieuwe baselines;
 3. migratie of expliciete onafhankelijkheid van iedere consument;
 4. snapshot en rollbackmanifest;

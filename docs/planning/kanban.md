@@ -9,7 +9,6 @@ De kolom **Volgorde** vertaalt afhankelijkheden naar de aanbevolen uitvoering: f
 | Ticket | Prioriteit | Categorie | Volgorde | Toelichting |
 |---|---|---|---|---|
 | [HD-112 Runtimebevindingen oplossen](tickets.md#hd-112--runtimebevindingen-oplossen) | P1 | Runtimeacceptatie | 1d · Voorwaardelijk | Live gevonden bevindingen oplossen in kleine, geïsoleerde regressieslices |
-| [HD-172 Multi-dashboard resource-audit uitvoeren](tickets.md#hd-172--multi-dashboard-resource-audit-uitvoeren) | P1 | Performance | 5b | Globale dashboardresources en hun consumenten inventariseren vóór opschoning |
 | [HD-180 HACS lifecycle en compatibiliteitsmatrix bijwerken](tickets.md#hd-180--hacs-lifecycle-en-compatibiliteitsmatrix-bijwerken) | P1 | Release engineering | 6a | Install/update/downgrade/verwijderen opnieuw bewijzen voor de actuele productvorm |
 | [HD-181 Admin-dashboardgrens uitwerken](tickets.md#hd-181--admin-dashboardgrens-uitwerken) | P2 | Diagnostiek | 2b | `require_admin`-grens voor diagnostiek/beheer, los van het gezinsdashboard |
 | [HD-192 v1-documentatie en release readiness afronden](tickets.md#hd-192--v1-documentatie-en-release-readiness-afronden) | P1 | Release engineering | 6c | Documentatie laten overeenkomen met de werkelijk bewezen v1-scope |
@@ -59,6 +58,7 @@ Geen tickets.
 | [HD-207 Control Deck-omkadering: drie resterende hiaten](tickets.md#hd-207--control-deck-omkadering-drie-resterende-hiaten) | P2 | Kamers | PR #63 · nog niet gereleased |
 | [HD-205 Verbruik en Historie op echte HA-statistics en logbook-data](tickets.md#hd-205--verbruik-en-historie-op-echte-ha-statistics-en-logbook-data) | P2 | Kamers / Energie en domeinen | PR #66 · `v0.8.0-alpha.27` candidate |
 | [HD-171 Performancebaseline en budgetten vastleggen](tickets.md#hd-171--performancebaseline-en-budgetten-vastleggen) | P1 | Performance | PR #67 · candidate `v0.8.0-alpha.28` |
+| [HD-172 Multi-dashboard resource-audit uitvoeren](tickets.md#hd-172--multi-dashboard-resource-audit-uitvoeren) | P1 | Performance | PR volgt · `docs/quality/resource-audit.md` |
 
 ## Geblokkeerd
 
