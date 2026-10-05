@@ -84,11 +84,15 @@ Meetrapport, scripts en vaste fixtures zonder live/private data.
 ### HD-172 — Multi-dashboard resource-audit uitvoeren
 
 - **Epic:** Performance en migratie
-- **Status:** Backlog
+- **Status:** Klaar — read-only audit uitgevoerd op 5 oktober 2026 ([D-061](../design/decision-log.md#d-061--multi-dashboard-resource-audit-uitgevoerd-hd-172)). Geen Home Assistant-write; geen resource verwijderd of gewijzigd.
 - **Prioriteit:** P1
 - **Omvang:** L
 - **Eigenaar:** Performance, privacy & release-QA-agent
 - **Afhankelijkheden:** HD-171
+
+**Resultaat**
+
+Volledige consumentenmatrix voor alle 48 globale resources over alle zes dashboards op de instantie, in [docs/quality/resource-audit.md](../quality/resource-audit.md). 37 resources bevestigd in gebruik, 2 uitsluitend op de teststaging (robot, dynamic-energy), 8 zonder bevestigde consument — expliciet gemarkeerd als blokkerend voor verwijdering in plaats van aangenomen als veilig. `integration-strategy.md`'s verouderde "52 resources" gecorrigeerd naar 48.
 
 **Doel**
 
