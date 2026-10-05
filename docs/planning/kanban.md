@@ -59,7 +59,7 @@ Geen tickets.
 | [HD-171 Performancebaseline en budgetten vastleggen](tickets.md#hd-171--performancebaseline-en-budgetten-vastleggen) | P1 | Performance | PR #67 · `v0.8.0-alpha.27` |
 | [HD-172 Multi-dashboard resource-audit uitvoeren](tickets.md#hd-172--multi-dashboard-resource-audit-uitvoeren) | P1 | Performance | PR #68 · `docs/quality/resource-audit.md` |
 | [HD-201 Volledige productaudit voor privacy en beveiliging](tickets.md#hd-201--volledige-productaudit-voor-privacy-en-beveiliging) | P0 | Quality engineering | PR #69 · `v0.8.0-alpha.27` |
-| [HD-211 Printersummary: relevante-state gating toevoegen](tickets.md#hd-211--printersummary-relevante-state-gating-toevoegen) | P2 | Performance | PR volgt · candidate |
+| [HD-211 Printersummary: relevante-state gating toevoegen](tickets.md#hd-211--printersummary-relevante-state-gating-toevoegen) | P2 | Performance | PR #71 |
 
 ## Geblokkeerd
 
