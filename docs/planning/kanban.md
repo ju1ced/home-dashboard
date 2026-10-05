@@ -59,7 +59,7 @@ Geen tickets.
 | [HD-172 Multi-dashboard resource-audit uitvoeren](tickets.md#hd-172--multi-dashboard-resource-audit-uitvoeren) | P1 | Performance | PR #68 · `docs/quality/resource-audit.md` |
 | [HD-201 Volledige productaudit voor privacy en beveiliging](tickets.md#hd-201--volledige-productaudit-voor-privacy-en-beveiliging) | P0 | Quality engineering | PR #69 · `v0.8.0-alpha.27` |
 | [HD-211 Printersummary: relevante-state gating toevoegen](tickets.md#hd-211--printersummary-relevante-state-gating-toevoegen) | P2 | Performance | PR #71 |
-| [HD-212 mountCard()-resourcefallback met een echte test bewijzen](tickets.md#hd-212--mountcard-resourcefallback-met-een-echte-test-bewijzen) | P2 | Quality engineering | PR volgt · candidate |
+| [HD-212 mountCard()-resourcefallback met een echte test bewijzen](tickets.md#hd-212--mountcard-resourcefallback-met-een-echte-test-bewijzen) | P2 | Quality engineering | PR #72 |
 
 ## Geblokkeerd
 
