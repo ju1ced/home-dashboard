@@ -12,6 +12,7 @@ import {
   getRoomMetric,
   getWastePresentation,
   migrateConfig,
+  printerStateKey,
   roomPath
 } from "../dist/home-dashboard.js";
 
@@ -486,6 +487,59 @@ test("3D-printer krijgt een stabiele specialistroute, foutdetectie en een zelfst
   const domainCards = domains.sections.flatMap((section) => section.cards);
   assert.ok(domainCards.some((card) => card.type === "tile" && card.entity === "printer_status_primary"), "printerstatus ontbreekt als navigeerbare tegel op Domeinen");
   assert.equal(domainCards.some((card) => card.type === "custom:home-dashboard-printer-summary"), false, "Domeinen mag niet de volledige samenvattingskaart embedden, enkel een navigeerbare tegel");
+});
+
+test("HD-211: printerStateKey blijft gelijk voor een volledig irrelevante entitywijziging en verandert bij elke relevante", async () => {
+  const config = await normalConfig();
+  config.specialists.printer = {
+    enabled: true,
+    card_type: "custom:home-dashboard-printer-summary",
+    minimum_version: "",
+    mapping_keys: ["printer_primary"],
+    card_config: {
+      title: "Werkplaatsprinter",
+      entities: {
+        status: "printer_status_primary",
+        progress: "printer_progress_primary",
+        time_remaining: "printer_time_remaining_primary",
+        nozzle_temperature: "printer_nozzle_primary",
+        bed_temperature: "printer_bed_primary",
+        job_failed: "printer_job_failed_primary",
+        insufficient_filament: "printer_insufficient_filament_primary"
+      }
+    }
+  };
+  const printer = config.specialists.printer;
+  const baseStates = {
+    printer_status_primary: { state: "printing" },
+    printer_progress_primary: { state: "42" },
+    printer_time_remaining_primary: { state: "38" },
+    printer_nozzle_primary: { state: "210" },
+    printer_bed_primary: { state: "60" },
+    printer_job_failed_primary: { state: "off" },
+    printer_insufficient_filament_primary: { state: "off" },
+    sensor_unrelated_to_printer: { state: "23" }
+  };
+  const baseKey = printerStateKey({ states: baseStates }, printer);
+
+  // Een volledig irrelevante entity wijzigt -- de key moet exact gelijk blijven, zodat set hass()
+  // de her-render overslaat.
+  const irrelevantChanged = { ...baseStates, sensor_unrelated_to_printer: { state: "99" } };
+  assert.equal(printerStateKey({ states: irrelevantChanged }, printer), baseKey, "irrelevante entity mag de key niet veranderen");
+
+  // Elk van de zeven relevante entiteiten moet de key individueel laten veranderen.
+  for (const [entity, nextState] of [
+    ["printer_status_primary", "error"],
+    ["printer_progress_primary", "43"],
+    ["printer_time_remaining_primary", "37"],
+    ["printer_nozzle_primary", "211"],
+    ["printer_bed_primary", "61"],
+    ["printer_job_failed_primary", "on"],
+    ["printer_insufficient_filament_primary", "on"]
+  ]) {
+    const changed = { ...baseStates, [entity]: { state: nextState } };
+    assert.notEqual(printerStateKey({ states: changed }, printer), baseKey, `${entity} moet de key veranderen`);
+  }
 });
 
 test("Zwembad krijgt een stabiele specialistroute, foutdetectie en een zelfstandige samenvattingskaart", async () => {

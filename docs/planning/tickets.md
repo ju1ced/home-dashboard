@@ -235,11 +235,15 @@ Documentreview, linkcheck, en waar nodig bronrepo-testbewijs en een browsercheck
 ### HD-211 — Printersummary: relevante-state gating toevoegen
 
 - **Epic:** Performance
-- **Status:** Backlog
+- **Status:** Klaar — candidate, lokaal geverifieerd op 5 oktober 2026 ([D-063](../design/decision-log.md#d-063--printersummary-krijgt-relevante-state-gating-hd-211)). Geen Home Assistant-write of deployment goedgekeurd.
 - **Prioriteit:** P2
 - **Omvang:** S
 - **Eigenaar:** Specialist-agent
 - **Afhankelijkheden:** geen
+
+**Resultaat**
+
+Nieuwe, geëxporteerde `printerStateKey()` vergelijkt de zeven relevante entiteiten vóór elke her-render; `set hass` slaat `updateValues()` over bij een ongewijzigde sleutel. Getest als pure functie (geen DOM-mutatietelling mogelijk, Node-testsuite heeft geen echte DOM) — bewijst dat een irrelevante entity de sleutel niet raakt en elk van de zeven relevante entiteiten dat wel individueel doet.
 
 **Doel**
 
