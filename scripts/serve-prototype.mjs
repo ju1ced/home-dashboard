@@ -7,6 +7,11 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../prot
 const repositoryRoot = path.resolve(root, "..");
 const port = Number.parseInt(process.env.HD_PROTOTYPE_PORT || "4173", 10);
 const healthToken = process.env.HD_PROTOTYPE_TOKEN || "standalone";
+// HD-171: opt-in only. Every other consumer of this server (the full browser matrix) relies on the
+// default no-store contract so each check always exercises a byte-identical, freshly-read dist/ file.
+// The performance-baseline script is the only caller that sets this, in its own short-lived server
+// instance, to produce a real cold-vs-warm HTTP cache distinction for the parse/evaluation metric.
+const cacheableDist = process.env.HD_PROTOTYPE_CACHE === "1";
 
 const contentTypes = new Map([
   [".html", "text/html; charset=utf-8"],
@@ -38,9 +43,10 @@ const server = http.createServer(async (request, response) => {
     const info = await stat(target);
     if (!info.isFile()) throw new Error("Not a file");
     const body = await readFile(target);
+    const cacheable = cacheableDist && relative.startsWith("/dist/");
     response.writeHead(200, {
       "Content-Type": contentTypes.get(path.extname(target)) || "application/octet-stream",
-      "Cache-Control": "no-store"
+      "Cache-Control": cacheable ? "public, max-age=31536000, immutable" : "no-store"
     });
     response.end(body);
   } catch {

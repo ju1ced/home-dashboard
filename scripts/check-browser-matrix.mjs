@@ -34,6 +34,12 @@ const checks = [
     script: "scripts/render-room-controls.mjs",
     context: "normal/dark/warning/missing/unavailable and integrated/kiosk/native at 390×844, 1024×900 and 1440×900; touch and reduced-motion gates",
     environment: { HD_RENDER_DIRECTORY: "generated/browser-matrix/room-controls" }
+  },
+  {
+    label: "performance baseline",
+    script: "scripts/check-performance-baseline.mjs",
+    context: "DOM size, long tasks, rerender cost (cold/warm cache, relevant/irrelevant updates) and in-repo navigation timing for Home/Kamers/room detail (light+heavy)/Energie/specialist (HD-171)",
+    environment: { HD_RENDER_DIRECTORY: "generated/browser-matrix/performance-baseline" }
   }
 ];
 
