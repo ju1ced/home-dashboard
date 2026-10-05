@@ -116,6 +116,19 @@ try {
   page.once('dialog',dialog=>dialog.accept());
   await page.getByRole('button',{name:'Woonkamer · Luifel Uit',exact:true}).click();
   assert.equal(await page.evaluate(()=>roomFixture.calls.length),1);
+  // HD-214: ActionConfig/privacy_action_key was fully defined but never executed by any card; this
+  // proves the camera strip's privacy-toggle button against the fixture's configured action.
+  currentCase='home/privacy-action/normal/1440x1100';
+  await open();
+  const privacyButton=page.getByRole('button',{name:'Binnen: privacy uitschakelen',exact:true});
+  await privacyButton.waitFor();
+  page.once('dialog',dialog=>dialog.dismiss());
+  await privacyButton.click();
+  assert.equal(await page.evaluate(()=>roomFixture.calls.length),0);
+  page.once('dialog',dialog=>dialog.accept());
+  await privacyButton.click();
+  const insidePrivacyEntity=await page.evaluate(()=>roomFixture.config.security.cameras[1].privacy_entity);
+  assert.deepEqual(await page.evaluate(()=>roomFixture.calls.at(-1)),{domain:'input_boolean',service:'turn_off',data:{entity_id:insidePrivacyEntity}});
   currentCase='home/unavailable/1440x1100';
   await open('?fixture=unavailable');
   await page.getByRole('button',{name:/Woonkamer · Rolluiken.*Open details/}).click();

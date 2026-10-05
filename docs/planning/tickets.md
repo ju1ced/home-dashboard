@@ -425,7 +425,7 @@ Gevonden tijdens [HD-171](#hd-171--performancebaseline-en-budgetten-vastleggen)'
 ### HD-214 — Centrale actionallowlist (`ActionConfig`/`privacy_action_key`) is gedefinieerd maar nergens uitgevoerd
 
 - **Epic:** Quality engineering
-- **Status:** Backlog
+- **Status:** Klaar — architectuurbeslissing (a) genomen en geïmplementeerd op 5 oktober 2026 ([D-066](../design/decision-log.md#d-066--actionconfigprivacy_action_key-daadwerkelijk-aangesloten-op-een-echte-bediening-hd-214)). PR volgt. Geen Home Assistant-write of release nog goedgekeurd.
 - **Prioriteit:** P2
 - **Omvang:** M
 - **Eigenaar:** Lead / integrator (architectuurbeslissing nodig vóór implementatie)

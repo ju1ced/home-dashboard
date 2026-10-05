@@ -4,6 +4,8 @@ import test from "node:test";
 import {
   HomeDashboardStrategy,
   HomeDashboardViewStrategy,
+  executeConfiguredAction,
+  findPrivacyAction,
   getCameraPresentation,
   getHomeStructureSignature,
   getKiaPresentation,
@@ -719,11 +721,46 @@ test("HD-201: een geconfigureerde privacy-entiteit die niet bevestigd 'uit' is, 
   assert.equal(getCameraPresentation("idle", undefined, "placeholder", false), "camera");
 });
 
+test("HD-214: findPrivacyAction koppelt camera.privacy_action_key aan de bijbehorende geconfigureerde actie", () => {
+  const actions = [{ key: "disable_privacy", label: "Privacy uit", sequence: [], risk: "privacy", confirmation_text: "", hold_required: false, verification_entity: "" }];
+  assert.equal(findPrivacyAction({ privacy_action_key: "disable_privacy" }, actions), actions[0]);
+  assert.equal(findPrivacyAction({ privacy_action_key: "unknown_key" }, actions), undefined);
+  assert.equal(findPrivacyAction({ privacy_action_key: "" }, actions), undefined);
+  assert.equal(findPrivacyAction({ privacy_action_key: "disable_privacy" }, undefined), undefined);
+});
+
+test("HD-214: executeConfiguredAction voert elke stap van de reeks uit en respecteert de risicogate", async () => {
+  const calls = [];
+  const hass = { callService: async (domain, service, data) => { calls.push({ domain, service, data }); } };
+  const safeAction = { key: "safe_action", label: "Veilig", sequence: [{ action: "light.turn_on", target: { entity_id: "light_primary" }, data: { brightness_pct: 50 } }], risk: "safe", confirmation_text: "", hold_required: false, verification_entity: "" };
+  await executeConfiguredAction(safeAction, hass);
+  assert.deepEqual(calls, [{ domain: "light", service: "turn_on", data: { entity_id: "light_primary", brightness_pct: 50 } }]);
+
+  calls.length = 0;
+  const privacyAction = { key: "privacy_action", label: "Privacy uit", sequence: [{ action: "input_boolean.turn_off", target: { entity_id: "privacy_primary" } }], risk: "privacy", confirmation_text: "Weet je het zeker?", hold_required: false, verification_entity: "privacy_primary" };
+  await assert.rejects(executeConfiguredAction(privacyAction, hass), /niet toegestaan/);
+  assert.deepEqual(calls, []);
+  await executeConfiguredAction(privacyAction, hass, true);
+  assert.deepEqual(calls, [{ domain: "input_boolean", service: "turn_off", data: { entity_id: "privacy_primary" } }]);
+
+  calls.length = 0;
+  const multiStepAction = { ...privacyAction, sequence: [{ action: "input_boolean.turn_off", target: { entity_id: "privacy_primary" } }, { action: "notify.notify", data: { message: "Privacy uitgeschakeld" } }] };
+  await executeConfiguredAction(multiStepAction, hass, true);
+  assert.deepEqual(calls, [
+    { domain: "input_boolean", service: "turn_off", data: { entity_id: "privacy_primary" } },
+    { domain: "notify", service: "notify", data: { message: "Privacy uitgeschakeld" } }
+  ]);
+
+  await assert.rejects(executeConfiguredAction(safeAction, {}), /niet toegestaan/);
+});
+
 test("cameracarrousel rendert één beeldbreedte en een compacte privacyrail", async () => {
   const bundle = await readFile(new URL("../dist/home-dashboard.js", import.meta.url), "utf8");
   assert.match(bundle, /flex:0 0 100%/);
   assert.match(bundle, /privacy-rail/);
   assert.match(bundle, /Privacy aan/);
+  assert.match(bundle, /privacy uitschakelen/);
+  assert.match(bundle, /privacy-chip\.actionable/);
   assert.match(bundle, /minmax\(0,520px\) 150px/);
   assert.doesNotMatch(bundle, /Privacy actief/);
 });

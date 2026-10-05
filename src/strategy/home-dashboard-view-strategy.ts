@@ -31,6 +31,7 @@ export interface HomeDashboardViewConfig {
   today?: HomeDashboardConfigV1["today"];
   persons?: HomeDashboardConfigV1["persons"];
   security?: HomeDashboardConfigV1["security"];
+  actions?: HomeDashboardConfigV1["actions"];
   rooms?: RoomConfig[];
   energy?: EnergyConfig;
   specialists?: SpecialistsConfig;
@@ -79,6 +80,12 @@ function homeSections(config: HomeDashboardViewConfig, maxColumns: number): Love
       today: config.today,
       persons: config.persons ?? [],
       security: config.security,
+      // Encoded as an opaque JSON string, not nested objects: `ActionConfig.sequence[]` entries use
+      // the same `{action, target, data}` shape as a native Lovelace service-action descriptor (by
+      // design -- it is produced by the same HA action selector), but this is config data our own
+      // card reads and executes through its own risk-gated path (HD-214); it must never read back as
+      // a native tap_action embedded in the static strategy output.
+      actions: JSON.stringify(config.actions ?? []),
       rooms: config.rooms ?? [],
       specialists: config.specialists,
       diagnostics: config.diagnostics,

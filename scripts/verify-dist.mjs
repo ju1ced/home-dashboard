@@ -51,7 +51,13 @@ const errors = [];
 // statistiek/geen-data) kosten netto meer. Gemeten kandidaat: 211.638 bytes
 // (na de reviewronde die een server-geleverde ruwe entity_id in het logboek-
 // `name`-veld hardened).
-const maxBundleBytes = 213_000;
+// 213_000 -> 215_000 (D-066, HD-214): ActionConfig/privacy_action_key was volledig
+// gedefinieerd, GUI-editable en schema-gevalideerd maar werd door geen enkele kaart
+// gelezen of uitgevoerd. Deze ticket voegt de echte uitvoering toe (executeConfiguredAction
+// + de privacy-toggleknop in de camerastrook, actions doorgegeven via de view-strategy-
+// keten) en dedupliceert perform()'s inline bevestigingscontrole naar de al-geteste
+// executeEntityControl. Gemeten kandidaat: 214.427 bytes.
+const maxBundleBytes = 215_000;
 // De editor is alleen nodig voor wie de visuele configuratie-UI opent: geen
 // runtime-performancepad, dus een ruimer budget. Gemeten op 93.887 bytes na de
 // split; dit is puur een plafond om een ongemerkte opblazing te signaleren.

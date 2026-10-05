@@ -75,10 +75,14 @@ rooms[0].room_energy={
   year_entity:put('sensor','living_energy_year','143',{unit_of_measurement:'kWh'}),
   year_period:'completed'
 };
+const insidePrivacyEntity=put('input_boolean','inside_privacy','on');
 const config=migrateConfig({rooms,today:{enabled:true,weather_entity:put('weather','weather','cloudy',{temperature:19,temperature_unit:'°C'}),forecast_days:3,
   battery_soc_entity:put('sensor','battery','42',{unit_of_measurement:'%'}),battery_charge_power_entity:put('sensor','charge','0',{unit_of_measurement:'W'}),battery_discharge_power_entity:put('sensor','discharge','0',{unit_of_measurement:'W'}),solar_power_entity:put('sensor','solar','320',{unit_of_measurement:'W'}),home_consumption_entity:put('sensor','consumption','860',{unit_of_measurement:'W'}),monthly_capacity_peak_entity:put('sensor','peak','4.2',{unit_of_measurement:'kW'}),
   waste_entities:['GFT','Restafval','Papier','PMD'].map((name,i)=>put('sensor',`waste_${i}`,`2026-09-${i<2?'09':'16'}`,{friendly_name:name}))},
-  security:{enabled:true,cameras:[{key:'garden',name:'Tuin',camera_entity:put('camera','garden','idle'),privacy_entity:put('input_boolean','garden_privacy','off')},{key:'private',name:'Binnen',camera_entity:put('camera','private','idle'),privacy_entity:put('input_boolean','inside_privacy','on')}]},
+  security:{enabled:true,cameras:[{key:'garden',name:'Tuin',camera_entity:put('camera','garden','idle'),privacy_entity:put('input_boolean','garden_privacy','off')},{key:'private',name:'Binnen',camera_entity:put('camera','private','idle'),privacy_entity:insidePrivacyEntity,privacy_action_key:'disable_inside_privacy',confirm_privacy_disable:true}]},
+  // HD-214: ActionConfig/privacy_action_key was fully defined but never executed by any card; this
+  // entry proves the camera strip's privacy-toggle button against a real (fixture) risk-gated action.
+  actions:[{key:'disable_inside_privacy',label:'Privacy binnen uitschakelen',sequence:[{action:'input_boolean.turn_off',target:{entity_id:insidePrivacyEntity}}],risk:'privacy',confirmation_text:'Binnencamera privacy uitschakelen?',hold_required:false,verification_entity:insidePrivacyEntity}],
   persons:['Bewoner A','Bewoner B'].map((label,i)=>({key:`person_${i}`,label,entity:put('person',`person_${i}`,'home')})),specialists:{kia:{enabled:true},robot:{enabled:true},garden:{enabled:true}}
 }).config;
 // Include non-favorite safety to prove warnings do not depend on Home selection.
