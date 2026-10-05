@@ -59,7 +59,7 @@ Geen tickets.
 | [HD-205 Verbruik en Historie op echte HA-statistics en logbook-data](tickets.md#hd-205--verbruik-en-historie-op-echte-ha-statistics-en-logbook-data) | P2 | Kamers / Energie en domeinen | PR #66 · `v0.8.0-alpha.27` candidate |
 | [HD-171 Performancebaseline en budgetten vastleggen](tickets.md#hd-171--performancebaseline-en-budgetten-vastleggen) | P1 | Performance | PR #67 · candidate `v0.8.0-alpha.28` |
 | [HD-172 Multi-dashboard resource-audit uitvoeren](tickets.md#hd-172--multi-dashboard-resource-audit-uitvoeren) | P1 | Performance | PR #68 · `docs/quality/resource-audit.md` |
-| [HD-201 Volledige productaudit voor privacy en beveiliging](tickets.md#hd-201--volledige-productaudit-voor-privacy-en-beveiliging) | P0 | Quality engineering | PR volgt · `v0.8.0-alpha.29` candidate |
+| [HD-201 Volledige productaudit voor privacy en beveiliging](tickets.md#hd-201--volledige-productaudit-voor-privacy-en-beveiliging) | P0 | Quality engineering | PR #69 · candidate `v0.8.0-alpha.29` |
 
 ## Geblokkeerd
 
