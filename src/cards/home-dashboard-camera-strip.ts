@@ -44,12 +44,22 @@ function isPrivacyActive(state: string | undefined): boolean {
   return state === "on" || state === "active" || state === "true";
 }
 
+function isPrivacyKnownOff(state: string | undefined): boolean {
+  return state === "off" || state === "false";
+}
+
 export function getCameraPresentation(
   cameraState: string | undefined,
   privacyState: string | undefined,
-  fallback: CameraConfig["fallback"]
+  fallback: CameraConfig["fallback"],
+  hasPrivacyEntity = false
 ): "camera" | "privacy" | "hidden" {
   if (isPrivacyActive(privacyState)) return "privacy";
+  // Fail closed (HD-201): a configured privacy entity that isn't confirmed "off" -- unavailable,
+  // unknown, or missing from hass.states during a sensor dropout -- must never be treated the same
+  // as privacy confirmed off. Showing the live feed here would be exactly the unintended-image-leak
+  // this toggle exists to prevent.
+  if (hasPrivacyEntity && !isPrivacyKnownOff(privacyState)) return "privacy";
   if (fallback === "hidden" && isUnavailable(cameraState)) return "hidden";
   return "camera";
 }
@@ -135,7 +145,7 @@ export class HomeDashboardCameraStrip extends HTMLElementBase {
     const cameraStates = this._config.cameras.map((camera) => {
       const cameraState = this._hass?.states?.[camera.camera_entity]?.state;
       const privacyState = camera.privacy_entity ? this._hass?.states?.[camera.privacy_entity]?.state : undefined;
-      return { camera, cameraState, privacyState, presentation: getCameraPresentation(cameraState, privacyState, camera.fallback) };
+      return { camera, cameraState, privacyState, presentation: getCameraPresentation(cameraState, privacyState, camera.fallback, Boolean(camera.privacy_entity)) };
     });
     const visibleCameras = cameraStates.filter(({ presentation }) => presentation === "camera");
     const privacyCameras = cameraStates.filter(({ camera }) => Boolean(camera.privacy_entity));
