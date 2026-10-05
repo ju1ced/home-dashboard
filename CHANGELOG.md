@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.8.0-alpha.28 — 2026-10-05
+
+Bundelt vier afgeronde tickets sinds alpha.27 in één release, alle vier gevonden tijdens alpha.27's eigen HD-171/HD-201-rondes.
+
+- **Nieuw: privacy-actieknop op de camerastrook (HD-214).** `ActionConfig`/`CameraConfig.privacy_action_key` waren volledig gedefinieerd, GUI-editable en schema-gevalideerd, maar werden door geen enkele kaart ooit gelezen of uitgevoerd — een geconfigureerde privacyactie had geen enkel effect. De camerastrook's privacystatuschip wordt nu een echte knop wanneer privacy actief is en een geldige gekoppelde actie bestaat; bevestiging is vereist zodra de camera dat vraagt of de actie risicovol is. **Voert bij bevestiging een echte Home Assistant-service-aanroep uit — vereist live verificatie, zie onder.**
+- **Performance: Home/Energie/pool-specialist schrijven niet langer onvoorwaardelijk naar de DOM bij elke irrelevante update (HD-213).** Elke schrijfactie wordt nu eerst tegen de huidige weergegeven waarde vergeleken. Gemeten op 500 irrelevante updates: Home 32.000 → 2.000 mutaties (-94%), Energie en de poolspecialist 100% naar nul. Geen wijziging aan wélke waarden getoond worden.
+- **Performance: printersamenvatting rendert niet langer onvoorwaardelijk bij elke `hass`-toewijzing (HD-211).** Een nieuwe stabiele sleutel over de zeven relevante entiteiten bepaalt of een her-render nodig is.
+- **Kwaliteit: `mountCard()`'s resourcefallback nu daadwerkelijk door een test afgedekt (HD-212).** Het bestaande `"Kaart niet beschikbaar."`-catchpad (gedeeld door de LINAK-bureaucard en history-graph) werd nooit uitgeoefend door een test; twee nieuwe browserscenario's bewijzen nu beide faalmodi.
+- **Interne opschoning:** `perform()`'s inline bevestigingscontrole in de kamerbediening is gededupliceerd naar de al-geteste `executeEntityControl()` — geen gedragswijziging, wel één bron van waarheid minder om uit elkaar te laten lopen.
+- Hoofdbundelbudget 213 kB → 215 kB (gemeten 214.427 bytes) voor de echte uitvoering van HD-214.
+- [Testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.28.md). Live Home Assistant-acceptatie blijft een afzonderlijke menselijke gate — deze release voegt voor het eerst een knop toe die zelf een service-aanroep uitvoert buiten de al bestaande kamerbediening om.
+
 ## 0.8.0-alpha.27 — 2026-10-05
 
 Bundelt zeven afgeronde tickets sinds alpha.26 in één release.

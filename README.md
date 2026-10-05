@@ -1,5 +1,7 @@
 # Home Dashboard — ontwerpvoorstel
 
+Testcandidate **v0.8.0-alpha.28** bundelt vier afgeronde tickets: een nieuwe privacy-actieknop op de camerastrook die bij bevestiging een echte Home Assistant-service-aanroep uitvoert (voorheen volledig ongebruikt schemaoppervlak), en drie performance-/kwaliteitstickets (Home/Energie/pool schrijven niet langer onvoorwaardelijk naar de DOM, de printersamenvatting rendert niet langer onvoorwaardelijk, en `mountCard()`'s resourcefallback is nu daadwerkelijk door een test afgedekt). Zie de [testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.28.md) — deze release vraagt voor het eerst live bevestiging van een knop die zelf een service-aanroep doet.
+
 Testcandidate **v0.8.0-alpha.27** bundelt zeven afgeronde tickets: een beveiligingsfix (camerastrook faalt nu dicht bij een unavailable/unknown privacy-sensor, na de eerste volledige productaudit voor privacy en beveiliging), echte HA-statistics/history/logbook-data voor Verbruik en Historie, een gemeten performancebaseline met budgetten, een multi-dashboard resource-audit, en documentatie-inhaalslagen voor de printerspecialist en de LINAK-bureaucard. Zie de [testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.27.md).
 
 Testcandidate **v0.8.0-alpha.26** lost het herhaaldelijk opgetrokken bundlebudget structureel op: de configuratie-editor is uitgesplitst naar een eigen, lazy geladen bundle (`dist/home-dashboard-editor.js`) en de hoofdbundel-grens daalt van 260 kB naar 210 kB. Geen functionele wijziging voor wie het dashboard bekijkt; de editor werkt ongewijzigd, nu gewoon on-demand geladen. Zie de [testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.26.md).
@@ -74,7 +76,7 @@ Open daarna `http://127.0.0.1:4173/`. De fixtureselector wisselt tussen normaal,
 
 ## HACS-installatie
 
-[`v0.1.0-alpha.1`](https://github.com/ju1ced/home-dashboard/releases/tag/v0.1.0-alpha.1) heeft de volledige HACS-lifecycle doorlopen: installatie, update, verwijdering en herinstallatie. Zie [het geanonimiseerde resultaat](docs/releases/results-v0.1.0-alpha.1.md). De `v0.2`-reeks valideerde de GUI; de `v0.3`-reeks bracht de eerste views; latere alpha's breidden camera's, Home, Kamers en veilige kamerbediening uit. `v0.8.0-alpha.27` is de laatst getagde kandidaat: een beveiligingsfix (camera-privacy faalt nu dicht), echte statistics/history/logbook-data, een gemeten performancebaseline en een resource-audit; live Home Assistant-acceptatie blijft een afzonderlijke, nog goed te keuren validatiecyclus.
+[`v0.1.0-alpha.1`](https://github.com/ju1ced/home-dashboard/releases/tag/v0.1.0-alpha.1) heeft de volledige HACS-lifecycle doorlopen: installatie, update, verwijdering en herinstallatie. Zie [het geanonimiseerde resultaat](docs/releases/results-v0.1.0-alpha.1.md). De `v0.2`-reeks valideerde de GUI; de `v0.3`-reeks bracht de eerste views; latere alpha's breidden camera's, Home, Kamers en veilige kamerbediening uit. `v0.8.0-alpha.28` is de laatst getagde kandidaat: een nieuwe privacy-actieknop die zelf een service-aanroep uitvoert, en drie performance-/kwaliteitstickets; live Home Assistant-acceptatie blijft een afzonderlijke, nog goed te keuren validatiecyclus.
 
 ## Checks
 
@@ -116,4 +118,4 @@ scripts/          lokale preview en repositorychecks
 
 ## Status
 
-v0.8.0-alpha.27 bundelt zeven afgeronde tickets: een beveiligingsfix (camerastrook faalt nu dicht bij een unavailable/unknown privacy-sensor, na de eerste volledige productaudit voor privacy en beveiliging), echte HA-statistics/history/logbook-data voor Verbruik en Historie, een gemeten performancebaseline met budgetten, een multi-dashboard resource-audit, drie kleine Control Deck-fixes, en documentatie-inhaalslagen voor de printerspecialist en de LINAK-bureaucard. De fixtures voeren geen live Home Assistant-write uit; deployment en runtimeacceptatie vereisen daarna nog de ingevulde menselijke gate uit de testchecklist.
+v0.8.0-alpha.28 bundelt vier afgeronde tickets: een nieuwe privacy-actieknop op de camerastrook (voert bij bevestiging een echte service-aanroep uit — voor het eerst in deze release, dus met expliciete live-verificatiepunten in de testchecklist), en drie performance-/kwaliteitstickets zonder gedragswijziging (Home/Energie/pool-DOM-diffing, printersamenvatting-gating, een nieuwe test voor `mountCard()`'s resourcefallback). De fixtures voeren geen live Home Assistant-write uit; deployment en runtimeacceptatie vereisen daarna nog de ingevulde menselijke gate uit de testchecklist.
