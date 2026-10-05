@@ -1,5 +1,7 @@
 # Home Dashboard — ontwerpvoorstel
 
+Testcandidate **v0.8.0-alpha.27** bundelt zeven afgeronde tickets: een beveiligingsfix (camerastrook faalt nu dicht bij een unavailable/unknown privacy-sensor, na de eerste volledige productaudit voor privacy en beveiliging), echte HA-statistics/history/logbook-data voor Verbruik en Historie, een gemeten performancebaseline met budgetten, een multi-dashboard resource-audit, en documentatie-inhaalslagen voor de printerspecialist en de LINAK-bureaucard. Zie de [testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.27.md).
+
 Testcandidate **v0.8.0-alpha.26** lost het herhaaldelijk opgetrokken bundlebudget structureel op: de configuratie-editor is uitgesplitst naar een eigen, lazy geladen bundle (`dist/home-dashboard-editor.js`) en de hoofdbundel-grens daalt van 260 kB naar 210 kB. Geen functionele wijziging voor wie het dashboard bekijkt; de editor werkt ongewijzigd, nu gewoon on-demand geladen. Zie de [testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.26.md).
 
 Testcandidate **v0.8.0-alpha.25** laat een kamerfoto rechtstreeks uploaden vanuit de kamereditor, via Home Assistants native media-selector — geen HA-hulpmiddel meer nodig vooraf. De bestaande `image_entity`-koppeling blijft werken als alternatief/terugval. Live Home Assistant-acceptatie blijft een afzonderlijke gate, met als extra aandachtspunt de nog niet live geverifieerde vorm van de onderliggende media-resolutie. Zie de [testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.25.md).
@@ -72,7 +74,7 @@ Open daarna `http://127.0.0.1:4173/`. De fixtureselector wisselt tussen normaal,
 
 ## HACS-installatie
 
-[`v0.1.0-alpha.1`](https://github.com/ju1ced/home-dashboard/releases/tag/v0.1.0-alpha.1) heeft de volledige HACS-lifecycle doorlopen: installatie, update, verwijdering en herinstallatie. Zie [het geanonimiseerde resultaat](docs/releases/results-v0.1.0-alpha.1.md). De `v0.2`-reeks valideerde de GUI; de `v0.3`-reeks bracht de eerste views; latere alpha's breidden camera's, Home, Kamers en veilige kamerbediening uit. `v0.8.0-alpha.26` is de laatst getagde kandidaat: de configuratie-editor is uitgesplitst naar een eigen lazy geladen bundle, wat het hoofdbundelbudget structureel verlaagt; live Home Assistant-acceptatie blijft een afzonderlijke, nog goed te keuren validatiecyclus.
+[`v0.1.0-alpha.1`](https://github.com/ju1ced/home-dashboard/releases/tag/v0.1.0-alpha.1) heeft de volledige HACS-lifecycle doorlopen: installatie, update, verwijdering en herinstallatie. Zie [het geanonimiseerde resultaat](docs/releases/results-v0.1.0-alpha.1.md). De `v0.2`-reeks valideerde de GUI; de `v0.3`-reeks bracht de eerste views; latere alpha's breidden camera's, Home, Kamers en veilige kamerbediening uit. `v0.8.0-alpha.27` is de laatst getagde kandidaat: een beveiligingsfix (camera-privacy faalt nu dicht), echte statistics/history/logbook-data, een gemeten performancebaseline en een resource-audit; live Home Assistant-acceptatie blijft een afzonderlijke, nog goed te keuren validatiecyclus.
 
 ## Checks
 
@@ -114,4 +116,4 @@ scripts/          lokale preview en repositorychecks
 
 ## Status
 
-v0.8.0-alpha.26 lost het bundlebudget structureel op: de configuratie-editor is uitgesplitst naar een eigen, lazy geladen bundle (`dist/home-dashboard-editor.js`), waardoor de hoofdbundel-grens van 260 kB naar 210 kB kan dalen in plaats van telkens opnieuw opgetrokken te worden. Geen functionele wijziging voor dashboardgebruikers; de editor werkt ongewijzigd, alleen on-demand geladen. v0.8.0-alpha.25 voegde rechtstreekse kamerfoto-upload toe via Home Assistants native media-selector. De fixtures voeren geen live Home Assistant-write uit; deployment en runtimeacceptatie vereisen daarna nog de ingevulde menselijke gate uit de testchecklist.
+v0.8.0-alpha.27 bundelt zeven afgeronde tickets: een beveiligingsfix (camerastrook faalt nu dicht bij een unavailable/unknown privacy-sensor, na de eerste volledige productaudit voor privacy en beveiliging), echte HA-statistics/history/logbook-data voor Verbruik en Historie, een gemeten performancebaseline met budgetten, een multi-dashboard resource-audit, drie kleine Control Deck-fixes, en documentatie-inhaalslagen voor de printerspecialist en de LINAK-bureaucard. De fixtures voeren geen live Home Assistant-write uit; deployment en runtimeacceptatie vereisen daarna nog de ingevulde menselijke gate uit de testchecklist.

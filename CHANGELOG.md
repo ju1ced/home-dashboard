@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.8.0-alpha.27 — 2026-10-05
+
+Bundelt zeven afgeronde tickets sinds alpha.26 in één release.
+
+- **Beveiligingsfix (HD-201):** de camerastrook toonde alsnog het live beeld wanneer een privacy-entiteit naar `unavailable`/`unknown` viel (bv. tijdens een Zigbee-/Z-Wave-uitval of HA-herstart) — exact hetzelfde resultaat als een bevestigde "privacy uit". Dit is nu gefixt: een geconfigureerde privacy-entiteit die niet bevestigd `off`/`false` is, faalt dicht (toont de privacy-placeholder) in plaats van open. Eerste volledige productaudit over privacy en beveiliging uitgevoerd over het hele samengevoegde product (alle hoofdviews, kamerdetails, Energie/Domeinen, alle specialistviews); verder geen open P0/P1-bevindingen. Twee kleinere, niet-blokkerende bevindingen apart vastgelegd (HD-214; printerwebcam-gating beoordeeld als bewuste productkeuze). Zie `docs/quality/privacy-security-audit.md`.
+- **Nieuw: echte HA-statistics/history/logbook-data (HD-205).** De Verbruik-tab krijgt een echt dagstaafdiagram per apparaat (`recorder/statistics_during_period`). De Historie-tab is herbouwd van een per-entiteit dialoog naar een volwaardig tabblad met een temperatuur-/luchtvochtigheidslijngrafiek en een strikt tot de kamer beperkt gebeurtenissenlogboek (max 50 events, nooit woningbreed). Hoofdbundelbudget 210 kB → 213 kB.
+- **Nieuw: performancebaseline en budgetten (HD-171).** Eerste echte meting van DOM-grootte, long tasks, koude/warme parse/eval en rerendercost over Home/Kamers/kamerdetail/Energie/specialistviews, met budgetten afgeleid van echte metingen. Eén bevinding (Home/Energie/pool herschrijven DOM onvoorwaardelijk bij irrelevante updates) apart vastgelegd als HD-213, niet in deze release gefixt.
+- **Nieuw: multi-dashboard resource-audit (HD-172).** Alle 48 globale Lovelace-resources geïnventariseerd over alle zes dashboards op de instantie; 8 resources zonder bevestigde consument expliciet gemarkeerd als blokkerend voor verwijdering. `integration-strategy.md`'s verouderde "52 resources" gecorrigeerd.
+- **Documentatie ingehaald:** de 3D-printerspecialist (HD-200) en de LINAK-bureaucard (HD-203) waren allebei al geleverd zonder decision-logregel of vermelding in de designbaseline — nu retroactief vastgelegd als eersteklas- resp. lichtere-categorie-specialisten.
+- **Drie kleine Control Deck-fixes (HD-207):** de Smart-plugs-stagebadge degradeerde niet wanneer alleen een plug's energiesensor unavailable was; een comfort-/energie-only kamer toonde een lege, hangende tellinglabel in de deck-head; een screenshot-evidencebestand werd per ongeluk overschreven door een latere testfixture.
+- Vier kleine vervolgtickets gevonden tijdens deze ronde (HD-211/212/213/214), geen van alle blokkerend, apart vastgelegd voor later.
+- [Testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.27.md). Live Home Assistant-acceptatie blijft een afzonderlijke menselijke gate.
+
 ## 0.8.0-alpha.26 — 2026-10-02
 
 - Het herhaaldelijk opgetrokken bundlebudget (245 kB → 254 kB → 258 kB → 260 kB over vier Control Deck-tickets) is structureel opgelost in plaats van opnieuw verhoogd: de configuratie-editor (`src/editor/home-dashboard-editor.ts` + `fields.ts`) is uitgesplitst naar een eigen, zelfstandige bundle (`dist/home-dashboard-editor.js`), die pas on-demand geladen wordt wanneer iemand de dashboardconfiguratie daadwerkelijk opent. `HomeDashboardStrategy.getConfigElement()` is nu asynchroon en haalt de editor dan pas op via een dynamische import — Home Assistants eigen `hui-element-editor.ts` await't dit al voor elke strategy-editor, dus dit is bevestigd bestaand HA-gedrag, geen aanname.
