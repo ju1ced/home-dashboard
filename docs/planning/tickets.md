@@ -457,6 +457,44 @@ Gevonden tijdens [HD-201](#hd-201--volledige-productaudit-voor-privacy-en-beveil
 
 ---
 
+### HD-215 — GUI-configuratie-editor opsplitsen per sectie
+
+- **Epic:** Quality engineering
+- **Status:** Backlog
+- **Prioriteit:** P2
+- **Omvang:** L
+- **Eigenaar:** Lead / integrator
+- **Afhankelijkheden:** geen
+
+**Doel**
+
+`src/editor/home-dashboard-editor.ts` (647 regels) opsplitsen in één module per sectie (Personen, Beveiliging/camera's, Kamers, Acties, Specialisten), zodat elke sectie afzonderlijk leesbaar, wijzigbaar en test baar is — zonder gedragswijziging.
+
+**Achtergrond**
+
+Het bestand bevat vandaag zes los-top-level render-functies (`renderPersons`, `renderCameras`, `renderRooms`, `renderActions`, `renderSpecialists`, `renderViewOrder`) plus één klasse (`HomeDashboardStrategyEditor`) die alle state (`_config`, `activeSection`, `expandedItems`) en alle event-delegation voor élke sectie in één `bindEvents()`-methode (~70 regels) en één `render()`-methode (die bij elke wijziging de volledige shadow-DOM herbouwt en herbindt) samenbrengt. Daarnaast bestaan drie verschillende CRUD-micropatronen naast elkaar voor conceptueel gelijkaardig werk: (a) generieke, padgeïndexeerde `updateCollection`/`addItem`/`removeItem`/`moveItem` voor platte collecties (personen, camera's, kamers, acties), (b) een losstaand, met de hand gedupliceerd drietal (`addRoomNestedItem`/`updateRoomNestedItem`/`removeRoomNestedItem`) voor de drie kamer-geneste collecties (`light_groups`/`cover_controls`/`smart_plugs`), en (c) een eigen, partiële-DOM-patch-mechanisme (`moveRoomControlDraft`/`bindControlOrderEvents`) uitsluitend voor de kamer-bedieningsvolgorde-lijst. Omdat alle secties door dezelfde gedeelde `bindEvents()`/`render()` lopen, kan een wijziging aan één sectie assertions van `tests/editor-behavior.test.mjs` of de browserharnas-scenario's van een andere sectie raken, en is een falende test lastig tot de juiste sectie te herleiden.
+
+**Scope**
+
+- Eén module per sectie onder `src/editor/sections/` (bv. `persons.ts`, `cameras.ts`, `rooms.ts`, `actions.ts`, `specialists.ts`), elk exporterend een `render<Sectie>()`-functie (verplaatsing van de bestaande render-functie) en een `bind<Sectie>Events()`-functie (het uit `bindEvents()` geëxtraheerde deel dat uitsluitend die sectie raakt).
+- Gedeelde infrastructuur blijft in `home-dashboard-editor.ts` of een klein gedeeld bestand: `getPath`/`setPath`/`deletePath`, `escapeHtml`, `clone`, `getEditorItemToken`/`mergeEditorIssues`, de generieke `FIELD_DEFINITIONS`-gebaseerde rendering voor de sectieloze velden (Algemeen/Vandaag/Energie/Diagnostiek), en de klasse-schil zelf (`_config`, `activeSection`, commit/validate/export/import/reset, sectienavigatie), die nu per actieve sectie dispatcht naar `render<Sectie>()`/`bind<Sectie>Events()` in plaats van alles zelf te doen.
+- Volgorde van extractie (klein naar groot, elke stap zelfstandig test baar en zonder gedragswijziging): Specialisten (geen geneste items) → Acties (platte collectie) → Personen (platte collectie) → Beveiliging/camera's (platte collectie, bestaand "Privacybediening is optioneel"-blok blijft in deze module) → Kamers (grootste, met de drie geneste collecties én de bedieningsvolgorde-lijst; als laatste omdat deze van niets eerder geëxtraheerds afhangt en bij overhaasten het meest kan breken).
+- De drie afwijkende CRUD-patronen worden niet kunstmatig tot één patroon gedwongen als er een echte reden is om te verschillen — met name het partiële-DOM-patch-mechanisme van de bedieningsvolgorde-lijst bestaat bewust om niet de hele sectie te moeten herbouwen tijdens het herschikken. Documenteer die reden inline in de nieuwe module in plaats van hem stilzwijgend te laten verdwijnen.
+
+**Acceptatiecriteria**
+
+- Geen enkele gedragswijziging: alle bestaande tests in `tests/editor-behavior.test.mjs` en alle editor-gerelateerde browserscenario's slagen ongewijzigd (alleen importpadwijzigingen toegestaan, geen aanpassing van assertions).
+- `home-dashboard-editor.ts` wordt een dunne schil die alleen gedeelde klassestate en dispatch naar sectiemodules bevat.
+- Elke sectie's rendering en event-binding is in eigen module geïsoleerd en apart test baar van de andere secties.
+- `pnpm test`, `pnpm run test:browser` en `git diff --check` slagen na élke afzonderlijke extractiestap, niet alleen aan het eind.
+- Editorbundel blijft binnen het bestaande 160 kB-budget (D-055); een zuivere verplaatsing van code zou de totale bundlegrootte niet wezenlijk mogen veranderen (baseline vóór dit ticket: 93.887 bytes).
+
+**Validatie**
+
+`pnpm test`, `pnpm run test:browser`, `git diff --check`, bundle-sizecheck (`scripts/verify-dist.mjs`) na elke stap.
+
+---
+
 ### HD-204 — Control Deck herstructureren naar de v3-rail
 
 - **Epic:** Kamers
