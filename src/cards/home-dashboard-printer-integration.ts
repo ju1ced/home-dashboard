@@ -35,6 +35,16 @@ function isOn(state: HassState | undefined): boolean {
   return Boolean(state && ["on", "true"].includes(state.state.toLowerCase()));
 }
 
+/** A stable key over exactly the entities getPrinterPresentation() reads, so set hass() can skip a
+ * re-render when none of them changed (HD-211) -- the same relevant-state gating convention the
+ * room-detail/room-overview cards already use, just applied here via a plain string hash. */
+export function printerStateKey(hass: HassLike | undefined, printer: PrinterSpecialistConfig): string {
+  const entities = printerEntities(printer);
+  return (["status", "progress", "time_remaining", "nozzle_temperature", "bed_temperature", "job_failed", "insufficient_filament"] as const)
+    .map((key) => `${key}:${stateFor(hass, entities[key])?.state ?? ""}`)
+    .join("|");
+}
+
 /**
  * `job_failed` en `insufficient_filament` zijn de expliciete foutsignaal-
  * entiteiten die de printerintegratie blootstelt; op de vrije-tekst
@@ -92,18 +102,25 @@ export function getPrinterPresentation(hass: HassLike | undefined, printer: Prin
 export class HomeDashboardPrinterSummary extends HTMLElementBase {
   private config?: PrinterSummaryCardConfig;
   private hassValue?: HassLike;
+  private lastStateKey: string | undefined;
 
   public setConfig(config: PrinterSummaryCardConfig): void {
     if (!config?.printer) throw new Error("Printerconfiguratie ontbreekt");
     this.config = config;
     applyDashboardPalette(this, config.palette, config.theme_mode);
+    this.lastStateKey = undefined;
     this.render();
   }
 
   public set hass(value: HassLike) {
     this.hassValue = value;
-    if (!this.shadowRoot) this.render();
-    else this.updateValues();
+    if (!this.shadowRoot) {
+      this.render();
+      return;
+    }
+    // HD-211: skip the write entirely when none of the entities this card actually reads changed.
+    if (this.config && printerStateKey(value, this.config.printer) === this.lastStateKey) return;
+    this.updateValues();
   }
 
   public getCardSize(): number {
@@ -142,6 +159,7 @@ export class HomeDashboardPrinterSummary extends HTMLElementBase {
 
   private updateValues(): void {
     if (!this.config || !this.shadowRoot) return;
+    this.lastStateKey = printerStateKey(this.hassValue, this.config.printer);
     const presentation = getPrinterPresentation(this.hassValue, this.config.printer);
     for (const key of ["title", "status", "progress", "nozzleTemperature", "bedTemperature", "timeRemaining"] as const) {
       const element = this.shadowRoot.querySelector<HTMLElement>(`[data-field="${key}"]`);
