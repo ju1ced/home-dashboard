@@ -333,22 +333,39 @@ function stateButton(host: HTMLElement, hass: HomeAssistantLike | undefined, ent
   return button;
 }
 
+/** HD-213: a DOM write only when the new value actually differs, so a fully irrelevant hass
+ * update (an entity this card doesn't display) never touches the DOM at all. setAttribute/
+ * className/textContent all fire a MutationObserver record even when written to their current
+ * value, so the equality check has to happen before the write, not rely on the browser to no-op it. */
+function setText(element: HTMLElement | null | undefined, value: string): void {
+  if (element && element.textContent !== value) element.textContent = value;
+}
+
+function setAttr(element: HTMLElement | null | undefined, name: string, value: string): void {
+  if (element && element.getAttribute(name) !== value) element.setAttribute(name, value);
+}
+
+function setIcon(element: (HTMLElement & { icon?: string }) | null | undefined, value: string): void {
+  if (element && element.icon !== value) element.icon = value;
+}
+
 function updateMetricPresentation(button: HTMLButtonElement, state: StateLike | undefined, label: string): void {
   const value = button.querySelector<HTMLElement>(".metric-value");
   const meta = button.querySelector<HTMLElement>(".metric-meta");
   const status = button.querySelector<HTMLElement>(".metric-status");
   const unavailable = !state || ["unknown", "unavailable"].includes(state.state ?? "");
 
-  if (value) value.textContent = formatState(state);
-  if (meta) meta.textContent = label;
+  setText(value, formatState(state));
+  setText(meta, label);
   if (status) {
-    status.textContent = unavailable ? (!state ? "Bron ontbreekt" : "Controleer bron") : "";
-    status.hidden = !status.textContent;
+    const statusText = unavailable ? (!state ? "Bron ontbreekt" : "Controleer bron") : "";
+    setText(status, statusText);
+    if (status.hidden !== !statusText) status.hidden = !statusText;
   }
-  button.classList.toggle("is-unavailable", unavailable);
+  if (button.classList.contains("is-unavailable") !== unavailable) button.classList.toggle("is-unavailable", unavailable);
 
-  button.title = label;
-  button.setAttribute("aria-label", `${label}: ${formatState(state)}. Open meer informatie.`);
+  if (button.title !== label) button.title = label;
+  setAttr(button, "aria-label", `${label}: ${formatState(state)}. Open meer informatie.`);
 }
 
 function metricButton(host: HTMLElement, hass: HomeAssistantLike | undefined, entity: string, label: string, iconName: string): HTMLButtonElement {
@@ -411,6 +428,7 @@ export class HomeDashboardHomeOverview extends HTMLElementBase {
   private hasRendered = false;
   private childCards: LovelaceCardElement[] = [];
   private weatherForecast: ForecastLike[] = [];
+  private lastWeatherStateKey: string | undefined;
   private weatherSubscriptionEntity = "";
   private weatherSubscriptionConnection?: HomeAssistantLike["connection"];
   private weatherUnsubscribe: Unsubscribe | undefined;
@@ -428,6 +446,7 @@ export class HomeDashboardHomeOverview extends HTMLElementBase {
     applyDashboardPalette(this, config.palette, config.theme_mode);
     this.currentStructureSignature = "";
     this.hasRendered = false;
+    this.lastWeatherStateKey = undefined;
     void this.render();
   }
 
@@ -482,17 +501,26 @@ export class HomeDashboardHomeOverview extends HTMLElementBase {
     void connection.subscribeMessage!((event) => {
       if (this.weatherSubscriptionEntity !== entity || !Array.isArray(event.forecast)) return;
       this.weatherForecast = event.forecast;
-      this.updateWeather();
+      this.updateWeather(true);
     }, { type: "weather/subscribe_forecast", forecast_type: "daily", entity_id: entity }).then((unsubscribe) => {
       if (this.weatherSubscriptionEntity === entity && this.weatherSubscriptionConnection === connection) this.weatherUnsubscribe = unsubscribe;
       else void Promise.resolve(unsubscribe());
     }).catch(() => { this.weatherUnsubscribe = undefined; });
   }
 
-  private updateWeather(): void {
+  /** HD-213: updateLiveState() calls this unconditionally on every hass tick, but the forecast
+   * subscription above already triggers its own update (forceRender) whenever the forecast itself
+   * changes -- so the only thing worth re-rendering for here is the weather entity's own state.
+   * Rebuilding the whole card (replaceChildren) on every irrelevant tick was the single largest
+   * contributor to Home's unexplained DOM churn found in HD-171's baseline. */
+  private updateWeather(forceRender = false): void {
     if (!this.shadowRoot || !this.config?.today?.weather_entity) return;
     const card = this.shadowRoot.querySelector<HTMLButtonElement>(".compact-weather");
     if (!card) return;
+    const state = this.currentHass?.states?.[this.config.today.weather_entity];
+    const key = `${state?.state ?? ""}:${state?.attributes?.temperature ?? ""}`;
+    if (!forceRender && key === this.lastWeatherStateKey) return;
+    this.lastWeatherStateKey = key;
     card.replaceChildren(weatherContent(this.currentHass, this.config.today.weather_entity, this.weatherForecast, this.config.today.forecast_days));
   }
 
@@ -508,9 +536,9 @@ export class HomeDashboardHomeOverview extends HTMLElementBase {
       const label = button.dataset.label;
       const name = button.querySelector<HTMLElement>(".state-copy strong");
       const value = button.querySelector<HTMLElement>(".state-copy span");
-      if (name) name.textContent = label ?? friendlyName(state, entity);
-      if (value) value.textContent = formatState(state);
-      button.setAttribute("aria-label", `Open ${friendlyName(state, label ?? entity)}`);
+      setText(name, label ?? friendlyName(state, entity));
+      setText(value, formatState(state));
+      setAttr(button, "aria-label", `Open ${friendlyName(state, label ?? entity)}`);
     });
     this.shadowRoot.querySelectorAll<HTMLButtonElement>(".metric-card[data-entity]").forEach((button) => {
       const entity = button.dataset.entity;
@@ -527,23 +555,24 @@ export class HomeDashboardHomeOverview extends HTMLElementBase {
       const label = button.querySelector<HTMLElement>(".waste-label");
       const date = button.querySelector<HTMLElement>(".waste-date");
       const relative = button.querySelector<HTMLElement>(".waste-relative");
-      if (icon) icon.icon = presentation.icon;
-      if (label) label.textContent = presentation.label;
-      if (date) date.textContent = presentation.date;
-      if (relative) relative.textContent = presentation.relative;
-      button.className = `waste-card tone-${presentation.tone}`;
-      button.setAttribute("aria-label", `${presentation.label}: ${presentation.date}, ${presentation.relative}. Open meer informatie.`);
+      setIcon(icon, presentation.icon);
+      setText(label, presentation.label);
+      setText(date, presentation.date);
+      setText(relative, presentation.relative);
+      const className = `waste-card tone-${presentation.tone}`;
+      if (button.className !== className) button.className = className;
+      setAttr(button, "aria-label", `${presentation.label}: ${presentation.date}, ${presentation.relative}. Open meer informatie.`);
     });
     const homeCount = (this.config.persons ?? []).filter((person) => hass?.states?.[person.entity]?.state === "home").length;
     const homePill = this.shadowRoot.querySelector<HTMLElement>("[data-live='home-count']");
-    if (homePill) homePill.textContent = `${homeCount} thuis`;
+    setText(homePill, `${homeCount} thuis`);
     const weatherPill = this.shadowRoot.querySelector<HTMLElement>("[data-live='weather']");
     const weather = this.config.today?.weather_entity ? hass?.states?.[this.config.today.weather_entity] : undefined;
-    if (weatherPill) weatherPill.textContent = weather ? `${weather.attributes?.temperature ?? "—"}° · ${formatState(weather)}` : "Weer niet ingesteld";
+    setText(weatherPill, weather ? `${weather.attributes?.temperature ?? "—"}° · ${formatState(weather)}` : "Weer niet ingesteld");
     this.updateWeather();
     const attentionPill = this.shadowRoot.querySelector<HTMLElement>("[data-live='attention']");
     const attentionCount = attentionItems(hass, this.config).length;
-    if (attentionPill) attentionPill.textContent = `${attentionCount} aandachtspunt${attentionCount === 1 ? "" : "en"}`;
+    setText(attentionPill, `${attentionCount} aandachtspunt${attentionCount === 1 ? "" : "en"}`);
     this.shadowRoot.querySelectorAll<HTMLButtonElement>(".person[data-person-index]").forEach((button) => {
       const person = this.config?.persons?.[Number(button.dataset.personIndex)];
       if (!person) return;
@@ -552,10 +581,10 @@ export class HomeDashboardHomeOverview extends HTMLElementBase {
       const context = button.querySelector<HTMLElement>(".person-copy small");
       const status = button.querySelector<HTMLElement>(".person-state");
       const presentation = personContext(hass, person);
-      if (name) name.textContent = person.label || friendlyName(state, "Bewoner");
-      if (context) context.textContent = presentation.context;
-      if (status) status.textContent = presentation.location;
-      button.setAttribute("aria-label", `${person.label || friendlyName(state, "Bewoner")}: ${presentation.location}${presentation.context ? `. ${presentation.context}` : ""}. Open meer informatie.`);
+      setText(name, person.label || friendlyName(state, "Bewoner"));
+      setText(context, presentation.context);
+      setText(status, presentation.location);
+      setAttr(button, "aria-label", `${person.label || friendlyName(state, "Bewoner")}: ${presentation.location}${presentation.context ? `. ${presentation.context}` : ""}. Open meer informatie.`);
     });
   }
 

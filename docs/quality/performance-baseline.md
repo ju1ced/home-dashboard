@@ -115,6 +115,8 @@ Geen van deze drie vervangt de hoofd-DOM-subtree (de `domLengthUnchanged`-assert
 
 **Niet zelf gefixt**: een diff-voor-schrijven-fix in `updateLiveState()`/`updateValues()`/pool-summary's renderpad is geen triviale, overduidelijk-veilige wijziging (precies de categorie die deze opdracht uitsluit van zelf repareren). Voorstel voor de lead: een gericht vervolgticket dat deze drie renderpaden laat vergelijken vóór schrijven (bijv. `if (valueElement.textContent !== value) valueElement.textContent = value;`), met dezelfde regressietests als nu (`render-room-controls.mjs`'s performance-sectie, `check-room-detail-browser.mjs`) als vangnet.
 
+**Opgelost in [HD-213](../planning/tickets.md#hd-213--diff-voor-schrijven-toevoegen-aan-home-energie-en-pool-specialist-renderpaden) ([D-065](../design/decision-log.md#d-065--diff-voor-schrijven-toegevoegd-aan-home-energie-en-pool-specialist-hd-213)):** Energie en de pool-specialist dalen naar **0 mutaties**; Home daalt van 32.000 naar **2.000** (64/update → 4/update) — de resterende 4/update komen uit `set hass`'s doorgave aan childCards (camerastrook, favoriete-kamer-quickcontrols), componenten met hun eigen renderpad buiten deze tickets scope. Zie D-065 voor de volledige meting en motivatie.
+
 ### Bevinding 2 — Kamerdetail (`home-dashboard-room-detail`) en Kamers (`home-dashboard-room-overview`) lijken al correct te diffen
 
 Ter contrast, en omdat dit niet vanzelfsprekend was gezien HD-171's eigen aandachtspunt over `render()`'s `previous.replaceWith(root)`-pad (`src/cards/home-dashboard-room-cards.ts` rond regel 1585): bij 500 irrelevante updates produceerde **Kamers 0 mutaties** en **kamerdetail zwaar slechts 6 mutaties** (0,012 per update) over een 181-node boom. Eén relevante update (de lamp van `room_0`) gaf **8 mutaties** — een klein, begrensd aantal, geen volledige subtree-vervanging. Dit weerspreekt de aanname dat elke relevante update via `replaceWith()` de hele `main`-subtree herbouwt; in de praktijk, voor dit specifieke fixtuurscenario, bleef het bij een gerichte DOM-schrijfactie. Dit is goed nieuws, geen actie vereist, maar wordt hier expliciet vastgelegd zodat een toekomstige regressie (bijv. een brede mutatiestijging bij kamerdetail) meetbaar zichtbaar wordt tegen deze baseline.
@@ -139,7 +141,7 @@ Geen directe bevinding, maar wel een scopebeperking: alleen gemeten op een 2-vCP
 
 ## Volgende stappen (niet in deze ticket)
 
-- HD-172 (multi-dashboard resource-audit) blijft een losse ticket.
-- Een gericht vervolgticket voor Bevinding 1 (diff-voor-schrijven in Home/Energie/pool-specialist), ter beoordeling door de lead.
+- HD-172 (multi-dashboard resource-audit) is afgerond, zie `docs/quality/resource-audit.md`.
+- Bevinding 1 (diff-voor-schrijven in Home/Energie/pool-specialist) is opgelost in HD-213/D-065.
 - Long-task-capture tijdens een realistischere, per-macrotaak gespreide batch van updates (in plaats van de huidige synchrone lus), als de lead dat specifiek wil.
 - Herhaling op representatievere eindgebruikershardware vóór een harde CI-long-task-gate.
