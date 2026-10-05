@@ -99,7 +99,7 @@ const viewMetadata: Record<ViewPath, { title: string; icon: string }> = {
 
 function createViewStrategy(path: ViewPath, config: HomeDashboardConfigV1): HomeDashboardViewConfig {
   const base: HomeDashboardViewConfig = { type: "custom:home-dashboard-view", view: path, density: config.general.density, content_width: config.layout.content_width, navigation_mode: config.layout.navigation_mode, theme_mode: config.general.theme_mode, palette: config.general.palette, show_quick_actions: config.layout.show_quick_actions };
-  if (path === "home") return { ...base, today: config.today, show_weather: config.layout.show_weather, persons: config.layout.show_persons ? config.persons : [], security: config.layout.show_security ? config.security : { ...config.security, enabled: false }, rooms: config.rooms, specialists: config.specialists, diagnostics: config.diagnostics, energy: config.energy };
+  if (path === "home") return { ...base, today: config.today, show_weather: config.layout.show_weather, persons: config.layout.show_persons ? config.persons : [], security: config.layout.show_security ? config.security : { ...config.security, enabled: false }, actions: config.actions, rooms: config.rooms, specialists: config.specialists, diagnostics: config.diagnostics, energy: config.energy };
   if (path === "rooms") return { ...base, rooms: config.rooms };
   if (path === "domains") {
     return {

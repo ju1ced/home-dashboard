@@ -1,13 +1,28 @@
-import type { CameraConfig } from "../config/types";
+import type { ActionConfig, CameraConfig } from "../config/types";
 
 type LovelaceCardElement = HTMLElement & { hass: HomeAssistantLike | undefined; setConfig?: (config: Record<string, unknown>) => void };
 type CardHelpers = { createCardElement: (config: Record<string, unknown>) => LovelaceCardElement };
-type HomeAssistantLike = { states?: Record<string, { state?: string }> };
+type HomeAssistantLike = { states?: Record<string, { state?: string }>; callService?: (domain: string, service: string, data: Record<string, unknown>) => Promise<unknown> };
+type ConfiguredActionStep = { action: string; target?: Record<string, unknown>; data?: Record<string, unknown> };
 
 interface CameraStripConfig {
   type: "custom:home-dashboard-camera-strip";
   cameras: CameraConfig[];
+  actions?: ActionConfig[];
   compact?: boolean;
+}
+
+/** `action.sequence` is schema-validated (`src/config/validate.ts`) before any card ever renders it. */
+export async function executeConfiguredAction(action: ActionConfig, hass: HomeAssistantLike, confirmed = false): Promise<void> {
+  if (!hass.callService || (action.risk !== "safe" && !confirmed)) throw new Error("Bediening niet toegestaan.");
+  for (const step of action.sequence as ConfiguredActionStep[]) {
+    const [domain, service] = step.action.split(".") as [string, string];
+    await hass.callService(domain, service, { ...step.target, ...step.data });
+  }
+}
+
+export function findPrivacyAction(camera: CameraConfig, actions: ActionConfig[] | undefined): ActionConfig | undefined {
+  return camera.privacy_action_key ? actions?.find((action) => action.key === camera.privacy_action_key) : undefined;
 }
 
 interface CustomCardMetadata {
@@ -70,6 +85,8 @@ export class HomeDashboardCameraStrip extends HTMLElementBase {
   private childCards: LovelaceCardElement[] = [];
   private renderToken = 0;
   private stateSignature = "";
+  private pendingPrivacyActions = new Set<string>();
+  private privacyActionFeedback = new Map<string, string>();
 
   public constructor() {
     super();
@@ -112,6 +129,24 @@ export class HomeDashboardCameraStrip extends HTMLElementBase {
     strip?.scrollBy({ left: direction * strip.clientWidth, behavior: reducedMotion ? "auto" : "smooth" });
   }
 
+  private async disablePrivacy(camera: CameraConfig, action: ActionConfig): Promise<void> {
+    if (!this._hass || this.pendingPrivacyActions.has(camera.key)) return;
+    const requiresConfirmation = camera.confirm_privacy_disable || action.risk !== "safe";
+    if (requiresConfirmation && !window.confirm(action.confirmation_text || `${camera.name}: privacy uitschakelen?`)) return;
+    this.pendingPrivacyActions.add(camera.key);
+    this.privacyActionFeedback.delete(camera.key);
+    void this.renderStrip();
+    try {
+      await executeConfiguredAction(action, this._hass, true);
+    } catch {
+      // Do not expose backend error payloads or identifiers in the UI/logs.
+      this.privacyActionFeedback.set(camera.key, "Niet bevestigd. Controleer status en rechten via Details.");
+    } finally {
+      this.pendingPrivacyActions.delete(camera.key);
+      void this.renderStrip();
+    }
+  }
+
   private async renderStrip(): Promise<void> {
     if (!this.shadowRoot || !this._config) return;
     const token = ++this.renderToken;
@@ -129,7 +164,7 @@ export class HomeDashboardCameraStrip extends HTMLElementBase {
       .controls button:disabled{opacity:.35;cursor:default}.content{display:grid;grid-template-columns:minmax(0,520px) 150px;justify-content:center;align-items:start;gap:10px}.content.no-privacy{grid-template-columns:minmax(0,520px)}
       .strip{display:flex;overflow-x:auto;overscroll-behavior-inline:contain;scroll-snap-type:inline mandatory;scrollbar-width:none;outline:none;border-radius:12px}.strip::-webkit-scrollbar{display:none}
       .strip:focus-visible{outline:2px solid var(--primary-color);outline-offset:2px}.item{flex:0 0 100%;min-width:0;scroll-snap-align:start;scroll-snap-stop:always}.item>*{display:block;width:100%}
-      .privacy-rail{display:grid;gap:6px;align-content:start}.privacy-title{font-size:.76rem;font-weight:600;color:var(--secondary-text-color);padding:2px 4px}.privacy-chip{display:grid;grid-template-columns:22px minmax(0,1fr);align-items:center;gap:6px;min-height:34px;padding:5px 8px;border:1px solid color-mix(in srgb,var(--divider-color) 74%,transparent);border-radius:10px;background:var(--secondary-background-color)}
+      .privacy-rail{display:grid;gap:6px;align-content:start}.privacy-title{font-size:.76rem;font-weight:600;color:var(--secondary-text-color);padding:2px 4px}.privacy-chip{display:grid;grid-template-columns:22px minmax(0,1fr);align-items:center;gap:6px;min-height:34px;padding:5px 8px;border:1px solid color-mix(in srgb,var(--divider-color) 74%,transparent);border-radius:10px;background:var(--secondary-background-color);font:inherit;color:inherit;text-align:left}.privacy-chip.actionable{cursor:pointer}.privacy-chip.actionable:disabled{opacity:.6;cursor:default}
       .privacy-chip ha-icon{width:19px;height:19px;color:var(--state-icon-color,var(--secondary-text-color))}.privacy-chip.active ha-icon{color:var(--warning-color,#f0a000)}.privacy-copy{display:grid;min-width:0}.privacy-copy strong,.privacy-copy span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.privacy-copy strong{font-size:.74rem}.privacy-copy span{font-size:.68rem;color:var(--secondary-text-color)}
       .empty{min-height:180px;display:grid;place-items:center;padding:18px;border-radius:12px;background:var(--secondary-background-color);color:var(--secondary-text-color);text-align:center}
       ha-card.compact{height:100%;max-width:none;padding:8px}.compact .toolbar{padding-bottom:6px}.compact .content{grid-template-columns:minmax(0,1fr)}.compact .privacy-rail{display:flex;overflow-x:auto;gap:5px}.compact .privacy-title{display:none}.compact .privacy-chip{flex:0 0 112px;min-height:30px;padding:4px 6px}
@@ -212,9 +247,21 @@ export class HomeDashboardCameraStrip extends HTMLElementBase {
       privacyTitle.textContent = "Privacy";
       privacyRail.append(privacyTitle);
       for (const { camera, privacyState, presentation } of privacyCameras) {
-        const chip = document.createElement("div");
-        chip.className = `privacy-chip${presentation === "privacy" ? " active" : ""}`;
-        chip.setAttribute("role", "status");
+        const privacyAction = findPrivacyAction(camera, this._config.actions);
+        const canDisablePrivacy = presentation === "privacy" && Boolean(privacyAction) && typeof this._hass?.callService === "function";
+        const pending = this.pendingPrivacyActions.has(camera.key);
+        const feedback = this.privacyActionFeedback.get(camera.key);
+        const chip = document.createElement(canDisablePrivacy ? "button" : "div");
+        chip.className = `privacy-chip${presentation === "privacy" ? " active" : ""}${canDisablePrivacy ? " actionable" : ""}`;
+        if (canDisablePrivacy) {
+          const button = chip as HTMLButtonElement;
+          button.type = "button";
+          button.disabled = pending;
+          button.setAttribute("aria-label", `${camera.name}: privacy uitschakelen`);
+          button.addEventListener("click", () => { void this.disablePrivacy(camera, privacyAction!); });
+        } else {
+          chip.setAttribute("role", "status");
+        }
         const icon = document.createElement("ha-icon") as HTMLElement & { icon?: string };
         icon.icon = presentation === "privacy" ? "mdi:eye-off-outline" : "mdi:eye-outline";
         const copy = document.createElement("span");
@@ -222,7 +269,7 @@ export class HomeDashboardCameraStrip extends HTMLElementBase {
         const name = document.createElement("strong");
         name.textContent = camera.name;
         const state = document.createElement("span");
-        state.textContent = presentation === "privacy" ? "Privacy aan" : privacyState === "off" ? "Privacy uit" : "Status onbekend";
+        state.textContent = feedback ?? (pending ? "Bezig…" : presentation === "privacy" ? canDisablePrivacy ? "Privacy aan · Tik om uit te schakelen" : "Privacy aan" : privacyState === "off" ? "Privacy uit" : "Status onbekend");
         copy.append(name, state);
         chip.append(icon, copy);
         privacyRail.append(chip);

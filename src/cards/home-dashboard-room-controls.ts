@@ -83,11 +83,15 @@ export function planEntityControl(room: RoomConfig, hass: Hass | undefined, enti
   return service ? { entity, domain, service, confirmation: kind === "awning" && command !== "stop" } : undefined;
 }
 
-export async function executeRoomControl(room: RoomConfig, hass: Hass, kind: Kind, command: Command, confirmed = false): Promise<void> {
-  const plan = planRoomControl(room, hass, kind, command);
+export async function executeEntityControl(room: RoomConfig, hass: Hass, entity: string, kind: Kind, command: Command, confirmed = false): Promise<void> {
+  const plan = planEntityControl(room, hass, entity, kind, command);
   if (!plan || !hass.callService || (plan.confirmation && !confirmed)) throw new Error("Bediening niet toegestaan.");
   // HA enforces the current user's entity permissions and integration conditions.
   await hass.callService(plan.domain, plan.service, { entity_id: plan.entity });
+}
+
+export async function executeRoomControl(room: RoomConfig, hass: Hass, kind: Kind, command: Command, confirmed = false): Promise<void> {
+  return executeEntityControl(room, hass, target(room, kind), kind, command, confirmed);
 }
 
 function icon(name: string): HTMLElement {
@@ -140,7 +144,8 @@ export class HomeDashboardRoomControls extends Base {
     const plan = planEntityControl(room, this.currentHass, entity, kind, command);
     if (!plan) return;
     const name = String(this.currentHass.states?.[plan.entity]?.attributes?.friendly_name ?? labels[kind]);
-    if (plan.confirmation && !window.confirm(`${room.name} · ${name}: luifel ${command === "open" ? "uitschuiven" : "inschuiven"}?`)) return;
+    const confirmed = !plan.confirmation || window.confirm(`${room.name} · ${name}: luifel ${command === "open" ? "uitschuiven" : "inschuiven"}?`);
+    if (!confirmed) return;
     const pendingKey = command === "stop" ? `${key}:stop` : key;
     this.pending.add(pendingKey); this.update();
     notice.textContent = "Verzoek versturen…";
@@ -148,7 +153,7 @@ export class HomeDashboardRoomControls extends Base {
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       await Promise.race([
-        this.currentHass.callService!(plan.domain, plan.service, { entity_id: plan.entity }),
+        executeEntityControl(room, this.currentHass, entity, kind, command, confirmed),
         new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error("timeout")), 10000); })
       ]);
       if (generation === this.generation) notice.textContent = "Verzoek ontvangen. Controleer de actuele status.";

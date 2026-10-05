@@ -42,7 +42,10 @@ test("release assets are deterministic for a given bundle", async () => {
   // dist/home-dashboard-editor.js (eigen budget 160_000, gemeten 93.887 bytes).
   // D-059 (HD-205) verhoogt de hoofdbundel opnieuw voor de echte statistics/
   // history/logbook-koppeling: 210_000 -> 213_000, gemeten 211.638 bytes.
-  assert.ok(bundle.length <= 213_000);
+  // D-066 (HD-214) verhoogt opnieuw voor de echte uitvoering van ActionConfig/
+  // privacy_action_key (privacy-toggleknop + executeConfiguredAction):
+  // 213_000 -> 215_000, gemeten 214.427 bytes.
+  assert.ok(bundle.length <= 215_000);
   assert.equal(bundle.includes(Buffer.from("sourceMappingURL")), false);
   assert.equal(editorBundle.includes(Buffer.from("sourceMappingURL")), false);
   const result = spawnSync(process.execPath, ["scripts/create-release-assets.mjs"], { cwd: rootPath, encoding: "utf8", env: { ...process.env, GITHUB_SHA: commit, RELEASE_TAG: tag } });

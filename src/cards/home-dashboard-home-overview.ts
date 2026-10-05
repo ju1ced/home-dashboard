@@ -1,6 +1,7 @@
 import { HomeDashboardRoomControls, favoriteRooms } from "./home-dashboard-room-controls";
 import { registerHomeDashboardNavigation } from "./home-dashboard-navigation";
 import type {
+  ActionConfig,
   DiagnosticsConfig,
   EnergyConfig,
   PersonConfig,
@@ -37,6 +38,9 @@ interface HomeOverviewConfig {
   specialists?: SpecialistsConfig;
   diagnostics?: DiagnosticsConfig;
   energy?: EnergyConfig;
+  /** `JSON.stringify`d by the view strategy to keep its action-descriptor shape out of the static
+   *  Lovelace tree (see `home-dashboard-view-strategy.ts`); a plain array when set directly (tests). */
+  actions?: ActionConfig[] | string;
   show_weather?: boolean;
   show_quick_actions?: boolean;
 }
@@ -58,6 +62,17 @@ const HTMLElementBase = (typeof HTMLElement === "undefined" ? class {} : HTMLEle
 
 function unique(values: Array<string | undefined>): string[] {
   return [...new Set(values.filter((value): value is string => Boolean(value)))];
+}
+
+function parseActions(actions: ActionConfig[] | string | undefined): ActionConfig[] {
+  if (Array.isArray(actions)) return actions;
+  if (!actions) return [];
+  try {
+    const parsed: unknown = JSON.parse(actions);
+    return Array.isArray(parsed) ? parsed as ActionConfig[] : [];
+  } catch {
+    return [];
+  }
 }
 
 type AttentionPriority = "critical" | "warning" | "offline";
@@ -713,7 +728,7 @@ export class HomeDashboardHomeOverview extends HTMLElementBase {
         layout.classList.add("has-camera");
         const cameraStrip = document.createElement("home-dashboard-camera-strip") as LovelaceCardElement;
         cameraStrip.className = "camera";
-        cameraStrip.setConfig?.({ type: "custom:home-dashboard-camera-strip", cameras: config.security.cameras.filter((camera) => camera.camera_entity), compact: true });
+        cameraStrip.setConfig?.({ type: "custom:home-dashboard-camera-strip", cameras: config.security.cameras.filter((camera) => camera.camera_entity), actions: parseActions(config.actions), compact: true });
         cameraStrip.hass = hass;
         this.childCards.push(cameraStrip);
         layout.append(cameraStrip);
