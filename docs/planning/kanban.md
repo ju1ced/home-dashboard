@@ -12,7 +12,6 @@ De kolom **Volgorde** vertaalt afhankelijkheden naar de aanbevolen uitvoering: f
 | [HD-180 HACS lifecycle en compatibiliteitsmatrix bijwerken](tickets.md#hd-180--hacs-lifecycle-en-compatibiliteitsmatrix-bijwerken) | P1 | Release engineering | 6a | Install/update/downgrade/verwijderen opnieuw bewijzen voor de actuele productvorm |
 | [HD-181 Admin-dashboardgrens uitwerken](tickets.md#hd-181--admin-dashboardgrens-uitwerken) | P2 | Diagnostiek | 2b | `require_admin`-grens voor diagnostiek/beheer, los van het gezinsdashboard |
 | [HD-192 v1-documentatie en release readiness afronden](tickets.md#hd-192--v1-documentatie-en-release-readiness-afronden) | P1 | Release engineering | 6c | Documentatie laten overeenkomen met de werkelijk bewezen v1-scope |
-| [HD-213 Diff-voor-schrijven toevoegen aan Home, Energie en pool-specialist renderpaden](tickets.md#hd-213--diff-voor-schrijven-toevoegen-aan-home-energie-en-pool-specialist-renderpaden) | P2 | Performance | 5a-vervolg | Gevonden tijdens HD-171: 500 irrelevante updates geven 32.000/6.000/4.500 DOM-mutaties voor Home/Energie/pool |
 | [HD-214 Centrale actionallowlist is gedefinieerd maar nergens uitgevoerd](tickets.md#hd-214--centrale-actionallowlist-actionconfigprivacy_action_key-is-gedefinieerd-maar-nergens-uitgevoerd) | P2 | Quality engineering | 5c-vervolg | Gevonden tijdens HD-201: `ActionConfig`/`privacy_action_key` volledig gedefinieerd en GUI-editable, maar nooit gelezen door een kaart |
 
 
