@@ -1,5 +1,4 @@
 import type {
-  DiagnosticsConfig,
   EnergyConfig,
   RoomConfig,
   SecurityConfig,
@@ -321,7 +320,6 @@ export interface DomainSources {
   energy?: EnergyConfig | undefined;
   security?: SecurityConfig | undefined;
   specialists?: SpecialistsConfig | undefined;
-  diagnostics?: DiagnosticsConfig | undefined;
 }
 
 export function buildDomainSections(sources: DomainSources, maxColumns: number): LovelaceCardConfig[] {
@@ -363,10 +361,12 @@ export function buildDomainSections(sources: DomainSources, maxColumns: number):
 
   const systemCards: LovelaceCardConfig[] = [];
   if (sources.energy?.ups_entity) systemCards.push(readonlyTile(sources.energy.ups_entity, "Noodstroom"));
-  const adminPath = sources.diagnostics?.admin_dashboard_path?.trim();
-  if (adminPath) systemCards.push(navigationButton("Beheerdashboard", "mdi:shield-account-outline", adminPath));
-  else systemCards.push(navigationButton("Meer en diagnose", "mdi:dots-horizontal-circle-outline", "more"));
-  sections.push(fullSection("Systeem", "mdi:server-outline", systemCards, maxColumns, adminPath || "more"));
+  // HD-181: het beheerdashboard (systeem/netwerk/updates/batterijen/automations/area-loze techniek,
+  // achter een eigen require_admin-grens) wordt hier bewust NIET gelinkt -- dat zou de admin-koppeling
+  // impliciet vermengen met dit gezinsgerichte Domeinen-overzicht. De enige admin-koppeling leeft in de
+  // apart genavigeerde "Meer"-sectie (zie home-dashboard-view-strategy.ts's moreSections()).
+  systemCards.push(navigationButton("Meer en diagnose", "mdi:dots-horizontal-circle-outline", "more"));
+  sections.push(fullSection("Systeem", "mdi:server-outline", systemCards, maxColumns, "more"));
 
   return sections.filter((candidate): candidate is LovelaceCardConfig => Boolean(candidate))
     .filter((candidate) => Array.isArray(candidate.cards) && candidate.cards.length > 1);

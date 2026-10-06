@@ -311,13 +311,36 @@ test("Domeinen routeert gecureerd per woningfunctie zonder platte entityinventar
   }
   const serialized = JSON.stringify(domains);
   assert.match(serialized, /room-living-room/);
-  assert.match(serialized, /\/admin-dashboard/);
+  // HD-181: het beheerdashboardpad mag niet impliciet vermengd worden met dit gezinsgerichte
+  // Domeinen-overzicht, ook niet wanneer het geconfigureerd is -- het leeft uitsluitend in de
+  // apart genavigeerde "Meer"-sectie (zie de "Meer toont een apart genavigeerde Beheer-sectie"-test).
+  assert.doesNotMatch(serialized, /\/admin-dashboard/);
   assert.match(serialized, /water_primary/);
   assert.match(serialized, /alarm_primary/);
   assert.doesNotMatch(serialized, /living_lights/);
   assert.doesNotMatch(serialized, /living_hvac/);
   assert.doesNotMatch(serialized, /living_media/);
   assert.equal(domains.sections.every((section) => section.column_span === domains.max_columns), true);
+});
+
+test("HD-181: Meer toont een apart genavigeerde Beheer-sectie, alleen wanneer een beheerdashboardpad is geconfigureerd", async () => {
+  const withoutAdmin = await HomeDashboardViewStrategy.generate({ type: "custom:home-dashboard-view", view: "more", density: "comfortable" });
+  assert.equal(withoutAdmin.sections.some((section) => section.title === "Beheer"), false);
+
+  const withAdmin = await HomeDashboardViewStrategy.generate({
+    type: "custom:home-dashboard-view",
+    view: "more",
+    density: "comfortable",
+    diagnostics: { admin_dashboard_path: "/admin-dashboard", show_config_health: true, stale_after_minutes: 30, unavailable_policy: "operational_only", operational_entities: [] }
+  });
+  const adminSection = withAdmin.sections.find((section) => section.title === "Beheer");
+  assert.ok(adminSection, "Beheer-sectie ontbreekt zodra een beheerdashboardpad geconfigureerd is");
+  // Een eigen, afzonderlijke sectie -- niet samengevoegd met "Dashboardstatus" -- zodat de
+  // admin-koppeling niet impliciet vermengd wordt met de rest van de "Meer"-inhoud.
+  assert.notEqual(withAdmin.sections.indexOf(adminSection), withAdmin.sections.findIndex((section) => section.title === "Dashboardstatus"));
+  const serialized = JSON.stringify(adminSection);
+  assert.match(serialized, /\/admin-dashboard/);
+  assert.match(serialized, /navigate/);
 });
 
 test("Kia krijgt een stabiele specialistroute, stale fallback en een zelfstandige cardgrens", async () => {

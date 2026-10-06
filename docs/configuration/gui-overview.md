@@ -15,7 +15,7 @@ De editor heeft tien onderdelen:
 7. **Acties:** native HA action selector, expliciete targetscope, risicoklasse, bevestiging, hold en verplichte resultaatcontrole.
 8. **Specialisten:** Kia, robot, tuin en zwembad met vaste cardtypes, minimumversie en logische mappingkeys.
 9. **Layout:** mobiele disclosure en zichtbaarheid van weer, personen, security en quick actions.
-10. **Diagnostiek:** beheerroute, freshness en operationele allowlist voor unavailable.
+10. **Diagnostiek:** beheerroute, freshness en operationele allowlist voor unavailable. De beheerroute verschijnt als een apart genavigeerde "Beheer"-sectie in de Meer-view (HD-181) — nooit vermengd met een gezinsgerichte view zoals Domeinen.
 
 ## Navigatie
 

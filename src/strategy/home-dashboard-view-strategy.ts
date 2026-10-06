@@ -119,10 +119,22 @@ function roomDetailSections(room: RoomConfig | undefined, maxColumns: number, pa
   }];
 }
 
+function navigationButton(name: string, icon: string, path: string): LovelaceConfig {
+  return {
+    type: "button",
+    name,
+    icon,
+    show_state: false,
+    tap_action: { action: "navigate", navigation_path: path },
+    hold_action: { action: "none" },
+    double_tap_action: { action: "none" }
+  };
+}
+
 function moreSections(config: HomeDashboardViewConfig): LovelaceConfig[] {
   const counts = config.counts ?? { rooms: 0, persons: 0, cameras: 0 };
   const enabled = Object.entries(config.specialists ?? {}).filter(([, specialist]) => specialist.enabled).map(([key]) => key);
-  return [{
+  const sections: LovelaceConfig[] = [{
     type: "grid",
     title: "Dashboardstatus",
     cards: [markdown([
@@ -134,6 +146,22 @@ function moreSections(config: HomeDashboardViewConfig): LovelaceConfig[] {
       "Deze eerste render is **read-only**. Bediening en volledige specialistische detailcards volgen na hun afzonderlijke veiligheidsgates."
     ].join("\n"))]
   }];
+  // HD-181: deze link is doelbewust de enige admin-koppeling. `require_admin` is een
+  // dashboardbrede HA-vlag, niet per view binnen deze strategy af te dwingen -- de echte
+  // autorisatiegrens en systeem-/netwerk-/updates-/batterijen-/automations-/area-loze-
+  // techniekinhoud leven daarom op het apart geconfigureerde beheerdashboard zelf, nooit hier.
+  const adminPath = config.diagnostics?.admin_dashboard_path?.trim();
+  if (adminPath) {
+    sections.push({
+      type: "grid",
+      title: "Beheer",
+      cards: [
+        markdown("Systeem, netwerk, updates, batterijen, automations en area-loze techniek leven op een afzonderlijk beheerdashboard met een eigen autorisatiegrens -- niet in dit gezinsdashboard."),
+        navigationButton("Beheerdashboard", "mdi:shield-account-outline", adminPath)
+      ]
+    });
+  }
+  return sections;
 }
 
 export function buildView(config: HomeDashboardViewConfig): LovelaceConfig {
@@ -148,7 +176,7 @@ export function buildView(config: HomeDashboardViewConfig): LovelaceConfig {
       : config.view === "specialist-printer" ? buildPrinterDetailSections(config.printer, config.diagnostics, maxColumns, config.theme_mode, config.palette)
       : config.view === "specialist-pool" ? buildPoolDetailSections(config.pool, config.diagnostics, maxColumns, config.theme_mode, config.palette)
       : config.view === "energy" ? buildEnergySections(config.energy, maxColumns, config.theme_mode, config.palette)
-        : config.view === "domains" ? buildDomainSections({ rooms: config.rooms, energy: config.energy, security: config.security, specialists: config.specialists, diagnostics: config.diagnostics }, maxColumns)
+        : config.view === "domains" ? buildDomainSections({ rooms: config.rooms, energy: config.energy, security: config.security, specialists: config.specialists }, maxColumns)
           : moreSections(config);
   // Home composes this same navigation card inside its responsive header.
   const navigation = config.view !== "home" && config.navigation_mode && config.navigation_mode !== "native" ? [{
