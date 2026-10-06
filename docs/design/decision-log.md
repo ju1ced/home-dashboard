@@ -519,6 +519,14 @@
 - **Regressiebewaking:** `pnpm typecheck` schoon, `pnpm test` (125/125, ongewijzigd — geen enkele assertion aangepast, drie testbestandspaden wel), de volledige `pnpm run test:browser`-matrix groen, `git diff --check` schoon. Editorbundel 94.077 van 160.000 bytes (D-055) — ruim binnen budget, geen wijziging nodig; hoofdbundel ongewijzigd (deze refactor raakt alleen de lazy-geladen editor).
 - **Openstaand:** live Home Assistant-acceptatie blijft een afzonderlijke menselijke gate, zoals altijd. Een eventuele verdere opsplitsing van de klasse-schil zelf (bv. de generieke `bindEvents()`-dispatchers naar een apart bestand) is niet aangemaakt als vervolgticket — de resterende 414 regels bevatten nu uitsluitend genuine gedeelde infrastructuur, niet nog een verborgen sectie.
 
+## D-068 — HD-181's architectuurbeslissing: admin-oppervlak blijft binnen home-dashboard
+
+- **Status:** besluit vastgelegd op 6 oktober 2026, geen implementatie in deze wijziging — zuiver de blokkerende architectuurbeslissing die HD-181 vereiste vóór opstart.
+- **Besluit:** de eigenaar koos voor het admin-oppervlak (systeem, netwerk, updates, batterijen, automations, area-loze techniek) als een eigen, apart genavigeerde sectie *binnen* dit project, niet als afzonderlijke repo of los product. Concreet: een extra `custom:home-dashboard-view`-pad (naar het patroon van de bestaande `more`-view) of een los Lovelace-dashboard met de native HA `require_admin`-dashboardvlag.
+- **Waarom dit een echte autorisatiegrens blijft, geen security-door-obscurity:** `require_admin` is een door Home Assistant zelf afgedwongen toegangscontrole (niet-adminaccounts krijgen de view/het dashboard niet te zien, geen client-side verberging), dus de bestaande projectregel "visibility wordt niet als security gebruikt" blijft onverkort van toepassing — dit is precies wat die regel al toestond, nu expliciet ingevuld voor dit ticket.
+- **Scope-wijziging in het ticket:** `docs/planning/tickets.md`'s HD-181 is bijgewerkt met deze besloten scope, de afhankelijkheid "eigenaarsbesluit over afzonderlijke repo of dashboard" is verwijderd (opgelost), en de acceptatiecriteria zijn aangescherpt om de daadwerkelijke afdwinging van `require_admin` te vereisen (niet alleen een verborgen navigatielink).
+- **Openstaand:** de daadwerkelijke implementatie (HD-181 zelf) staat nu klaar in de backlog, zonder resterende blokkade. Live verificatie dat `require_admin` een niet-admin-gebruiker daadwerkelijk blokkeert, blijft een afzonderlijke menselijke testsessie, zoals elke andere HA-gate in dit project.
+
 ## D-069 — HACS-lifecycle live opnieuw bewezen voor v0.8.0-alpha.28 (HD-180)
 
 - **Status:** live uitgevoerd op 6 oktober 2026 via de Home Assistant MCP-verbinding, met expliciete eigenaarstoestemming vooraf ("via de MCP kan je aan home assistant voor HD180"). Geen codewijziging — zuiver een live verificatie plus documentatie-update.
