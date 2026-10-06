@@ -108,11 +108,10 @@ function createViewStrategy(path: ViewPath, config: HomeDashboardConfigV1): Home
       energy: config.energy,
       security: config.security,
       specialists: config.specialists,
-      diagnostics: config.diagnostics,
     };
   }
   if (path === "energy") return { ...base, energy: config.energy };
-  return { ...base, specialists: config.specialists, counts: { rooms: config.rooms.length, persons: config.persons.length, cameras: config.security.cameras.length } };
+  return { ...base, specialists: config.specialists, diagnostics: config.diagnostics, counts: { rooms: config.rooms.length, persons: config.persons.length, cameras: config.security.cameras.length } };
 }
 
 function createView(path: ViewPath, config: HomeDashboardConfigV1): Record<string, unknown> {

@@ -141,7 +141,7 @@ Schone HACS-testcyclus en gedownload-artifactvergelijking.
 ### HD-181 — Admin-dashboardgrens uitwerken
 
 - **Epic:** Diagnostiek
-- **Status:** Backlog — architectuurbeslissing genomen door de eigenaar op 6 oktober 2026: admin-oppervlak blijft binnen `home-dashboard` zelf (geen afzonderlijke repo/dashboard). Klaar om op te pakken.
+- **Status:** Klaar — navigatie-ingang losgemaakt van het gezinspad op 6 oktober 2026 ([D-070](../design/decision-log.md#d-070--admin-beheerkoppeling-losgemaakt-van-het-gezinspad-hd-181)). De autorisatiegrens zelf (`require_admin`) wordt afgedwongen door het aparte, eigenaar-geconfigureerde beheerdashboard — live verificatie daarvan blijft een afzonderlijke menselijke testsessie, zoals dit ticket zelf al vereiste. PR volgt.
 - **Prioriteit:** P2
 - **Omvang:** M
 - **Eigenaar:** Lead / integrator
