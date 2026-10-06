@@ -1,10 +1,18 @@
 import { createCameraConfig, createDefaultConfig } from "../config/defaults";
 import { migrateConfig } from "../config/migrate";
 import { parseImportedConfig, serializeConfig } from "../config/compiler";
-import { ROOM_CAPABILITIES, type ActionConfig, type HomeDashboardConfigV1, type PersonConfig, type RoomConfig, type ValidationIssue } from "../config/types";
+import type { ActionConfig, HomeDashboardConfigV1, PersonConfig, RoomConfig, ValidationIssue } from "../config/types";
 import { validateConfig } from "../config/validate";
 import { validateConfigSchema } from "../config/schema-validator";
 import { FIELD_DEFINITIONS, type FieldDefinition } from "./fields";
+import { bindSpecialistEvents, renderSpecialists } from "./sections/specialists";
+import { renderActions } from "./sections/actions";
+import { renderPersons } from "./sections/persons";
+import { renderCameras, renderSecurityGuidance } from "./sections/cameras";
+import { addRoomNestedItem, bindRoomEvents, moveRoomControlDraft, removeRoomNestedItem, renderRooms, updateRoomNestedItem, type RoomNestedCollection } from "./sections/rooms";
+import { EDITOR_SECTION_KEYS, escapeHtml, getEditorItemToken, getEditorSectionForKey, mergeEditorIssues, renderSelector, SECTION_TITLES } from "./shared";
+
+export { EDITOR_SECTION_KEYS, getEditorItemToken, getEditorSectionForKey, mergeEditorIssues } from "./shared";
 
 interface HomeAssistantLike {
   states: Record<string, unknown>;
@@ -12,51 +20,8 @@ interface HomeAssistantLike {
 
 type MutableRecord = Record<string, unknown>;
 
-const SECTION_TITLES: Record<string, string> = {
-  general: "Algemeen",
-  today: "Vandaag",
-  persons: "Personen",
-  security: "Security",
-  rooms: "Kamers",
-  energy: "Energie",
-  actions: "Acties",
-  specialists: "Kia, 3D-printer, robot, tuin en zwembad",
-  layout: "Layout",
-  diagnostics: "Diagnostiek"
-};
-export const EDITOR_SECTION_KEYS = Object.keys(SECTION_TITLES);
-
-export function getEditorItemToken(collection: string, item: object, index: number): string {
-  const key = (item as { key?: unknown }).key;
-  return `${collection}:${typeof key === "string" && key.trim() ? key.trim() : `#${index}`}`;
-}
-
-export function getEditorSectionForKey(current: string, key: string): string {
-  const currentIndex = Math.max(0, EDITOR_SECTION_KEYS.indexOf(current));
-  if (key === "Home") return EDITOR_SECTION_KEYS[0] ?? "general";
-  if (key === "End") return EDITOR_SECTION_KEYS.at(-1) ?? "general";
-  const direction = ["ArrowLeft", "ArrowUp"].includes(key) ? -1 : ["ArrowRight", "ArrowDown"].includes(key) ? 1 : 0;
-  return EDITOR_SECTION_KEYS[(currentIndex + direction + EDITOR_SECTION_KEYS.length) % EDITOR_SECTION_KEYS.length] ?? "general";
-}
-
-export function mergeEditorIssues(schemaIssues: ValidationIssue[], semanticIssues: ValidationIssue[]): ValidationIssue[] {
-  const usefulSchemaIssues = schemaIssues.filter((schemaIssue) => schemaIssue.code !== "schema_any_of" || !semanticIssues.some((semanticIssue) =>
-    semanticIssue.path === schemaIssue.path || semanticIssue.path.startsWith(`${schemaIssue.path}.`) || semanticIssue.path.startsWith(`${schemaIssue.path}[`)
-  ));
-  return [...usefulSchemaIssues, ...semanticIssues];
-}
-
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
-}
-
-function escapeHtml(value: unknown): string {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
 }
 
 function getPath(source: unknown, path: string): unknown {
@@ -103,146 +68,6 @@ function renderField(field: FieldDefinition, config: HomeDashboardConfigV1): str
   return `<label class="field"><span><strong>${escapeHtml(field.label)}</strong><small>${escapeHtml(field.description)}</small></span>${control}</label>`;
 }
 
-function renderSelector(collection: string, index: number, field: string, value: unknown, selector: Record<string, unknown>): string {
-  return `<ha-selector class="collection-selector" data-collection="${collection}" data-index="${index}" data-field="${field}" data-selector="${escapeHtml(JSON.stringify(selector))}" data-value="${escapeHtml(JSON.stringify(value))}"></ha-selector>`;
-}
-
-function renderPersons(config: HomeDashboardConfigV1, expandedItems: Set<string>): string {
-  return config.persons.map((personConfig, index) => `<details class="item" data-item-token="${escapeHtml(getEditorItemToken("persons", personConfig, index))}" ${expandedItems.has(getEditorItemToken("persons", personConfig, index)) ? "open" : ""}>
-    <summary>${escapeHtml(personConfig.label || personConfig.key || `Persoon ${index + 1}`)}</summary><div class="item-body">
-    <div class="item-toolbar"><button type="button" aria-label="Verwijder persoon ${escapeHtml(personConfig.label || personConfig.key || index + 1)}" data-remove="persons" data-index="${index}">Verwijder</button></div>
-    <label>Logische sleutel<input data-collection="persons" data-index="${index}" data-field="key" value="${escapeHtml(personConfig.key)}"></label>
-    <label>Label<input data-collection="persons" data-index="${index}" data-field="label" value="${escapeHtml(personConfig.label)}"></label>
-    <label>Person-entiteit${renderSelector("persons", index, "entity", personConfig.entity, { entity: { domain: "person" } })}</label>
-    <label>Freshness (minuten)<input type="number" data-collection="persons" data-index="${index}" data-field="freshness_minutes" value="${personConfig.freshness_minutes}"></label>
-    <label class="check"><input type="checkbox" data-collection="persons" data-index="${index}" data-field="show_location" ${personConfig.show_location ? "checked" : ""}> Toon thuis/zone/andere locatie</label>
-    <label>Toegestane zones${renderSelector("persons", index, "zone_entities", personConfig.zone_entities, { entity: { domain: "zone", multiple: true } })}</label>
-    <label>Batterijbronnen${renderSelector("persons", index, "battery_entities", personConfig.battery_entities, { entity: { multiple: true } })}</label>
-  </div></details>`).join("");
-}
-
-function renderCameras(config: HomeDashboardConfigV1, expandedItems: Set<string>): string {
-  const actionOptions = [`<option value="">Geen</option>`, ...config.actions.map((action) => `<option value="${escapeHtml(action.key)}">${escapeHtml(action.label || action.key)} · risico: ${escapeHtml(action.risk)}</option>`)].join("");
-  return config.security.cameras.map((cameraConfig, index) => `<details class="item" data-item-token="${escapeHtml(getEditorItemToken("security.cameras", cameraConfig, index))}" ${expandedItems.has(getEditorItemToken("security.cameras", cameraConfig, index)) ? "open" : ""}>
-    <summary>${escapeHtml(cameraConfig.name || cameraConfig.key || `Camera ${index + 1}`)}</summary><div class="item-body">
-    <div class="item-toolbar"><button type="button" aria-label="Verwijder camera ${escapeHtml(cameraConfig.name || cameraConfig.key || index + 1)}" data-remove="security.cameras" data-index="${index}">Verwijder</button></div>
-    <label>Logische sleutel<input data-collection="security.cameras" data-index="${index}" data-field="key" value="${escapeHtml(cameraConfig.key)}"></label>
-    <label>Naam<input data-collection="security.cameras" data-index="${index}" data-field="name" value="${escapeHtml(cameraConfig.name)}"></label>
-    <label>Camera${renderSelector("security.cameras", index, "camera_entity", cameraConfig.camera_entity, { entity: { domain: "camera" } })}</label>
-    <label>Privacyinstelling${renderSelector("security.cameras", index, "privacy_entity", cameraConfig.privacy_entity, { entity: { domain: ["switch", "input_boolean", "binary_sensor"] } })}</label>
-    <label>Privacyactie <small>Optioneel. Laat op Geen voor alleen status; maak een bedieningsactie eerst onder Acties.</small><select data-collection="security.cameras" data-index="${index}" data-field="privacy_action_key">${actionOptions.replace(`value="${escapeHtml(cameraConfig.privacy_action_key)}"`, `value="${escapeHtml(cameraConfig.privacy_action_key)}" selected`)}</select></label>
-    <label>Fallback<select data-collection="security.cameras" data-index="${index}" data-field="fallback">${["placeholder", "last_image", "hidden"].map((value) => `<option ${cameraConfig.fallback === value ? "selected" : ""}>${value}</option>`).join("")}</select></label>
-    <label class="check"><input type="checkbox" data-collection="security.cameras" data-index="${index}" data-field="confirm_privacy_disable" ${cameraConfig.confirm_privacy_disable ? "checked" : ""}> Extra bevestiging bij privacy uitschakelen <small>Optioneel en onafhankelijk van de risicoklasse van de gekozen actie.</small></label>
-  </div></details>`).join("");
-}
-
-function visibleRoomControls(room: RoomConfig): string[] {
-  if (room.control_entities !== undefined) return room.control_entities;
-  const light = room.control_light_entity ? [room.control_light_entity] : [...room.light_entities, ...room.light_switch_entities];
-  const media = room.control_media_entity ? [room.control_media_entity] : room.media_entities;
-  const cover = room.control_cover_entity ? [room.control_cover_entity] : room.cover_entities.filter(entity => entity !== room.control_awning_entity);
-  return [...new Set([...light, ...media, ...cover, room.control_awning_entity ?? "", room.hvac.entity].filter(Boolean))];
-}
-
-function renderControlOrderRows(controls: readonly string[], roomIndex: number): string {
-  return controls.map((entity, controlIndex) => `<div data-control-order-row><span class="order-index">${controlIndex + 1}</span><code>${escapeHtml(entity)}</code><span class="order-actions"><button type="button" data-room-control-move="up" data-room-index="${roomIndex}" data-control-index="${controlIndex}" aria-label="Verplaats quick action ${controlIndex + 1} omhoog" ${controlIndex === 0 ? "disabled" : ""}>↑</button><button type="button" data-room-control-move="down" data-room-index="${roomIndex}" data-control-index="${controlIndex}" aria-label="Verplaats quick action ${controlIndex + 1} omlaag" ${controlIndex === controls.length - 1 ? "disabled" : ""}>↓</button></span></div>`).join("");
-}
-
-function renderRoomNestedSelector(roomIndex: number, collection: string, itemIndex: number, field: string, value: unknown, selector: Record<string, unknown>): string {
-  return `<ha-selector class="collection-selector" data-room-index="${roomIndex}" data-room-nested-collection="${collection}" data-item-index="${itemIndex}" data-field="${field}" data-selector="${escapeHtml(JSON.stringify(selector))}" data-value="${escapeHtml(JSON.stringify(value))}"></ha-selector>`;
-}
-
-function renderPeriodOptions(value: "running" | "completed" | undefined): string {
-  return `<option value="" ${value ? "" : "selected"}>Niet gemapt</option><option value="running" ${value === "running" ? "selected" : ""}>Lopend</option><option value="completed" ${value === "completed" ? "selected" : ""}>Afgesloten</option>`;
-}
-
-function renderRoomControlDeck(room: RoomConfig, roomIndex: number): string {
-  const lightGroups = (room.light_groups ?? []).map((item, itemIndex) => `<article class="nested-item"><div class="item-toolbar"><strong>${escapeHtml(item.name || item.key)}</strong><button type="button" data-room-nested-remove="light_groups" data-room-index="${roomIndex}" data-item-index="${itemIndex}">Verwijder</button></div><label>Sleutel<input data-room-nested-collection="light_groups" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="key" value="${escapeHtml(item.key)}"></label><label>Naam<input data-room-nested-collection="light_groups" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="name" value="${escapeHtml(item.name)}"></label><label>Actiedoel${renderRoomNestedSelector(roomIndex, "light_groups", itemIndex, "control_entity", item.control_entity, { entity: { domain: "light" } })}</label><label>Expliciete leden${renderRoomNestedSelector(roomIndex, "light_groups", itemIndex, "member_entities", item.member_entities, { entity: { domain: "light", multiple: true } })}</label></article>`).join("");
-  const covers = (room.cover_controls ?? []).map((item, itemIndex) => `<article class="nested-item"><div class="item-toolbar"><strong>${escapeHtml(item.name || item.key)}</strong><button type="button" data-room-nested-remove="cover_controls" data-room-index="${roomIndex}" data-item-index="${itemIndex}">Verwijder</button></div><label>Sleutel<input data-room-nested-collection="cover_controls" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="key" value="${escapeHtml(item.key)}"></label><label>Naam<input data-room-nested-collection="cover_controls" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="name" value="${escapeHtml(item.name)}"></label><label>Cover${renderRoomNestedSelector(roomIndex, "cover_controls", itemIndex, "entity", item.entity, { entity: { domain: "cover" } })}</label><label>Type<select data-room-nested-collection="cover_controls" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="kind">${["shutter", "screen", "awning"].map((value) => `<option value="${value}" ${item.kind === value ? "selected" : ""}>${value}</option>`).join("")}</select></label><label>Bevestiging<select data-room-nested-collection="cover_controls" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="confirmation"><option value="movement" ${item.confirmation === "movement" ? "selected" : ""}>Bij beweging</option><option value="none" ${item.confirmation === "none" ? "selected" : ""}>Geen</option></select></label></article>`).join("");
-  const plugs = (room.smart_plugs ?? []).map((item, itemIndex) => `<article class="nested-item"><div class="item-toolbar"><strong>${escapeHtml(item.name || item.key)}</strong><button type="button" data-room-nested-remove="smart_plugs" data-room-index="${roomIndex}" data-item-index="${itemIndex}">Verwijder</button></div><h6>Basis</h6><label>Sleutel<input data-room-nested-collection="smart_plugs" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="key" value="${escapeHtml(item.key)}"></label><label>Naam<input data-room-nested-collection="smart_plugs" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="name" value="${escapeHtml(item.name)}"></label><label>Schakelaar${renderRoomNestedSelector(roomIndex, "smart_plugs", itemIndex, "switch_entity", item.switch_entity, { entity: { domain: "switch" } })}</label><label>Actueel vermogen${renderRoomNestedSelector(roomIndex, "smart_plugs", itemIndex, "power_entity", item.power_entity, { entity: { domain: "sensor" } })}</label><label class="check"><input type="checkbox" data-room-nested-collection="smart_plugs" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="protected" ${item.protected ? "checked" : ""}>Beveiligd, niet schakelbaar</label><label>Uitleg<input data-room-nested-collection="smart_plugs" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="protection_reason" value="${escapeHtml(item.protection_reason ?? "")}"></label><h6>Energieperiodes</h6><label>Energie totaal${renderRoomNestedSelector(roomIndex, "smart_plugs", itemIndex, "energy_entity", item.energy_entity, { entity: { domain: "sensor" } })}</label><label>Spanning${renderRoomNestedSelector(roomIndex, "smart_plugs", itemIndex, "voltage_entity", item.voltage_entity, { entity: { domain: "sensor" } })}</label><label>Dag${renderRoomNestedSelector(roomIndex, "smart_plugs", itemIndex, "energy_day_entity", item.energy_day_entity ?? "", { entity: { domain: "sensor" } })}</label><label>Dagperiode<select data-room-nested-collection="smart_plugs" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="energy_day_period">${renderPeriodOptions(item.energy_day_period)}</select></label><label>Maand${renderRoomNestedSelector(roomIndex, "smart_plugs", itemIndex, "energy_month_entity", item.energy_month_entity ?? "", { entity: { domain: "sensor" } })}</label><label>Maandperiode<select data-room-nested-collection="smart_plugs" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="energy_month_period">${renderPeriodOptions(item.energy_month_period)}</select></label><label>Jaar${renderRoomNestedSelector(roomIndex, "smart_plugs", itemIndex, "energy_year_entity", item.energy_year_entity ?? "", { entity: { domain: "sensor" } })}</label><label>Jaarperiode<select data-room-nested-collection="smart_plugs" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="energy_year_period">${renderPeriodOptions(item.energy_year_period)}</select></label></article>`).join("");
-  const roomEnergy = room.room_energy ?? { power_entity: "", day_entity: "", month_entity: "", year_entity: "" };
-  return `<h4>Control Deck</h4><label>Privacyveilige kamerafbeelding${renderSelector("rooms", roomIndex, "image_entity", room.image_entity ?? "", { entity: { domain: "image" } })}</label><label>Kamerfoto uploaden<small>Upload een foto rechtstreeks, zonder eerst een Image-hulpmiddel aan te maken via HA Instellingen. Zijn zowel een kamerafbeelding als een upload ingesteld, dan krijgt de upload voorrang.</small>${renderSelector("rooms", roomIndex, "image_upload", room.image_upload ?? null, { media: { accept: ["image/*"], image_upload: true } })}</label><div class="nested-collection"><h5>Lichtgroepen</h5>${lightGroups}<button type="button" data-room-nested-add="light_groups" data-room-index="${roomIndex}">Lichtgroep toevoegen</button></div><div class="nested-collection"><h5>Getypeerde openingen</h5>${covers}<button type="button" data-room-nested-add="cover_controls" data-room-index="${roomIndex}">Opening toevoegen</button></div><div class="nested-collection"><h5>Smart plugs</h5><small>Voor apparaten die je hier volledig wil volgen: vermogen, dag/maand/jaar-verbruik, vergrendeling. Zwaarder dan de simpele lijst hierboven, met een eigen interactieve kaart.</small>${plugs}<button type="button" data-room-nested-add="smart_plugs" data-room-index="${roomIndex}">Smart plug toevoegen</button></div><h5>Kamerenergie</h5><label>Actueel vermogen${renderSelector("rooms", roomIndex, "room_energy.power_entity", roomEnergy.power_entity, { entity: { domain: "sensor" } })}</label><label>Vandaag${renderSelector("rooms", roomIndex, "room_energy.day_entity", roomEnergy.day_entity, { entity: { domain: "sensor" } })}</label><label>Dagperiode<select data-path="rooms.${roomIndex}.room_energy.day_period">${renderPeriodOptions(roomEnergy.day_period)}</select></label><label>Maand${renderSelector("rooms", roomIndex, "room_energy.month_entity", roomEnergy.month_entity, { entity: { domain: "sensor" } })}</label><label>Maandperiode<select data-path="rooms.${roomIndex}.room_energy.month_period">${renderPeriodOptions(roomEnergy.month_period)}</select></label><label>Jaar${renderSelector("rooms", roomIndex, "room_energy.year_entity", roomEnergy.year_entity, { entity: { domain: "sensor" } })}</label><label>Jaarperiode<select data-path="rooms.${roomIndex}.room_energy.year_period">${renderPeriodOptions(roomEnergy.year_period)}</select></label>`;
-}
-
-function renderRooms(config: HomeDashboardConfigV1, expandedItems: Set<string>): string {
-  return config.rooms.map((roomConfig, index) => {
-    const controls = visibleRoomControls(roomConfig);
-    const controlOrder = controls.length ? `<div class="order" data-control-order="${index}" aria-label="Volgorde quick actions">${renderControlOrderRows(controls, index)}</div><div class="order-save"><small>De pijlen reageren direct. Pas de volgorde één keer toe wanneer ze goed staat.</small><button type="button" data-room-control-apply="${index}">Volgorde toepassen</button></div>` : `<small>Geen quick actions gekozen.</small>`;
-    return `<details class="item" data-item-token="${escapeHtml(getEditorItemToken("rooms", roomConfig, index))}" ${expandedItems.has(getEditorItemToken("rooms", roomConfig, index)) ? "open" : ""}>
-    <summary>${escapeHtml(roomConfig.name || roomConfig.key || `Kamer ${index + 1}`)}</summary><div class="item-body">
-    <div class="item-toolbar"><span class="item-actions"><button type="button" aria-label="Verplaats ${escapeHtml(roomConfig.name || roomConfig.key || `kamer ${index + 1}`)} omhoog" data-room-move="up" data-index="${index}" ${index === 0 ? "disabled" : ""}>↑</button><button type="button" aria-label="Verplaats ${escapeHtml(roomConfig.name || roomConfig.key || `kamer ${index + 1}`)} omlaag" data-room-move="down" data-index="${index}" ${index === config.rooms.length - 1 ? "disabled" : ""}>↓</button><button type="button" aria-label="Verwijder kamer ${escapeHtml(roomConfig.name || roomConfig.key || index + 1)}" data-remove="rooms" data-index="${index}">Verwijder</button></span></div>
-    <label>Logische sleutel<input data-collection="rooms" data-index="${index}" data-field="key" value="${escapeHtml(roomConfig.key)}"></label>
-    <label>Naam<input data-collection="rooms" data-index="${index}" data-field="name" value="${escapeHtml(roomConfig.name)}"></label>
-    <label>Icoon${renderSelector("rooms", index, "icon", roomConfig.icon, { icon: {} })}</label>
-    <label>Verdieping${renderSelector("rooms", index, "floor_id", roomConfig.floor_id, { floor: {} })}</label>
-    <label>Area${renderSelector("rooms", index, "area_id", roomConfig.area_id, { area: {} })}</label>
-    <label>Extra devices${renderSelector("rooms", index, "device_ids", roomConfig.device_ids, { device: { multiple: true } })}</label>
-    <label>Functies<select multiple data-collection="rooms" data-index="${index}" data-field="capabilities">${ROOM_CAPABILITIES.map((value) => `<option value="${value}" ${roomConfig.capabilities.includes(value) ? "selected" : ""}>${value}</option>`).join("")}</select></label>
-    <label><input type="checkbox" data-collection="rooms" data-index="${index}" data-field="home_favorite" ${roomConfig.home_favorite ? "checked" : ""}>Favoriet op Home (maximaal vier, volgorde via pijlen)</label>
-    <h4>Quick actions</h4>
-    <label>Knoppen op Home${renderSelector("rooms", index, "control_entities", controls, { entity: { domain: ["light", "switch", "cover", "media_player", "climate"], multiple: true } })}</label>
-    <small>Kies nul tot zestien; orden zonder telkens het dashboard opnieuw te laden.</small>
-    ${controlOrder}
-    <label><input type="checkbox" data-collection="rooms" data-index="${index}" data-field="controls_enabled" ${roomConfig.controls_enabled ? "checked" : ""}>Directe bediening toestaan voor gekozen licht-, cover- en mediaknoppen</label>
-    <p>Zonder toestemming openen de knoppen alleen Home Assistant-details. Klimaat opent altijd het native detailvenster. Luifelbeveiliging blijft in Home Assistant.</p>
-    <label>Scripts (bewaard, max. 2)<select multiple data-collection="rooms" data-index="${index}" data-field="quick_actions">${config.actions.map((action) => `<option value="${escapeHtml(action.key)}" ${roomConfig.quick_actions.includes(action.key) ? "selected" : ""}>${escapeHtml(action.label || action.key)}</option>`).join("")}</select></label>
-    <h4>Bronmappings</h4>
-    <label>Lampen${renderSelector("rooms", index, "light_entities", roomConfig.light_entities, { entity: { domain: "light", multiple: true } })}</label>
-    <label>Verlichtingsschakelaars${renderSelector("rooms", index, "light_switch_entities", roomConfig.light_switch_entities, { entity: { domain: "switch", multiple: true } })}</label>
-    <label>Covers en openingen${renderSelector("rooms", index, "cover_entities", roomConfig.cover_entities, { entity: { multiple: true } })}</label>
-    <label>Media${renderSelector("rooms", index, "media_entities", roomConfig.media_entities, { entity: { domain: "media_player", multiple: true } })}</label>
-    <label>Safety${renderSelector("rooms", index, "safety_entities", roomConfig.safety_entities, { entity: { multiple: true } })}</label>
-    <label>Camera's${renderSelector("rooms", index, "camera_entities", roomConfig.camera_entities, { entity: { domain: "camera", multiple: true } })}</label>
-    <label>Apparaten en power<small>Telt mee in het huidige vermogen van de kamer. Geen dag/maand/jaartotalen tenzij hetzelfde apparaat ook als Smart plug is ingesteld.</small>${renderSelector("rooms", index, "power_entities", roomConfig.power_entities, { entity: { multiple: true } })}</label>
-    <label>Overige historie${renderSelector("rooms", index, "history_entities", roomConfig.history_entities, { entity: { multiple: true } })}</label>
-    ${renderRoomControlDeck(roomConfig, index)}
-    <h4>Klimaatdetail</h4>
-    <label>Klimaatbron${renderSelector("rooms", index, "hvac.entity", roomConfig.hvac.entity, { entity: { domain: "climate" } })}</label>
-    <label>Comfort en luchtkwaliteit${renderSelector("rooms", index, "hvac.comfort_entities", roomConfig.hvac.comfort_entities, { entity: { multiple: true } })}</label>
-    <label>Klimaathistorie${renderSelector("rooms", index, "hvac.history_entities", roomConfig.hvac.history_entities, { entity: { multiple: true } })}</label>
-    <label>Toegestane modes<input data-collection="rooms" data-index="${index}" data-field="hvac.modes" value="${escapeHtml(roomConfig.hvac.modes.join(", "))}"></label>
-    <label>Presets<input data-collection="rooms" data-index="${index}" data-field="hvac.presets" value="${escapeHtml(roomConfig.hvac.presets.join(", "))}"></label>
-    <label>Fan modes<input data-collection="rooms" data-index="${index}" data-field="hvac.fan_modes" value="${escapeHtml(roomConfig.hvac.fan_modes.join(", "))}"></label>
-    <label>Swing modes<input data-collection="rooms" data-index="${index}" data-field="hvac.swing_modes" value="${escapeHtml(roomConfig.hvac.swing_modes.join(", "))}"></label>
-  </div></details>`;
-  }).join("");
-}
-
-function renderActions(config: HomeDashboardConfigV1, expandedItems: Set<string>): string {
-  return config.actions.map((action, index) => `<details class="item" data-item-token="${escapeHtml(getEditorItemToken("actions", action, index))}" ${expandedItems.has(getEditorItemToken("actions", action, index)) ? "open" : ""}>
-    <summary>${escapeHtml(action.label || action.key || `Actie ${index + 1}`)}</summary><div class="item-body">
-    <div class="item-toolbar"><button type="button" aria-label="Verwijder actie ${escapeHtml(action.label || action.key || index + 1)}" data-remove="actions" data-index="${index}">Verwijder</button></div>
-    <label>Logische sleutel<input data-collection="actions" data-index="${index}" data-field="key" value="${escapeHtml(action.key)}"></label>
-    <label>Label<input data-collection="actions" data-index="${index}" data-field="label" value="${escapeHtml(action.label)}"></label>
-    <label>Home Assistant-acties${renderSelector("actions", index, "sequence", action.sequence, { action: {} })}</label>
-    <label>Risico<select data-collection="actions" data-index="${index}" data-field="risk">${["safe", "privacy", "costly", "destructive"].map((value) => `<option ${action.risk === value ? "selected" : ""}>${value}</option>`).join("")}</select></label>
-    <label>Bevestigingstekst<input data-collection="actions" data-index="${index}" data-field="confirmation_text" value="${escapeHtml(action.confirmation_text)}"></label>
-    <label class="check"><input type="checkbox" data-collection="actions" data-index="${index}" data-field="hold_required" ${action.hold_required ? "checked" : ""}> Hold-to-confirm</label>
-    <label>Resultaatcontrole${renderSelector("actions", index, "verification_entity", action.verification_entity, { entity: {} })}</label>
-  </div></details>`).join("");
-}
-
-function renderSpecialists(config: HomeDashboardConfigV1): string {
-  return Object.entries(config.specialists).map(([key, specialist]) => {
-    const tag = specialist.card_type.replace(/^custom:/, "");
-    const available = typeof customElements !== "undefined" && Boolean(customElements.get(tag));
-    const resourceStatus = !specialist.enabled
-      ? "Uitgeschakeld."
-      : available
-        ? "Resource is geladen."
-        : "Resource niet gevonden. Installeer of update deze kaart via HACS en herlaad de browser.";
-    return `<article class="item">
-    <strong>${escapeHtml(key)}</strong><code>${escapeHtml(specialist.card_type)}</code>
-    <p class="${specialist.enabled && !available ? "warning" : ""}">${escapeHtml(resourceStatus)}</p>
-    <label class="check"><input type="checkbox" data-specialist="${key}" data-field="enabled" ${specialist.enabled ? "checked" : ""}> Inschakelen</label>
-    <label>Geteste minimumversie<input data-specialist="${key}" data-field="minimum_version" value="${escapeHtml(specialist.minimum_version)}"></label>
-    <label>Logische mappingsleutels<input data-specialist="${key}" data-field="mapping_keys" value="${escapeHtml(specialist.mapping_keys.join(", "))}"></label>
-    ${key === "kia" ? `<label>Geavanceerde Kia-cardconfiguratie<small>Deze private configuratie wordt ongewijzigd aan de zelfstandige Kia-card doorgegeven. Gebruik daarin onder meer <code>entities</code>; geen echte mappings in Git opslaan.</small><textarea rows="9" data-specialist="kia" data-field="card_config">${escapeHtml(JSON.stringify(config.specialists.kia.card_config, null, 2))}</textarea></label>` : ""}
-    ${key === "printer" ? `<label>Geavanceerde printer-cardconfiguratie<small>Bevat onder meer <code>entities</code> met logische sleutels als <code>status</code>, <code>progress</code>, <code>nozzle_temperature</code>; geen echte mappings in Git opslaan.</small><textarea rows="9" data-specialist="printer" data-field="card_config">${escapeHtml(JSON.stringify(config.specialists.printer.card_config, null, 2))}</textarea></label>` : ""}
-    ${key === "pool" ? `<label>Geavanceerde zwembad-cardconfiguratie<small>Bevat onder meer <code>entities</code> met logische sleutels als <code>status</code>, <code>water_temperature</code>, <code>heater_power</code>; geen echte mappings in Git opslaan.</small><textarea rows="9" data-specialist="pool" data-field="card_config">${escapeHtml(JSON.stringify(config.specialists.pool.card_config, null, 2))}</textarea></label>` : ""}
-  </article>`;
-  }).join("");
-}
 
 function renderViewOrder(config: HomeDashboardConfigV1): string {
   return `<div class="order" aria-label="Viewvolgorde">${config.layout.view_order.map((path, index) => `<div><span>${escapeHtml(path)}</span><span><button type="button" aria-label="Verplaats ${escapeHtml(path)} omhoog" data-view-move="up" data-index="${index}" ${index === 0 ? "disabled" : ""}>↑</button><button type="button" aria-label="Verplaats ${escapeHtml(path)} omlaag" data-view-move="down" data-index="${index}" ${index === config.layout.view_order.length - 1 ? "disabled" : ""}>↓</button></span></div>`).join("")}</div>`;
@@ -307,30 +132,6 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
     this.commit();
   }
 
-  private addRoomNestedItem(roomIndex: number, collection: "light_groups" | "cover_controls" | "smart_plugs"): void {
-    const room = this._config.rooms[roomIndex];
-    if (!room) return;
-    if (collection === "light_groups") (room.light_groups ??= []).push({ key: `light_group_${room.light_groups.length + 1}`, name: "", control_entity: "", member_entities: [] });
-    if (collection === "cover_controls") (room.cover_controls ??= []).push({ key: `cover_${room.cover_controls.length + 1}`, name: "", entity: "", kind: "shutter", confirmation: "movement" });
-    if (collection === "smart_plugs") (room.smart_plugs ??= []).push({ key: `plug_${room.smart_plugs.length + 1}`, name: "", switch_entity: "", power_entity: "", energy_entity: "", voltage_entity: "", protected: false, protection_reason: "", energy_day_entity: "", energy_month_entity: "", energy_year_entity: "" });
-    this.commit();
-  }
-
-  private updateRoomNestedItem(roomIndex: number, collection: "light_groups" | "cover_controls" | "smart_plugs", itemIndex: number, field: string, value: unknown): void {
-    const room = this._config.rooms[roomIndex];
-    const item = room?.[collection]?.[itemIndex] as MutableRecord | undefined;
-    if (!item) return;
-    if (field.endsWith("_period") && value === "") delete item[field];
-    else item[field] = value;
-    this.commit();
-  }
-
-  private removeRoomNestedItem(roomIndex: number, collection: "light_groups" | "cover_controls" | "smart_plugs", itemIndex: number): void {
-    const room = this._config.rooms[roomIndex];
-    room?.[collection]?.splice(itemIndex, 1);
-    this.commit();
-  }
-
   private commit(): void {
     if (this.blocked) {
       this.message = "Configuratie blijft geblokkeerd; er wordt geen v1-configuratie teruggeschreven.";
@@ -388,26 +189,27 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
     this.commit();
   }
 
-  private moveRoomControlDraft(roomIndex: number, index: number, direction: "up" | "down"): void {
-    const room = this._config.rooms[roomIndex];
-    if (!room) return;
-    room.control_entities ??= visibleRoomControls(room);
-    const target = direction === "up" ? index - 1 : index + 1;
-    if (target < 0 || target >= room.control_entities.length) return;
-    const current = room.control_entities[index]!;
-    room.control_entities[index] = room.control_entities[target]!;
-    room.control_entities[target] = current;
-    const container = this.shadowRoot?.querySelector<HTMLElement>(`[data-control-order="${roomIndex}"]`);
-    if (!container) return;
-    container.innerHTML = renderControlOrderRows(room.control_entities, roomIndex);
-    this.bindControlOrderEvents(container);
-    const save = this.shadowRoot?.querySelector<HTMLButtonElement>(`[data-room-control-apply="${roomIndex}"]`);
-    save?.classList.add("pending");
-    if (save) save.textContent = "Volgorde opslaan";
+  // Thin wrappers delegating to ./sections/rooms: the editor's own DOM event wiring calls those
+  // functions directly via bindRoomEvents(), but these three + moveRoomControlDraft below are kept
+  // as methods too, since they are also exercised directly (bypassing the DOM) by editor-behavior.test.mjs.
+  private addRoomNestedItem(roomIndex: number, collection: RoomNestedCollection): void {
+    addRoomNestedItem(this._config, roomIndex, collection);
+    this.commit();
   }
 
-  private bindControlOrderEvents(root: ParentNode): void {
-    root.querySelectorAll<HTMLButtonElement>("[data-room-control-move]").forEach((controlButton) => controlButton.addEventListener("click", () => this.moveRoomControlDraft(Number(controlButton.dataset.roomIndex), Number(controlButton.dataset.controlIndex), controlButton.dataset.roomControlMove as "up" | "down")));
+  private updateRoomNestedItem(roomIndex: number, collection: RoomNestedCollection, itemIndex: number, field: string, value: unknown): void {
+    updateRoomNestedItem(this._config, roomIndex, collection, itemIndex, field, value);
+    this.commit();
+  }
+
+  private removeRoomNestedItem(roomIndex: number, collection: RoomNestedCollection, itemIndex: number): void {
+    removeRoomNestedItem(this._config, roomIndex, collection, itemIndex);
+    this.commit();
+  }
+
+  private moveRoomControlDraft(roomIndex: number, index: number, direction: "up" | "down"): void {
+    if (!this.shadowRoot) return;
+    moveRoomControlDraft(this.shadowRoot, this._config, roomIndex, index, direction);
   }
 
   private configureSelectors(): void {
@@ -445,7 +247,7 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
           setPath(this._config, path, value);
           this.commit();
         } else if (element.dataset.roomNestedCollection) {
-          this.updateRoomNestedItem(Number(element.dataset.roomIndex), element.dataset.roomNestedCollection as "light_groups" | "cover_controls" | "smart_plugs", Number(element.dataset.itemIndex), element.dataset.field ?? "", value);
+          this.updateRoomNestedItem(Number(element.dataset.roomIndex), element.dataset.roomNestedCollection as RoomNestedCollection, Number(element.dataset.itemIndex), element.dataset.field ?? "", value);
         } else {
           this.updateCollection(element.dataset.collection ?? "", Number(element.dataset.index), element.dataset.field ?? "", value);
         }
@@ -462,21 +264,9 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
         this.updateCollection(element.dataset.collection ?? "", Number(element.dataset.index), element.dataset.field ?? "", value);
       });
     });
-    this.shadowRoot.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-room-nested-collection]").forEach((element) => {
-      if (element.tagName.toLowerCase() === "ha-selector") return;
-      element.addEventListener("change", () => {
-        let value: unknown = element.value;
-        if (element instanceof HTMLInputElement && element.type === "checkbox") value = element.checked;
-        this.updateRoomNestedItem(Number(element.dataset.roomIndex), element.dataset.roomNestedCollection as "light_groups" | "cover_controls" | "smart_plugs", Number(element.dataset.itemIndex), element.dataset.field ?? "", value);
-      });
-    });
     this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-add]").forEach((controlButton) => controlButton.addEventListener("click", () => this.addItem(controlButton.dataset.add ?? "")));
     this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-remove]").forEach((controlButton) => controlButton.addEventListener("click", () => this.removeItem(controlButton.dataset.remove ?? "", Number(controlButton.dataset.index))));
-    this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-room-nested-add]").forEach((controlButton) => controlButton.addEventListener("click", () => this.addRoomNestedItem(Number(controlButton.dataset.roomIndex), controlButton.dataset.roomNestedAdd as "light_groups" | "cover_controls" | "smart_plugs")));
-    this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-room-nested-remove]").forEach((controlButton) => controlButton.addEventListener("click", () => this.removeRoomNestedItem(Number(controlButton.dataset.roomIndex), controlButton.dataset.roomNestedRemove as "light_groups" | "cover_controls" | "smart_plugs", Number(controlButton.dataset.itemIndex))));
-    this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-room-move]").forEach((controlButton) => controlButton.addEventListener("click", () => this.moveItem(this._config.rooms, Number(controlButton.dataset.index), controlButton.dataset.roomMove as "up" | "down")));
-    this.bindControlOrderEvents(this.shadowRoot);
-    this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-room-control-apply]").forEach((controlButton) => controlButton.addEventListener("click", () => this.commit()));
+    bindRoomEvents(this.shadowRoot, this._config, { commit: () => this.commit(), moveItem: (items, index, direction) => this.moveItem(items, index, direction) });
     this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-view-move]").forEach((controlButton) => controlButton.addEventListener("click", () => this.moveItem(this._config.layout.view_order, Number(controlButton.dataset.index), controlButton.dataset.viewMove as "up" | "down")));
     this.shadowRoot.querySelectorAll<HTMLDetailsElement>("details[data-item-token]").forEach((details) => {
       const token = details.dataset.itemToken;
@@ -511,30 +301,7 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
       this.focusActiveSection = true;
       this.render();
     }));
-    this.shadowRoot.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("[data-specialist]").forEach((element) => element.addEventListener("change", () => {
-      const specialist = this._config.specialists[element.dataset.specialist as keyof typeof this._config.specialists];
-      const field = element.dataset.field as "enabled" | "minimum_version" | "mapping_keys" | "card_config";
-      if (!specialist || !field) return;
-      if (field === "enabled") {
-        if (!(element instanceof HTMLInputElement)) return;
-        specialist.enabled = element.checked;
-      }
-      else if (field === "mapping_keys") specialist.mapping_keys = element.value.split(",").map((value) => value.trim()).filter(Boolean);
-      else if (field === "card_config") {
-        if (!("card_config" in specialist)) return;
-        try {
-          const parsed = JSON.parse(element.value);
-          if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("geen object");
-          specialist.card_config = parsed as Record<string, unknown>;
-        } catch {
-          this.message = "De geavanceerde cardconfiguratie moet geldige JSON-objecttekst zijn; de eerdere geldige configuratie blijft behouden.";
-          this.render();
-          return;
-        }
-      }
-      else specialist.minimum_version = element.value;
-      this.commit();
-    }));
+    bindSpecialistEvents(this.shadowRoot, this._config, { commit: () => this.commit(), blockWithMessage: (message) => { this.message = message; this.render(); } });
     this.shadowRoot.querySelector<HTMLButtonElement>("#reset")?.addEventListener("click", () => {
       if (globalThis.confirm?.("Alle configuratie in deze editor terugzetten naar de standaardwaarden?")) {
         this._config = createDefaultConfig();
@@ -585,7 +352,7 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
       general: { body: "" },
       today: { body: "" },
       persons: { body: `<div class="items">${renderPersons(this._config, this.expandedItems)}</div>`, extra: `<button class="add" type="button" data-add="persons">Persoon toevoegen</button>` },
-      security: { body: `<aside class="guidance"><strong>Privacybediening is optioneel</strong><p>Laat Privacyactie op Geen om alleen de status te tonen. Wil je bedienen, maak dan onder Acties een actie met expliciete target en resultaatcontrole. Risicoklasse en bevestiging stel je bij de actie zelf in.</p><button type="button" data-go-section="actions">Ga naar Acties →</button></aside><div class="items">${renderCameras(this._config, this.expandedItems)}</div>`, extra: `<button class="add" type="button" data-add="security.cameras">Camera toevoegen</button>` },
+      security: { body: `${renderSecurityGuidance()}<div class="items">${renderCameras(this._config, this.expandedItems)}</div>`, extra: `<button class="add" type="button" data-add="security.cameras">Camera toevoegen</button>` },
       rooms: { body: `<div class="items">${renderRooms(this._config, this.expandedItems)}</div>`, extra: `<button class="add" type="button" data-add="rooms">Kamer toevoegen</button>` },
       energy: { body: "" },
       actions: { body: `<div class="items">${renderActions(this._config, this.expandedItems)}</div>`, extra: `<button class="add" type="button" data-add="actions">Actie toevoegen</button>` },

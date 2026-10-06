@@ -175,12 +175,12 @@ test("Control Deck toont beschermde plugs en afzonderlijke dag-, maand- en jaarb
 });
 
 test("kamereditor biedt verlichtingsswitches ook als direct kiesbaar doel", async () => {
-  const editor = await readFile(new URL("../src/editor/home-dashboard-editor.ts", import.meta.url), "utf8");
+  const editor = await readFile(new URL("../src/editor/sections/rooms.ts", import.meta.url), "utf8");
   assert.match(editor, /domain: \["light", "switch", "cover", "media_player", "climate"\]/);
 });
 
 test("Control Deck-editor dekt alle plugmetingen en privacyveilige afbeeldingen", async () => {
-  const editor = await readFile(new URL("../src/editor/home-dashboard-editor.ts", import.meta.url), "utf8");
+  const editor = await readFile(new URL("../src/editor/sections/rooms.ts", import.meta.url), "utf8");
   const fields = await readFile(new URL("../src/editor/fields.ts", import.meta.url), "utf8");
   assert.match(editor, /itemIndex, "energy_entity"/);
   assert.match(editor, /itemIndex, "voltage_entity"/);
@@ -350,7 +350,7 @@ test("HD-206: de hero toont meerdere echte statuspillen en een eerlijke placehol
 
 test("kameracties gebruiken korte namen, entiteitsiconen en duidelijke actieve types", async () => {
   const controls = await readFile(new URL("../src/cards/home-dashboard-room-controls.ts", import.meta.url), "utf8");
-  const editor = await readFile(new URL("../src/editor/home-dashboard-editor.ts", import.meta.url), "utf8");
+  const editor = await readFile(new URL("../src/editor/sections/rooms.ts", import.meta.url), "utf8");
   assert.match(controls, /function shortName/);
   assert.match(controls, /attributes\?\.icon/);
   assert.match(controls, /kind-\$\{kind\}/);
