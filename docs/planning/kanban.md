@@ -9,8 +9,7 @@ De kolom **Volgorde** vertaalt afhankelijkheden naar de aanbevolen uitvoering: f
 | Ticket | Prioriteit | Categorie | Volgorde | Toelichting |
 |---|---|---|---|---|
 | [HD-112 Runtimebevindingen oplossen](tickets.md#hd-112--runtimebevindingen-oplossen) | P1 | Runtimeacceptatie | 1d · Voorwaardelijk | Live gevonden bevindingen oplossen in kleine, geïsoleerde regressieslices |
-| [HD-180 HACS lifecycle en compatibiliteitsmatrix bijwerken](tickets.md#hd-180--hacs-lifecycle-en-compatibiliteitsmatrix-bijwerken) | P1 | Release engineering | 6a | Install/update/downgrade/verwijderen opnieuw bewijzen voor de actuele productvorm |
-| [HD-181 Admin-dashboardgrens uitwerken](tickets.md#hd-181--admin-dashboardgrens-uitwerken) | P2 | Diagnostiek | 2b | `require_admin`-grens voor diagnostiek/beheer, los van het gezinsdashboard |
+| [HD-181 Admin-dashboardgrens uitwerken](tickets.md#hd-181--admin-dashboardgrens-uitwerken) | P2 | Diagnostiek | 2b | `require_admin`-grens voor diagnostiek/beheer, los van het gezinsdashboard; architectuurbeslissing genomen (D-068), klaar om op te pakken |
 | [HD-192 v1-documentatie en release readiness afronden](tickets.md#hd-192--v1-documentatie-en-release-readiness-afronden) | P1 | Release engineering | 6c | Documentatie laten overeenkomen met de werkelijk bewezen v1-scope |
 
 
@@ -60,7 +59,8 @@ Geen tickets.
 | [HD-212 mountCard()-resourcefallback met een echte test bewijzen](tickets.md#hd-212--mountcard-resourcefallback-met-een-echte-test-bewijzen) | P2 | Quality engineering | PR #72 |
 | [HD-213 Diff-voor-schrijven toevoegen aan Home, Energie en pool-specialist renderpaden](tickets.md#hd-213--diff-voor-schrijven-toevoegen-aan-home-energie-en-pool-specialist-renderpaden) | P2 | Performance | PR #73 |
 | [HD-214 Centrale actionallowlist is gedefinieerd maar nergens uitgevoerd](tickets.md#hd-214--centrale-actionallowlist-actionconfigprivacy_action_key-is-gedefinieerd-maar-nergens-uitgevoerd) | P2 | Quality engineering | PR #74 · `v0.8.0-alpha.28` |
-| [HD-215 GUI-configuratie-editor opsplitsen per sectie](tickets.md#hd-215--gui-configuratie-editor-opsplitsen-per-sectie) | P2 | Quality engineering | PR volgt |
+| [HD-215 GUI-configuratie-editor opsplitsen per sectie](tickets.md#hd-215--gui-configuratie-editor-opsplitsen-per-sectie) | P2 | Quality engineering | PR #77 |
+| [HD-180 HACS lifecycle en compatibiliteitsmatrix bijwerken](tickets.md#hd-180--hacs-lifecycle-en-compatibiliteitsmatrix-bijwerken) | P1 | Release engineering | Live HACS-test 6 okt 2026, geen PR nodig (documentatie + live verificatie) |
 
 ## Geblokkeerd
 
