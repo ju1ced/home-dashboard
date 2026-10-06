@@ -460,7 +460,7 @@ Gevonden tijdens [HD-201](#hd-201--volledige-productaudit-voor-privacy-en-beveil
 ### HD-215 — GUI-configuratie-editor opsplitsen per sectie
 
 - **Epic:** Quality engineering
-- **Status:** Backlog
+- **Status:** Klaar — opgesplitst op 6 oktober 2026 ([D-067](../design/decision-log.md#d-067--gui-configuratie-editor-opgesplitst-per-sectie-hd-215)). PR volgt. Geen Home Assistant-write of release nog goedgekeurd.
 - **Prioriteit:** P2
 - **Omvang:** L
 - **Eigenaar:** Lead / integrator
