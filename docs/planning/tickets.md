@@ -141,26 +141,32 @@ Schone HACS-testcyclus en gedownload-artifactvergelijking.
 ### HD-181 — Admin-dashboardgrens uitwerken
 
 - **Epic:** Diagnostiek
-- **Status:** Backlog
+- **Status:** Backlog — architectuurbeslissing genomen door de eigenaar op 6 oktober 2026: admin-oppervlak blijft binnen `home-dashboard` zelf (geen afzonderlijke repo/dashboard). Klaar om op te pakken.
 - **Prioriteit:** P2
 - **Omvang:** M
 - **Eigenaar:** Lead / integrator
-- **Afhankelijkheden:** eigenaarsbesluit over afzonderlijke repo of dashboard
+- **Afhankelijkheden:** geen
 
 **Doel**
 
 De vastgelegde `require_admin`-grens voor systeem, netwerk, updates, batterijen, automations en area-loze techniek uitvoerbaar maken zonder het gezinsdashboard opnieuw te belasten.
 
+**Scope (besloten)**
+
+- Admin-inhoud leeft als een eigen view/sectie binnen dit project, niet als afzonderlijk product of repo — bijvoorbeeld een extra `custom:home-dashboard-view`-pad (vergelijkbaar met de bestaande `more`-view) of een los Lovelace-dashboard dat `require_admin: true` gebruikt (native HA-dashboardvlag; zie `ha_config_set_dashboard`'s `require_admin`-parameter).
+- `require_admin` is een echte autorisatiegrens (HA weigert de view/dashboard voor niet-admin-gebruikers), niet louter een verborgen navigatie-ingang — de bestaande regel "visibility wordt niet als security gebruikt" blijft onverkort gelden.
+- Geen wijziging aan het bestaande gezinspad (Home/Kamers/Energie/Domeinen/Meer); dit is een toegevoegde, apart genavigeerde sectie.
+
 **Acceptatiecriteria**
 
-- Scope, autorisatiegrens, navigatie-ingang en ownership zijn besloten.
-- Visibility wordt niet als security gebruikt.
-- De scheiding tussen gezinspad en diagnose is gedocumenteerd.
-- Eventuele bouwtickets staan in de juiste repo en zijn geen impliciete uitbreiding van `home-dashboard`.
+- Navigatie-ingang naar de admin-sectie is duidelijk gescheiden van het gezinspad (geen impliciete vermenging in bestaande views).
+- `require_admin` is daadwerkelijk afgedwongen (geverifieerd: een niet-admin-gebruiker krijgt de sectie niet te zien), niet alleen visueel verborgen.
+- Systeem, netwerk, updates, batterijen, automations en area-loze techniek zijn elk expliciet toegewezen aan deze sectie of bewust uitgesloten met reden.
+- De scheiding tussen gezinspad en diagnose is gedocumenteerd in de designbaseline.
 
 **Validatie**
 
-Beslislogupdate en goedgekeurde architectuurscope; implementatie volgt alleen na aparte toestemming.
+`pnpm test`, `pnpm run test:browser`, `git diff --check`; live verificatie van de `require_admin`-afdwinging vereist een menselijke testsessie (los van deze implementatie, net als elke andere HA-gate in dit project).
 
 ---
 
