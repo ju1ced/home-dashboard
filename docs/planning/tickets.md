@@ -114,11 +114,11 @@ Read-only auditrapport, snapshotreferentie en multi-dashboardcontrole.
 ### HD-180 — HACS lifecycle en compatibiliteitsmatrix bijwerken
 
 - **Epic:** Release engineering
-- **Status:** Backlog
+- **Status:** Klaar — volledige HACS-lifecycle live getest op 6 oktober 2026 via de Home Assistant MCP-verbinding ([D-069](../design/decision-log.md#d-069--hacs-lifecycle-live-opnieuw-bewezen-voor-v0800-alpha28-hd-180)). Vooraf een volledige HA-snapshot genomen (`e8b31114`); geen andere wijziging aan de instantie.
 - **Prioriteit:** P1
 - **Omvang:** M
 - **Eigenaar:** Foundation & HACS-agent + documentatiereviewer
-- **Afhankelijkheden:** definitieve specialistset en actuele releasecandidate
+- **Afhankelijkheden:** geen
 
 **Doel**
 
