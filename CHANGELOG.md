@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8.0 — 2026-10-07
+
+Zelfde inhoud als `0.8.0-alpha.30` — geen functionele wijziging. Dit is een releaseproces-/versioneringswijziging: vanaf nu dragen releasetags geen `-alpha.N`-achtervoegsel meer.
+
+**Waarom:** HD-218's onderzoek (zie het beslislog) vond de kernoorzaak van de herhaalde HACS-drift die daar beschreven staat — elke eerdere release werd door GitHub als "Pre-release" gemarkeerd (vanwege het `-alpha.N`-achtervoegsel in de tag), en HACS' eigen zichtbaarheidsinstelling voor prereleases stond voor deze repository uit. Met dertig releases en geen enkele daarvan zichtbaar voor HACS, bleef HACS' releaselijst voor dit component permanent leeg — wat HACS er telkens toe bracht terug te vallen op het volgen van de `main`-branch in plaats van een gepinde release, net zo vaak als die releasedata ververst werd.
+
+**Besluit:** in plaats van de eigenaar te vragen een HACS-instelling (zichtbaarheid van bèta-/prerelease-versies) handmatig om te zetten, kiest de eigenaar ervoor om voortaan "volledige" (niet-prerelease) releasetags te gebruiken — zodat GitHub en HACS ze zonder extra configuratie als een gewone release herkennen. Dit is een bewuste, zichtbare keuze: het project blijft inhoudelijk in dezelfde vroege, nog-niet-productieklare fase als voorheen (zie `AGENTS.md`'s "concept/prototype"-status en de nog geblokkeerde v1-gates in het kanban), alleen het releaseproces verandert.
+
+- Geen codewijziging. Hoofdbundel en editorbundel ongewijzigd t.o.v. `0.8.0-alpha.30` (enkel de versiebanner verschilt).
+- Zie [HD-218](docs/planning/tickets.md#hd-218--hacs-pin-voor-home-dashboard-valt-herhaaldelijk-terug-op-main-tracking) voor de volledige analyse en [D-073](docs/design/decision-log.md) voor het besluit.
+
 ## 0.8.0-alpha.30 — 2026-10-07
 
 Documentatie-only release: geen functionele wijziging aan de dashboardstrategy of de editor.

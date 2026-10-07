@@ -1526,7 +1526,7 @@ Ondertekende go/no-go, productiesmoke en post-cutoverstatus. Uitvoering vereist 
 ### HD-218 — HACS-pin voor home-dashboard valt herhaaldelijk terug op main-tracking
 
 - **Epic:** Runtimeacceptatie
-- **Status:** Backlog
+- **Status:** Klaar — kernoorzaak bevestigd en opgelost via `v0.8.0` (zie [D-073](../design/decision-log.md#d-073--hd-218-opgelost-releasetags-dragen-geen-prerelease-achtervoegsel-meer)). Live herbevestiging ná de release staat nog open.
 - **Prioriteit:** P2
 - **Omvang:** S (onderzoek) + onbekend (fix, afhankelijk van bevinding)
 - **Eigenaar:** Lead / integrator
