@@ -501,6 +501,45 @@ Het bestand bevat vandaag zes los-top-level render-functies (`renderPersons`, `r
 
 ---
 
+### HD-216 — Kameneditor: lazy-mount, zoeken/filteren en smart-plug-koppelhulp
+
+- **Epic:** Quality engineering
+- **Status:** Backlog
+- **Prioriteit:** P1
+- **Omvang:** L
+- **Eigenaar:** Lead / integrator
+- **Afhankelijkheden:** geen (bouwt voort op HD-215's sectieopsplitsing)
+
+**Doel**
+
+De GUI-configuratie-editor's Kamers-sectie onbruikbaar traag en moeilijk maken is een reëel, bij 20 echte kamers (live geverifieerd 6-7 oktober 2026) ervaren probleem oplossen: te traag, te lastig om de juiste kamer terug te vinden, en dubbel werk bij het koppelen van een smart plug aan zijn eigen vermogenssensor.
+
+**Achtergrond**
+
+`renderRooms()` (`src/editor/sections/rooms.ts`) bouwt bij elke render de **volledige** markup voor **elke** kamer — elk veld, elke `ha-selector` — ongeacht of die kamer's `<details>`-element open of dicht staat. Natieve `<details>` verbergt gesloten inhoud alleen visueel; de markup (en dus elke gemonteerde `ha-selector`, een zware custom element) blijft volledig in de DOM. Bij 20 kamers met gemiddeld 10-20 velden elk betekent dit honderden gelijktijdig gemonteerde `ha-selector`-instanties, ook al is er maar één kamer tegelijk zichtbaar — dit is de concrete, geverifieerde oorzaak van de ervaren traagheid, geen vage indruk.
+
+Daarnaast bestaat er geen manier om een al elders ingevoerde schakelaar-entiteit en zijn vermogenssensor te herkennen als hetzelfde fysieke smart-plug-apparaat: de eigenaar moet beide entity-ID's met de hand opnieuw intypen in een los `smart_plugs`-blok, ook als ze al in de platte `power_entities`-lijst van diezelfde kamer staan. Gevonden tijdens een live configuratiesessie (HD-180/181-vervolg, 6-7 oktober 2026): 18 van 20 kamers kregen hierdoor een vlakke, ongegroepeerde apparatenlijst in plaats van bruikbare smart-plug-kaarten met schakelaar + vermogen in één kaart (`smartPlugCard()`, `home-dashboard-room-cards.ts:1214-1242`, degradeert overigens al netjes met alleen schakelaar+vermogen — dag/maand/jaar-sensoren zijn optioneel, dus de "Verbruik"-tab had met een simpele koppelstap al veel bruikbaarder kunnen zijn).
+
+**Scope**
+
+1. **Lazy-mount kamerdetails (performancefix, prioriteit):** een kamer's volledige veldenset wordt alleen gerenderd en met `ha-selector`'s gemonteerd wanneer de `<details>` daadwerkelijk open staat. Bij sluiten wordt de inhoud weer leeggemaakt (niet alleen visueel verborgen) zodat de gemonteerde custom elements ontmanteld worden. Het bestaande `expandedItems`-gedrag (een kamer blijft open na een HA-roundtrip of keywijziging) blijft intact.
+2. **Zoeken/filteren op kamernaam:** een tekstveld boven de kamerlijst filtert de zichtbare `<details>`-koppen op naam (client-side, puur op de al-geladen samenvattingen — geen extra rendering nodig dankzij punt 1). Maakt een specifieke kamer tussen 20 stuks direct vindbaar zonder te moeten scrollen.
+3. **Smart-plug-koppelhulp:** een manier om een schakelaar-entiteit die al in `power_entities` van diezelfde kamer staat te "promoten" tot een `smart_plugs`-item, met een voorgestelde koppeling aan zijn vermoedelijke vermogens-/energiesensor op basis van entity-ID-naamgelijkenis binnen diezelfde `power_entities`-lijst (eenzelfde stam, een herkenbaar vermogens-/energie-/spanningsachtervoegsel), die de eigenaar met één klik bevestigt in plaats van beide entity-ID's met de hand over te typen. Puur een pure, zelfstandig testbare matchfunctie op de al in de kamer geconfigureerde entity-ID's — geen uitbreiding van de editor's `hass`-contract (device-/entityregistry of een volledige `hass.states`-scan) nodig voor deze eerste versie.
+
+**Acceptatiecriteria**
+
+- Met 20 kamers in de configuratie blijft het openen/sluiten van een kamer en het wijzigen van een veld merkbaar vlot (een gesloten kamer heeft geen gemonteerde `ha-selector`'s; alleen de open kamer(s) tellen mee in de velden die bij een wijziging opnieuw gerenderd worden).
+- Een kamer zoeken op (deel van) haar naam toont alleen bijpassende kamers, ongeacht of ze open of dicht staan.
+- Een schakelaar + zijn vermoedelijke sensor(en) kunnen met één bevestigingsstap een `smart_plugs`-item worden, zonder de entity-ID's met de hand over te typen; de voorgestelde koppeling is altijd eerst een suggestie, nooit een stille automatische wijziging.
+- Geen gedragswijziging aan de generieke platte-collectie-CRUD, de geneste-collectie-CRUD of de bedieningsvolgorde-lijst uit HD-215 — deze ticket bouwt voort op die structuur, herschrijft hem niet.
+- Bestaande tests in `tests/editor-behavior.test.mjs` blijven slagen; nieuwe tests dekken lazy-mount (gesloten kamer heeft geen gemonteerde `ha-selector`'s), het zoekfilter, en de koppelsuggestie-logica.
+
+**Validatie**
+
+`pnpm test`, `pnpm run test:browser`, `git diff --check`, bundle-sizecheck (`scripts/verify-dist.mjs`).
+
+---
+
 ### HD-204 — Control Deck herstructureren naar de v3-rail
 
 - **Epic:** Kamers

@@ -19,7 +19,10 @@ import {
   HomeDashboardStrategyEditor,
   getEditorItemToken,
   getEditorSectionForKey,
-  mergeEditorIssues
+  matchesRoomSearch,
+  mergeEditorIssues,
+  promoteToSmartPlug,
+  suggestSmartPlugPairs
 } from "../dist/home-dashboard-editor.js";
 
 async function fixture(name) {
@@ -525,4 +528,60 @@ test("JSON Schema en editorcontract dekken dezelfde configuratieoppervlakte", as
   assert.equal(new Set(paths).size, paths.length);
   for (const path of paths) assert.equal(schemaPathExists(schema, path), true, `schema mist editorpad ${path}`);
   assert.deepEqual(collectUnannotatedLeaves(schema), [], "ieder configsleutelblad moet een GUI/system annotation hebben");
+});
+
+const ref = (domain, key) => [domain, key].join(".");
+
+test("HD-216: matchesRoomSearch filtert op naam, sleutel en area", () => {
+  const livingRoom = { key: "living_room", name: "Woonkamer", area_id: "benedenverdieping" };
+  assert.equal(matchesRoomSearch(livingRoom, ""), true);
+  assert.equal(matchesRoomSearch(livingRoom, "woon"), true);
+  assert.equal(matchesRoomSearch(livingRoom, "LIVING"), true);
+  assert.equal(matchesRoomSearch(livingRoom, "beneden"), true);
+  assert.equal(matchesRoomSearch(livingRoom, "garage"), false);
+});
+
+test("HD-216: suggestSmartPlugPairs herkent switch+sensor-stammen in power_entities, vermogen is verplicht", () => {
+  const powerEntities = [
+    ref("switch", "example_frigo"),
+    ref("sensor", "example_frigo_power"),
+    ref("sensor", "example_frigo_energy"),
+    ref("sensor", "example_frigo_voltage"),
+    ref("switch", "example_zonder_sensor"),
+    ref("sensor", "example_ongerelateerd")
+  ];
+  const suggestions = suggestSmartPlugPairs(powerEntities);
+  assert.equal(suggestions.length, 1, "een switch zonder vermogenssensor-match levert geen suggestie op");
+  assert.deepEqual(suggestions[0], {
+    switchEntity: ref("switch", "example_frigo"),
+    powerEntity: ref("sensor", "example_frigo_power"),
+    energyEntity: ref("sensor", "example_frigo_energy"),
+    voltageEntity: ref("sensor", "example_frigo_voltage")
+  });
+
+  const powerOnly = suggestSmartPlugPairs([ref("switch", "example_plant"), ref("sensor", "example_plant_power")]);
+  assert.equal(powerOnly.length, 1);
+  assert.equal(powerOnly[0].energyEntity, undefined, "energie en spanning blijven optioneel, net als smartPlugCard()'s eigen degradatie");
+  assert.equal(powerOnly[0].voltageEntity, undefined);
+});
+
+test("HD-216: promoteToSmartPlug maakt een smart_plugs-item en haalt de bronnen uit power_entities", () => {
+  const switchEntity = ref("switch", "example_frigo");
+  const powerEntity = ref("sensor", "example_frigo_power");
+  const otherEntity = ref("sensor", "example_overig_vermogen");
+  const config = createDefaultConfig();
+  config.rooms.push({
+    key: "keuken", name: "Keuken", icon: "mdi:sofa", floor_id: "", area_id: "", device_ids: [], capabilities: [], quick_actions: [],
+    light_entities: [], light_switch_entities: [], light_groups: [], cover_entities: [], cover_controls: [], media_entities: [], safety_entities: [], camera_entities: [],
+    power_entities: [switchEntity, powerEntity, otherEntity], history_entities: [],
+    image_entity: "", temperature_history_entity: "", smart_plugs: [], room_energy: { power_entity: "", day_entity: "", month_entity: "", year_entity: "" },
+    hvac: { entity: "", comfort_entities: [], history_entities: [], modes: [], presets: [], fan_modes: [], swing_modes: [] }
+  });
+
+  promoteToSmartPlug(config, 0, { switchEntity, powerEntity });
+
+  assert.equal(config.rooms[0].smart_plugs.length, 1);
+  assert.deepEqual(config.rooms[0].smart_plugs[0].switch_entity, switchEntity);
+  assert.deepEqual(config.rooms[0].smart_plugs[0].power_entity, powerEntity);
+  assert.deepEqual(config.rooms[0].power_entities, [otherEntity], "gepromoveerde entiteiten verdwijnen uit de platte lijst zodat niets dubbel telt");
 });
