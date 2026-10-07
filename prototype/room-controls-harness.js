@@ -112,6 +112,18 @@ config.rooms.push(migrateConfig({rooms:[{key:'photo_upload_ok',name:'Fotokamer',
 // prove the fallback path and to prove a later reconnect still attempts a fresh resolution rather than being
 // permanently stuck on the first failed attempt.
 config.rooms.push(migrateConfig({rooms:[{key:'photo_upload_unusable',name:'Fotokamer zonder upload',area_id:'EXAMPLE_PHOTO_UNUSABLE',image_entity:put('image','photo_fallback','available',{}),image_upload:{media_content_id:PHOTO_UPLOAD_UNUSABLE_ID,media_content_type:'image/jpeg'}}]}).config.rooms[0]);
+// HD-208: a room with no room_energy.*_entity for any period, a generic power_entities reading (so the
+// room-total card has a reason to render in every period, matching the real reported case -- a room whose
+// current-wattage figure is already configured, like the owner's live Keuken), two smart plugs with DIFFERENT
+// month entities (proves the period-total fallback sums across plugs) and the SAME year entity (proves it
+// dedupes by entity ID instead of counting that sensor twice), and no day entity anywhere (proves "Vandaag"
+// still shows "Niet geconfigureerd" for this room while "Maand"/"Jaar" show real combined totals -- the card
+// degrades per-period, not all-or-nothing).
+const periodFallbackYearEntity = put('sensor','period_fallback_shared_year','40',{unit_of_measurement:'kWh'});
+config.rooms.push(migrateConfig({rooms:[{key:'period_fallback_mixed',name:'Periodeterugval',area_id:'EXAMPLE_PERIOD_FALLBACK',power_entities:[put('sensor','period_fallback_power','15',{unit_of_measurement:'W',friendly_name:'Periodeterugval vermogen'})],smart_plugs:[
+  {key:'period_fallback_a',name:'Terugvalplug A',switch_entity:put('switch','period_fallback_a_switch','off',{friendly_name:'Terugvalplug A'}),power_entity:put('sensor','period_fallback_a_power','0',{unit_of_measurement:'W'}),energy_month_entity:put('sensor','period_fallback_a_month','3',{unit_of_measurement:'kWh'}),energy_year_entity:periodFallbackYearEntity},
+  {key:'period_fallback_b',name:'Terugvalplug B',switch_entity:put('switch','period_fallback_b_switch','off',{friendly_name:'Terugvalplug B'}),power_entity:put('sensor','period_fallback_b_power','0',{unit_of_measurement:'W'}),energy_month_entity:put('sensor','period_fallback_b_month','5',{unit_of_measurement:'kWh'}),energy_year_entity:periodFallbackYearEntity}
+]}]}).config.rooms[0]);
 // NOTE: 'hall' must stay the LAST room pushed -- scripts/check-room-detail-browser.mjs's open() helper reads
 // `fixture.config.rooms.at(-1).safety_entities` to source its safety sensor, so any new fixture room must be
 // inserted above this line, never below it.
