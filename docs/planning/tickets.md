@@ -504,7 +504,7 @@ Het bestand bevat vandaag zes los-top-level render-functies (`renderPersons`, `r
 ### HD-216 — Kameneditor: lazy-mount, zoeken/filteren en smart-plug-koppelhulp
 
 - **Epic:** Quality engineering
-- **Status:** Backlog
+- **Status:** Klaar — PR #81 · `v0.8.0-alpha.29`
 - **Prioriteit:** P1
 - **Omvang:** L
 - **Eigenaar:** Lead / integrator

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8.0-alpha.29 — 2026-10-07
+
+Eén ticket (HD-216), gevonden tijdens een live configuratiesessie met 20 echte kamers.
+
+- **Performance: de GUI-editor's Kamers-sectie mountte voorheen de volledige veldenset van élke kamer bij elke render, open of dicht (HD-216, D-071).** Bij 20 kamers betekende dit honderden gelijktijdig gemonteerde `ha-selector`-instanties, ervaren als onbruikbaar traag. Een gesloten kamer rendert nu alleen haar titel; volledige velden worden pas gemount wanneer die kamer daadwerkelijk open staat.
+- **Nieuw: zoekveld boven de kamerlijst.** Filtert kamers op naam, sleutel of area zonder zelf te her-renderen — direct een specifieke kamer terugvinden tussen 20 stuks.
+- **Nieuw: smart-plug-koppelhulp.** Herkent een schakelaar + zijn vermoedelijke vermogens-/energie-/spanningssensor binnen een kamer's eigen "Apparaten en power"-lijst (naamstam-gelijkenis) en biedt een knop om ze met één klik te koppelen tot een smart-plug-kaart — geen dubbel handwerk meer om beide entiteit-ID's apart in te typen. De knop benoemt altijd expliciet wat hij verplaatst.
+- Editorbundel 95 kB → 97 kB, ruim binnen het bestaande budget van 160 kB (D-055). Hoofdbundel ongewijzigd.
+- [Testchecklist en rollback](docs/releases/testing-v0.8.0-alpha.29.md). Live Home Assistant-acceptatie blijft een afzonderlijke menselijke gate; deze release wijzigt alleen de lokale GUI-editor, geen enkele runtime-kaart of service-aanroep.
+
 ## 0.8.0-alpha.28 — 2026-10-05
 
 Bundelt vier afgeronde tickets sinds alpha.27 in één release, alle vier gevonden tijdens alpha.27's eigen HD-171/HD-201-rondes.
