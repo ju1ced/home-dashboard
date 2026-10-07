@@ -1561,3 +1561,14 @@ Dit is de **tweede keer** dat dit is vastgesteld. D-069 (HD-180, 6 oktober 2026)
 **Validatie**
 
 Live herbevestiging dat de installatie op de getagde release blijft staan over minstens één volledige HA-herstartcyclus (als dat de verdachte oorzaak is) of het relevante tijdsinterval voor de uiteindelijk bevestigde oorzaak.
+
+**Aanvullende bevinding (7 oktober 2026, dezelfde dag) — een echte reproductiestap gevonden**
+
+Tijdens het uitbrengen van v0.8.0-alpha.30 werd de exacte trigger live betrapt:
+
+- Vlak na het correct pinnen op `tags/v0.8.0-alpha.30` toonde HACS nog steeds een "update beschikbaar" met als beschikbare versie de rauwe commit-SHA van `main`'s tip — zelfs toen die SHA exact dezelfde commit was als de zojuist getagde release zelf. Vergelijking met de gezonde Kia-afhankelijkheid (`ju1ced/ha-kia-connect-dashboard`) toonde het verschil: Kia heeft een volledig gevulde releaselijst (29 getagde releases, HACS herkent ze) en een schone, kale tagverwijzing. `home-dashboard` had op dat moment een lege releaselijst — HACS had de GitHub Releases van deze repository nooit geïndexeerd, ondanks dat die releases wel degelijk bestaan.
+- Om dat te herstellen werd HACS' eigen "ververs releasedata"-actie uitgevoerd — exact de actie die bedoeld is voor "een repository die geen correcte releasedata toont." **Direct na die aanroep sprong de installatie terug naar het volgen van `main`**, en de releaselijst bleef leeg.
+- Een tweede herpin naar de getagde release herstelde de juiste staat opnieuw.
+- Dit is een **bevestigde, reproduceerbare trigger**: de releasedata-ververs-actie zelf (of de onderliggende HACS-herindexering die ze uitvoert) zet de installatie terug naar de default branch wanneer de releaselijst voor deze repository niet gevuld raakt — in plaats van de releaselijst te vullen zoals bedoeld.
+- **Nog niet bevestigd:** waarom de releaselijst voor déze repository nooit gevuld raakt terwijl Kia's dat wel doet. Mogelijke factoren, geen van alle getest: GitHub API-ratelimiting specifiek voor deze repository op het moment van indexeren, een verschil in hoe de repository ooit als custom repository is toegevoegd, of een HACS-interne eigenschap van deze specifieke repository-registratie die losstaat van de broncode zelf.
+- **Directe, voorlopige mitigatie:** **vermijd HACS' releasedata-ververs-actie (en de gelijkwaardige UI-knop "Update information") voor deze repository** totdat de kernoorzaak gevonden is — elke aanroep zet de installatie terug naar `main` en moet daarna opnieuw hersteld worden. Een reguliere installatie naar een specifieke versie (zoals bij elke release al gebeurt) triggert dit probleem niet, alleen de releasedata-herindexering wel.
