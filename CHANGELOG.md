@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.0-alpha.30 — 2026-10-07
+
+Documentatie-only release: geen functionele wijziging aan de dashboardstrategy of de editor.
+
+- HD-111's live acceptatieronde vastgelegd: een echte apparaatbediening (kamer "Bureau") geslaagd, de volledige live 19-kamer-configuratie zonder schema- of semantische fouten gevalideerd, default `lovelace` bevestigd ongewijzigd. Zie het [resultaatdocument](docs/releases/results-hd111-live-acceptance.md).
+- HD-218 geopend: HACS volgde voor de tweede keer `main` in plaats van een gepinde releasetag (zelfde regressieklasse als D-069/HD-180). Deze release pint de installatie opnieuw correct en brengt `main` en de getagde release weer in lijn, zodat HACS niet langer een update toont die er eigenlijk geen is.
+
 ## 0.8.0-alpha.29 — 2026-10-07
 
 Eén ticket (HD-216), gevonden tijdens een live configuratiesessie met 20 echte kamers.
