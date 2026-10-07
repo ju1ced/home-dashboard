@@ -1522,3 +1522,42 @@ Een gecontroleerde productiecutover uitvoeren nadat dagelijks gebruik, accessibi
 **Validatie**
 
 Ondertekende go/no-go, productiesmoke en post-cutoverstatus. Uitvoering vereist altijd een nieuwe expliciete toestemming.
+
+### HD-218 — HACS-pin voor home-dashboard valt herhaaldelijk terug op main-tracking
+
+- **Epic:** Runtimeacceptatie
+- **Status:** Backlog
+- **Prioriteit:** P2
+- **Omvang:** S (onderzoek) + onbekend (fix, afhankelijk van bevinding)
+- **Eigenaar:** Lead / integrator
+- **Afhankelijkheden:** geen (vervolg op D-069/HD-180 en de live HD-111-ronde)
+
+**Doel**
+
+De onderliggende oorzaak vinden waarom de HACS-installatie van dit project herhaaldelijk terugvalt van een gepinde releasetag naar het volgen van de `main`-branchtip, zodat dit structureel gefixt wordt in plaats van telkens opnieuw handmatig herpind.
+
+**Achtergrond**
+
+Dit is de **tweede keer** dat dit is vastgesteld. D-069 (HD-180, 6 oktober 2026) vond en fixte precies dezelfde situatie: HACS volgde `main` in plaats van een getagde release, hersteld door expliciet te pinnen op `v0.8.0-alpha.28`. Tijdens de live HD-111-acceptatieronde (7 oktober 2026, zie [resultaatdocument](../releases/results-hd111-live-acceptance.md)) bleek de installatie wéér op `main` te volgen, nu zelfs geïnstalleerd op een commit ouder dan `v0.8.0-alpha.28` — ouder dan de vorige fix zelf. Opnieuw hersteld door expliciet te pinnen op `v0.8.0-alpha.29`, maar zonder te weten WAAROM de pin niet standhoudt, zal dit zich hoogstwaarschijnlijk een derde keer voordoen.
+
+**Mogelijke oorzaken om te onderzoeken (geen van alle bevestigd)**
+
+- `hide_default_branch: true` in `hacs.json` interageert mogelijk onverwacht met hoe HACS "geselecteerde tag" versus "actieve ref" bijhoudt.
+- Een HA-herstart of HACS-herstart zou de pin kunnen resetten naar de default branch.
+- Een eerdere `ha_manage_hacs(action="download", ...)`-aanroep zonder expliciete `version` (ergens anders in de live sessiegeschiedenis) zou stilzwijgend naar `main` kunnen zijn teruggevallen.
+- HACS' eigen periodieke repository-refresh (ongeveer elke 48 uur, zie de tool-documentatie) zou de "beschikbare versie"-indicator kunnen beïnvloeden, maar zou niet de geïnstalleerde `ref` mogen wijzigen zonder een expliciete download-aanroep — te bevestigen of dat klopt.
+
+**Scope**
+
+1. Reproduceerbare stappen vinden (of uitsluiten) voor elk van bovenstaande hypotheses.
+2. Als een structurele fix mogelijk is (bv. een HACS-instelling, een andere `hacs.json`-vlag, of een geautomatiseerde her-pin-check), die toepassen.
+3. Als geen structurele fix mogelijk is binnen HACS zelf, een lichte periodieke controle documenteren (bv. als vast onderdeel van elke volgende live-acceptatieronde) in plaats van dit als verrassing te blijven ontdekken.
+
+**Acceptatiecriteria**
+
+- Ofwel een bevestigde oorzaak plus structurele fix, ofwel een expliciet gedocumenteerde conclusie dat de oorzaak niet binnen deze repository's controle ligt (bv. een HACS-kernbeperking), met een vaste controlestap als mitigatie.
+- Geen aanname zonder bevestiging — als de oorzaak onbekend blijft na onderzoek, wordt dat expliciet zo vastgelegd, niet stilzwijgend als "opgelost" gemarkeerd.
+
+**Validatie**
+
+Live herbevestiging dat de installatie op de getagde release blijft staan over minstens één volledige HA-herstartcyclus (als dat de verdachte oorzaak is) of het relevante tijdsinterval voor de uiteindelijk bevestigde oorzaak.

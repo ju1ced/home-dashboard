@@ -10,6 +10,7 @@ De kolom **Volgorde** vertaalt afhankelijkheden naar de aanbevolen uitvoering: f
 |---|---|---|---|---|
 | [HD-112 Runtimebevindingen oplossen](tickets.md#hd-112--runtimebevindingen-oplossen) | P1 | Runtimeacceptatie | 1d · Voorwaardelijk | Live gevonden bevindingen oplossen in kleine, geïsoleerde regressieslices |
 | [HD-192 v1-documentatie en release readiness afronden](tickets.md#hd-192--v1-documentatie-en-release-readiness-afronden) | P1 | Release engineering | 6c | Documentatie laten overeenkomen met de werkelijk bewezen v1-scope |
+| [HD-218 HACS-pin voor home-dashboard valt herhaaldelijk terug op main-tracking](tickets.md#hd-218--hacs-pin-voor-home-dashboard-valt-herhaaldelijk-terug-op-main-tracking) | P2 | Runtimeacceptatie | 1d-vervolg | Tweede keer vastgesteld tijdens HD-111 (7 okt 2026); oorzaak nog onbekend, herpinnen is een workaround geen fix |
 
 
 ## In uitvoering
@@ -21,6 +22,7 @@ Geen tickets.
 | Ticket | Prioriteit | Categorie | Volgorde | Toelichting |
 |---|---|---|---|---|
 | [HD-170 Volledige responsive, accessibility en visual QA](tickets.md#hd-170--volledige-responsive-accessibility-en-visual-qa) | P1 | Quality engineering | 1a en 4b | Nu de menselijke alpha.20-QA uitvoeren; definitief sluiten na validatie van de gekozen specialistset |
+| [HD-111 Live acceptatie van de actuele alpha](tickets.md#hd-111--live-acceptatie-van-de-actuele-alpha) | P0 | Runtimeacceptatie | 1b | Gedeeltelijk geslaagd 7 okt 2026 (zie [resultaatdocument](../releases/results-hd111-live-acceptance.md)); visuele/interactieve punten vereisen nog een menselijke browsersessie |
 
 ## Klaar
 
@@ -67,7 +69,6 @@ Geen tickets.
 
 | Ticket | Prioriteit | Categorie | Volgorde | Blokkade |
 |---|---|---|---|---|
-| [HD-111 Live acceptatie van de actuele alpha](tickets.md#hd-111--live-acceptatie-van-de-actuele-alpha) | P0 | Runtimeacceptatie | 1b | Expliciet goedgekeurd testdashboard, verse snapshot en targetallowlist |
 | [HD-121 Live Energie- en domeinpariteit valideren](tickets.md#hd-121--live-energie--en-domeinpariteit-valideren) | P1 | Energie en domeinen | 1c | HD-120 en menselijke runtimegate; praktisch in hetzelfde testvenster als HD-111 |
 | [HD-130 Robot-bronrepo door de productiepoort brengen](tickets.md#hd-130--robot-bronrepo-door-de-productiepoort-brengen) | P1 | Specialisten | 3a | Afzonderlijke scope en eigenaarschap in de robot-bronrepo |
 | [HD-131 Robot centraal integreren](tickets.md#hd-131--robot-centraal-integreren) | P1 | Specialisten | 3b | HD-130 |
