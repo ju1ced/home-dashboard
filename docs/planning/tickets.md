@@ -1522,3 +1522,38 @@ Een gecontroleerde productiecutover uitvoeren nadat dagelijks gebruik, accessibi
 **Validatie**
 
 Ondertekende go/no-go, productiesmoke en post-cutoverstatus. Uitvoering vereist altijd een nieuwe expliciete toestemming.
+
+### HD-217 — Kamereditor: dag/maand/jaar-periodesensoren automatisch opzoeken bij een smart plug
+
+- **Epic:** Quality engineering
+- **Status:** Backlog
+- **Prioriteit:** P1
+- **Omvang:** M
+- **Eigenaar:** Lead / integrator
+- **Afhankelijkheden:** geen (bouwt voort op HD-216's smart-plug-koppelhulp)
+
+**Doel**
+
+HD-216's koppelhulp matcht een schakelaar en zijn vermogens-/energiesensor binnen de kamer's eigen, al geconfigureerde entiteiten — maar de dag/maand/jaar-periodesensoren (`energy_day_entity`/`energy_month_entity`/`energy_year_entity`) blijven handmatig in te vullen via drie aparte entity-selectors. Gevonden tijdens een live promotiepassage (7 oktober 2026, HD-216-vervolg): voor zo goed als elk smart-plug-apparaat in deze woning bestaat er al een `utility_meter`-helper per periode (dagelijks/maandelijks/jaarlijks), met een `source`-veld dat exact naar de plug's energiesensor wijst — maar de helper's eigen entity-ID volgt geen voorspelbare naamconventie afgeleid van het apparaat (bv. een stopcontact-schakelaar met een merk-/apparaatvoorvoegsel versus zijn periodesensor zonder dat voorvoegsel, dus geen gedeelde entity-ID-stam om op te matchen). Dat maakt een zuivere naamgelijkenis-heuristiek (zoals HD-216's `suggestSmartPlugPairs()`) voor dit specifieke veld onbetrouwbaar — alleen de helper's eigen `source`-configuratie geeft het zekere antwoord.
+
+**Achtergrond**
+
+Tijdens een live MCP-sessie (niet via de editor, via de Home Assistant MCP-tool `ha_config_list_helpers(helper_type="utility_meter")`) werden 138 bestaande `utility_meter`-helpers gevonden en met succes gekoppeld aan 20+ smart-plug-apparaten over de hele woning. Die tool draait op een apart geïnstalleerde `ha_mcp_tools`-component en is niet beschikbaar binnen de kamereditor's eigen `hass`-contract (vandaag beperkt tot `{ states: Record<string, unknown> }`). De native Home Assistant-frontend kent echter een stabiele, niet-exotische weg naar dezelfde informatie: `utility_meter` is een config-entry-gebaseerde integratie (bevestigd: elke `utility_meter`-sensor-entiteit draagt een `config_entry_id` in het entity-register), dus elke ingelogde frontendclient kan zijn opties — inclusief het `source`-veld — opvragen via de standaard `hass.callWS({type: "config_entries/get", entry_id})`-call, zonder enige extra component. Dit vereist wel een nieuwe, optionele uitbreiding van de editor's `hass`-contract (een `callWS`-methode), want vandaag wordt alleen `states` doorgegeven.
+
+**Scope**
+
+1. **`hass`-contract uitbreiden:** `HomeAssistantLike` (`src/editor/home-dashboard-editor.ts`) krijgt een optionele `callWS?: (message: Record<string, unknown>) => Promise<unknown>`-methode. Alle bestaande code en tests blijven werken zonder deze methode (feature degradeert stil af — geen opzoekfunctionaliteit, geen fout — wanneer `callWS` ontbreekt, bv. in de bestaande `FakeElement`-testharness).
+2. **Periodesensor-opzoekfunctie:** een nieuwe, zelfstandig testbare functie die, gegeven een energie-entity-ID, via `hass.callWS(...)` de `utility_meter`-config-entries opvraagt, filtert op `options.source === energyEntityId`, en voor elke match zijn `options.cycle` (`daily`/`monthly`/`yearly`) koppelt aan zijn eigen entity-ID (via het entity-register, eveneens per `callWS`). Exacte websocket-commandovorm te bevestigen tegen de echte Home Assistant-frontendbroncode tijdens implementatie — dit is de enige resterende technische onzekerheid in deze ticket.
+3. **Toepassing in de koppelhulp:** wanneer `promoteToSmartPlug()` een nieuwe `smart_plugs`-item aanmaakt (of wanneer een bestaand item's `energy_entity` wijzigt), wordt de opzoekfunctie uitgevoerd en het resultaat als voorstel getoond — nooit stil overgenomen, een expliciete bevestigingsstap blijft vereist, consistent met HD-216's "altijd eerst een suggestie"-principe. De drie bestaande handmatige entity-selectors blijven gewoon beschikbaar/bewerkbaar; dit is een aanvulling, geen vervanging.
+4. **Geen aanname bij ontbrekende of dubbelzinnige match:** geen helper gevonden voor een periode → veld blijft leeg, geen gok. Meerdere kandidaten voor dezelfde periode (zou niet mogen voorkomen bij een correct geconfigureerde `utility_meter`, maar defensief behandelen) → geen van beide overnemen, aan de eigenaar laten zien dat er een dubbelzinnigheid is.
+
+**Acceptatiecriteria**
+
+- Zonder `hass.callWS` (bestaande testharness, oudere Home Assistant-embedding) blijft de editor exact zoals vandaag functioneren — geen regressie, geen fout, geen zichtbare wijziging.
+- Met `hass.callWS` beschikbaar: het aanmaken van een smart-plug-item via de koppelhulp toont automatisch een voorstel voor dag/maand/jaar wanneer een `utility_meter`-helper met bijpassende `source` bestaat, met één klik te bevestigen.
+- Geen enkele dag/maand/jaar-waarde wordt ooit automatisch, zonder bevestiging, in de configuratie geschreven.
+- Bestaande tests in `tests/config.test.mjs` en `tests/editor-behavior.test.mjs` blijven slagen; nieuwe tests dekken: geen `callWS` beschikbaar (stil degraderen), een geldige match (voorstel correct samengesteld), geen match (leeg, geen gok), en de bevestigingsstap (niets geschreven vóór expliciete actie).
+
+**Validatie**
+
+`pnpm test`, `pnpm run test:browser`, `git diff --check`, bundle-sizecheck. Live Home Assistant-bevestiging van de exacte `callWS`-commandovorm blijft, zoals elke nieuwe HA-frontend-aanname in dit project, een afzonderlijke menselijke testsessie vóór release.
