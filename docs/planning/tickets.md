@@ -1526,7 +1526,7 @@ Ondertekende go/no-go, productiesmoke en post-cutoverstatus. Uitvoering vereist 
 ### HD-218 — HACS-pin voor home-dashboard valt herhaaldelijk terug op main-tracking
 
 - **Epic:** Runtimeacceptatie
-- **Status:** Klaar — kernoorzaak bevestigd en opgelost via `v0.8.0` (zie [D-073](../design/decision-log.md#d-073--hd-218-opgelost-releasetags-dragen-geen-prerelease-achtervoegsel-meer)). Live herbevestiging ná de release staat nog open.
+- **Status:** Klaar — kernoorzaak bevestigd en opgelost via `v0.8.0` (zie [D-073](../design/decision-log.md#d-073--hd-218-opgelost-releasetags-dragen-geen-prerelease-achtervoegsel-meer)). Live herbevestigd op 7 oktober 2026: HACS' releaselijst is gevuld (`releases: ["v0.8.0"]`), de pin staat op `v0.8.0`, en een herhaalde `update_information`-aanroep zette de pin niet langer terug op `main`.
 - **Prioriteit:** P2
 - **Omvang:** S (onderzoek) + onbekend (fix, afhankelijk van bevinding)
 - **Eigenaar:** Lead / integrator
