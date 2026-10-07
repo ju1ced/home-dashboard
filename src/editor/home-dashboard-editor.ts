@@ -16,6 +16,9 @@ export { EDITOR_SECTION_KEYS, getEditorItemToken, getEditorSectionForKey, mergeE
 
 interface HomeAssistantLike {
   states: Record<string, unknown>;
+  // HD-217: optional -- absent in the existing test harness and any older embedding. Every caller
+  // degrades to "no lookup" rather than erroring when this is missing.
+  callWS?: (message: Record<string, unknown>) => Promise<unknown>;
 }
 
 type MutableRecord = Record<string, unknown>;
@@ -267,7 +270,7 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
     });
     this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-add]").forEach((controlButton) => controlButton.addEventListener("click", () => this.addItem(controlButton.dataset.add ?? "")));
     this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-remove]").forEach((controlButton) => controlButton.addEventListener("click", () => this.removeItem(controlButton.dataset.remove ?? "", Number(controlButton.dataset.index))));
-    bindRoomEvents(this.shadowRoot, this._config, { commit: () => this.commit(), moveItem: (items, index, direction) => this.moveItem(items, index, direction) });
+    bindRoomEvents(this.shadowRoot, this._config, { commit: () => this.commit(), moveItem: (items, index, direction) => this.moveItem(items, index, direction), ...(this._hass ? { hass: this._hass } : {}) });
     this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-view-move]").forEach((controlButton) => controlButton.addEventListener("click", () => this.moveItem(this._config.layout.view_order, Number(controlButton.dataset.index), controlButton.dataset.viewMove as "up" | "down")));
     this.shadowRoot.querySelectorAll<HTMLDetailsElement>("details[data-item-token]").forEach((details) => {
       const token = details.dataset.itemToken;

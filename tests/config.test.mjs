@@ -21,6 +21,7 @@ import {
   getEditorSectionForKey,
   matchesRoomSearch,
   mergeEditorIssues,
+  lookupPeriodSensors,
   promoteToSmartPlug,
   suggestSmartPlugPairs
 } from "../dist/home-dashboard-editor.js";
@@ -584,4 +585,61 @@ test("HD-216: promoteToSmartPlug maakt een smart_plugs-item en haalt de bronnen 
   assert.deepEqual(config.rooms[0].smart_plugs[0].switch_entity, switchEntity);
   assert.deepEqual(config.rooms[0].smart_plugs[0].power_entity, powerEntity);
   assert.deepEqual(config.rooms[0].power_entities, [otherEntity], "gepromoveerde entiteiten verdwijnen uit de platte lijst zodat niets dubbel telt");
+});
+
+test("HD-217: lookupPeriodSensors degradeert stil zonder hass.callWS", async () => {
+  assert.equal(await lookupPeriodSensors(undefined, ref("sensor", "example_energy")), null);
+  assert.equal(await lookupPeriodSensors({}, ref("sensor", "example_energy")), null);
+});
+
+test("HD-217: lookupPeriodSensors vindt dag/maand/jaar via de utility_meter-source, nooit op naam", async () => {
+  const energyEntity = ref("sensor", "example_device_energy");
+  const dayEntity = ref("sensor", "totally_unrelated_name_daily");
+  const monthEntity = ref("sensor", "totally_unrelated_name_monthly");
+  const hass = {
+    callWS: async (message) => {
+      if (message.type === "config_entries/get") {
+        return [
+          { entry_id: "entry_day", domain: "utility_meter", options: { source: energyEntity, cycle: "daily" } },
+          { entry_id: "entry_month", domain: "utility_meter", options: { source: energyEntity, cycle: "monthly" } },
+          { entry_id: "entry_other", domain: "utility_meter", options: { source: ref("sensor", "unrelated_energy"), cycle: "yearly" } }
+        ];
+      }
+      if (message.type === "config/entity_registry/list") {
+        return [
+          { entity_id: dayEntity, config_entry_id: "entry_day" },
+          { entity_id: monthEntity, config_entry_id: "entry_month" },
+          { entity_id: ref("sensor", "unrelated_yearly"), config_entry_id: "entry_other" }
+        ];
+      }
+      throw new Error(`onverwachte callWS: ${message.type}`);
+    }
+  };
+  const result = await lookupPeriodSensors(hass, energyEntity);
+  assert.deepEqual(result, { day: dayEntity, month: monthEntity });
+});
+
+test("HD-217: lookupPeriodSensors gokt nooit bij een dubbelzinnige match of geen match", async () => {
+  const energyEntity = ref("sensor", "example_device_energy");
+  const ambiguousHass = {
+    callWS: async (message) => {
+      if (message.type === "config_entries/get") {
+        return [
+          { entry_id: "entry_a", domain: "utility_meter", options: { source: energyEntity, cycle: "yearly" } },
+          { entry_id: "entry_b", domain: "utility_meter", options: { source: energyEntity, cycle: "yearly" } }
+        ];
+      }
+      return [
+        { entity_id: ref("sensor", "candidate_a"), config_entry_id: "entry_a" },
+        { entity_id: ref("sensor", "candidate_b"), config_entry_id: "entry_b" }
+      ];
+    }
+  };
+  assert.equal(await lookupPeriodSensors(ambiguousHass, energyEntity), null, "twee kandidaten voor dezelfde periode: geen van beide overnemen");
+
+  const noMatchHass = { callWS: async () => [] };
+  assert.equal(await lookupPeriodSensors(noMatchHass, energyEntity), null);
+
+  const throwingHass = { callWS: async () => { throw new Error("websocket weg"); } };
+  assert.equal(await lookupPeriodSensors(throwingHass, energyEntity), null, "een falende callWS degradeert stil, geen fout");
 });
