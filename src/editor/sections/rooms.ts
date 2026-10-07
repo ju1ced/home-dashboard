@@ -31,12 +31,10 @@ function renderRoomControlDeck(room: RoomConfig, roomIndex: number): string {
   return `<h4>Control Deck</h4><label>Privacyveilige kamerafbeelding${renderSelector("rooms", roomIndex, "image_entity", room.image_entity ?? "", { entity: { domain: "image" } })}</label><label>Kamerfoto uploaden<small>Upload een foto rechtstreeks, zonder eerst een Image-hulpmiddel aan te maken via HA Instellingen. Zijn zowel een kamerafbeelding als een upload ingesteld, dan krijgt de upload voorrang.</small>${renderSelector("rooms", roomIndex, "image_upload", room.image_upload ?? null, { media: { accept: ["image/*"], image_upload: true } })}</label><div class="nested-collection"><h5>Lichtgroepen</h5>${lightGroups}<button type="button" data-room-nested-add="light_groups" data-room-index="${roomIndex}">Lichtgroep toevoegen</button></div><div class="nested-collection"><h5>Getypeerde openingen</h5>${covers}<button type="button" data-room-nested-add="cover_controls" data-room-index="${roomIndex}">Opening toevoegen</button></div><div class="nested-collection"><h5>Smart plugs</h5><small>Voor apparaten die je hier volledig wil volgen: vermogen, dag/maand/jaar-verbruik, vergrendeling. Zwaarder dan de simpele lijst hierboven, met een eigen interactieve kaart.</small>${plugs}<button type="button" data-room-nested-add="smart_plugs" data-room-index="${roomIndex}">Smart plug toevoegen</button></div><h5>Kamerenergie</h5><label>Actueel vermogen${renderSelector("rooms", roomIndex, "room_energy.power_entity", roomEnergy.power_entity, { entity: { domain: "sensor" } })}</label><label>Vandaag${renderSelector("rooms", roomIndex, "room_energy.day_entity", roomEnergy.day_entity, { entity: { domain: "sensor" } })}</label><label>Dagperiode<select data-path="rooms.${roomIndex}.room_energy.day_period">${renderPeriodOptions(roomEnergy.day_period)}</select></label><label>Maand${renderSelector("rooms", roomIndex, "room_energy.month_entity", roomEnergy.month_entity, { entity: { domain: "sensor" } })}</label><label>Maandperiode<select data-path="rooms.${roomIndex}.room_energy.month_period">${renderPeriodOptions(roomEnergy.month_period)}</select></label><label>Jaar${renderSelector("rooms", roomIndex, "room_energy.year_entity", roomEnergy.year_entity, { entity: { domain: "sensor" } })}</label><label>Jaarperiode<select data-path="rooms.${roomIndex}.room_energy.year_period">${renderPeriodOptions(roomEnergy.year_period)}</select></label>`;
 }
 
-export function renderRooms(config: HomeDashboardConfigV1, expandedItems: Set<string>): string {
-  return config.rooms.map((roomConfig, index) => {
-    const controls = visibleRoomControls(roomConfig);
-    const controlOrder = controls.length ? `<div class="order" data-control-order="${index}" aria-label="Volgorde quick actions">${renderControlOrderRows(controls, index)}</div><div class="order-save"><small>De pijlen reageren direct. Pas de volgorde één keer toe wanneer ze goed staat.</small><button type="button" data-room-control-apply="${index}">Volgorde toepassen</button></div>` : `<small>Geen quick actions gekozen.</small>`;
-    return `<details class="item" data-item-token="${escapeHtml(getEditorItemToken("rooms", roomConfig, index))}" ${expandedItems.has(getEditorItemToken("rooms", roomConfig, index)) ? "open" : ""}>
-    <summary>${escapeHtml(roomConfig.name || roomConfig.key || `Kamer ${index + 1}`)}</summary><div class="item-body">
+function renderRoomBody(config: HomeDashboardConfigV1, roomConfig: RoomConfig, index: number): string {
+  const controls = visibleRoomControls(roomConfig);
+  const controlOrder = controls.length ? `<div class="order" data-control-order="${index}" aria-label="Volgorde quick actions">${renderControlOrderRows(controls, index)}</div><div class="order-save"><small>De pijlen reageren direct. Pas de volgorde één keer toe wanneer ze goed staat.</small><button type="button" data-room-control-apply="${index}">Volgorde toepassen</button></div>` : `<small>Geen quick actions gekozen.</small>`;
+  return `<div class="item-body">
     <div class="item-toolbar"><span class="item-actions"><button type="button" aria-label="Verplaats ${escapeHtml(roomConfig.name || roomConfig.key || `kamer ${index + 1}`)} omhoog" data-room-move="up" data-index="${index}" ${index === 0 ? "disabled" : ""}>↑</button><button type="button" aria-label="Verplaats ${escapeHtml(roomConfig.name || roomConfig.key || `kamer ${index + 1}`)} omlaag" data-room-move="down" data-index="${index}" ${index === config.rooms.length - 1 ? "disabled" : ""}>↓</button><button type="button" aria-label="Verwijder kamer ${escapeHtml(roomConfig.name || roomConfig.key || index + 1)}" data-remove="rooms" data-index="${index}">Verwijder</button></span></div>
     <label>Logische sleutel<input data-collection="rooms" data-index="${index}" data-field="key" value="${escapeHtml(roomConfig.key)}"></label>
     <label>Naam<input data-collection="rooms" data-index="${index}" data-field="name" value="${escapeHtml(roomConfig.name)}"></label>
@@ -71,7 +69,30 @@ export function renderRooms(config: HomeDashboardConfigV1, expandedItems: Set<st
     <label>Presets<input data-collection="rooms" data-index="${index}" data-field="hvac.presets" value="${escapeHtml(roomConfig.hvac.presets.join(", "))}"></label>
     <label>Fan modes<input data-collection="rooms" data-index="${index}" data-field="hvac.fan_modes" value="${escapeHtml(roomConfig.hvac.fan_modes.join(", "))}"></label>
     <label>Swing modes<input data-collection="rooms" data-index="${index}" data-field="hvac.swing_modes" value="${escapeHtml(roomConfig.hvac.swing_modes.join(", "))}"></label>
-  </div></details>`;
+  </div>`;
+}
+
+export function matchesRoomSearch(roomConfig: RoomConfig, query: string): boolean {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return true;
+  return (roomConfig.name || "").toLowerCase().includes(needle)
+    || (roomConfig.key || "").toLowerCase().includes(needle)
+    || (roomConfig.area_id || "").toLowerCase().includes(needle);
+}
+
+export function renderRooms(config: HomeDashboardConfigV1, expandedItems: Set<string>, searchQuery = ""): string {
+  return config.rooms.map((roomConfig, index) => {
+    const token = getEditorItemToken("rooms", roomConfig, index);
+    const isOpen = expandedItems.has(token);
+    const label = escapeHtml(roomConfig.name || roomConfig.key || `Kamer ${index + 1}`);
+    const hidden = matchesRoomSearch(roomConfig, searchQuery) ? "" : " hidden";
+    // Lazy-mount (HD-216): a closed room renders only its <summary>, with no fields and no
+    // <ha-selector> mounted. At 20 rooms, always mounting every room's full field set (every
+    // ha-selector) regardless of open/closed state was the measured cause of editor slowness.
+    // Full fields are (re)generated only once this room's <details> actually opens -- see the
+    // "rooms:"-token branch of the toggle listener in home-dashboard-editor.ts's bindEvents().
+    return `<details class="item" data-item-token="${escapeHtml(token)}" ${isOpen ? "open" : ""}${hidden}>
+    <summary>${label}</summary>${isOpen ? renderRoomBody(config, roomConfig, index) : ""}</details>`;
   }).join("");
 }
 

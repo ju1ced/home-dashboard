@@ -83,6 +83,7 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
   private activeSection = "general";
   private expandedItems = new Set<string>();
   private focusActiveSection = false;
+  private roomSearchQuery = "";
 
   public get configBlocked(): boolean {
     return this.blocked;
@@ -271,7 +272,32 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
     this.shadowRoot.querySelectorAll<HTMLDetailsElement>("details[data-item-token]").forEach((details) => {
       const token = details.dataset.itemToken;
       if (!token) return;
-      details.addEventListener("toggle", () => details.open ? this.expandedItems.add(token) : this.expandedItems.delete(token));
+      details.addEventListener("toggle", () => {
+        // A <details open> parsed via innerHTML queues its own toggle event, so without this guard
+        // the handler below would re-render, which re-parses the same "open" markup, which queues
+        // another toggle -- an infinite loop. Bail out whenever the open state actually matches
+        // what expandedItems already records.
+        const wasExpanded = this.expandedItems.has(token);
+        if (details.open === wasExpanded) return;
+        if (details.open) this.expandedItems.add(token); else this.expandedItems.delete(token);
+        // Only rooms (HD-216) lazy-mount their fields: opening/closing one needs a re-render to
+        // actually (un)mount its <ha-selector>s. Other sections already render fully regardless of
+        // open state, so re-rendering on their toggle would just be wasted work.
+        if (!token.startsWith("rooms:")) return;
+        this.render();
+        // The old <summary> is destroyed by render()'s innerHTML rebuild, so the browser drops
+        // focus entirely unless we explicitly restore it onto the newly rendered one.
+        const escapedToken = typeof CSS !== "undefined" ? CSS.escape(token) : token;
+        this.shadowRoot?.querySelector<HTMLElement>(`details[data-item-token="${escapedToken}"] summary`)?.focus();
+      });
+    });
+    this.shadowRoot.querySelector<HTMLInputElement>("#room-search")?.addEventListener("input", (event) => {
+      this.roomSearchQuery = (event.target as HTMLInputElement).value;
+      const needle = this.roomSearchQuery.trim().toLowerCase();
+      this.shadowRoot?.querySelectorAll<HTMLDetailsElement>('details[data-item-token^="rooms:"]').forEach((details) => {
+        const name = details.querySelector("summary")?.textContent?.toLowerCase() ?? "";
+        details.hidden = needle.length > 0 && !name.includes(needle);
+      });
     });
     this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-section-nav]").forEach((controlButton) => {
       controlButton.addEventListener("click", () => {
@@ -353,7 +379,7 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
       today: { body: "" },
       persons: { body: `<div class="items">${renderPersons(this._config, this.expandedItems)}</div>`, extra: `<button class="add" type="button" data-add="persons">Persoon toevoegen</button>` },
       security: { body: `${renderSecurityGuidance()}<div class="items">${renderCameras(this._config, this.expandedItems)}</div>`, extra: `<button class="add" type="button" data-add="security.cameras">Camera toevoegen</button>` },
-      rooms: { body: `<div class="items">${renderRooms(this._config, this.expandedItems)}</div>`, extra: `<button class="add" type="button" data-add="rooms">Kamer toevoegen</button>` },
+      rooms: { body: `<label>Zoek kamer<input id="room-search" type="search" placeholder="Filter op naam, sleutel of area" value="${escapeHtml(this.roomSearchQuery)}"></label><div class="items">${renderRooms(this._config, this.expandedItems, this.roomSearchQuery)}</div>`, extra: `<button class="add" type="button" data-add="rooms">Kamer toevoegen</button>` },
       energy: { body: "" },
       actions: { body: `<div class="items">${renderActions(this._config, this.expandedItems)}</div>`, extra: `<button class="add" type="button" data-add="actions">Actie toevoegen</button>` },
       specialists: { body: `<div class="items">${renderSpecialists(this._config)}</div>` },

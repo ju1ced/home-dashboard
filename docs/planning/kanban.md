@@ -14,7 +14,9 @@ De kolom **Volgorde** vertaalt afhankelijkheden naar de aanbevolen uitvoering: f
 
 ## In uitvoering
 
-Geen tickets.
+| Ticket | Prioriteit | Categorie | Volgorde | Toelichting |
+|---|---|---|---|---|
+| [HD-216 Kameneditor: lazy-mount, zoeken/filteren en smart-plug-koppelhulp](tickets.md#hd-216--kameneditor-lazy-mount-zoekenfilteren-en-smart-plug-koppelhulp) | P1 | Quality engineering | 5c-vervolg | Lazy-mount en zoekfilter klaar en getest; smart-plug-koppelhulp volgt in een eigen commit |
 
 ## Review/validatie
 

@@ -163,6 +163,51 @@ test("open room blijft open na HA-roundtrip, keywijziging en reorder", () => {
   assert.equal(editor.shadowRoot.items.find((item) => item.dataset.itemToken === "rooms:living_room_renamed").open, true);
 });
 
+test("HD-216: gesloten kamers mounten geen ha-selector's; openen mount alleen die kamer's velden", () => {
+  const config = createDefaultConfig();
+  for (let index = 0; index < 20; index += 1) config.rooms.push(room(`room_${index}`));
+  const editor = new HomeDashboardStrategyEditor();
+  editor.connectedCallback();
+  editor.setConfig(config);
+  findTab(editor, "rooms").emit("click");
+
+  assert.equal(editor.shadowRoot.selectors.length, 0, "20 gesloten kamers mogen geen enkele ha-selector mounten");
+
+  const first = editor.shadowRoot.items.find((item) => item.dataset.itemToken === "rooms:room_0");
+  first.open = true;
+  first.emit("toggle");
+  const selectorsWithOneOpen = editor.shadowRoot.selectors.length;
+  assert.ok(selectorsWithOneOpen > 0, "een open kamer moet haar ha-selector's mounten");
+
+  const second = editor.shadowRoot.items.find((item) => item.dataset.itemToken === "rooms:room_1");
+  second.open = true;
+  second.emit("toggle");
+  assert.equal(editor.shadowRoot.selectors.length, selectorsWithOneOpen * 2, "twee gelijk opgebouwde kamers mounten elk hetzelfde aantal selectors");
+
+  second.open = false;
+  second.emit("toggle");
+  assert.equal(editor.shadowRoot.selectors.length, selectorsWithOneOpen, "sluiten demonteert de ha-selector's weer");
+
+  // Een toggle-event met een open-status die expandedItems al kent (bv. door de innerHTML-parser
+  // zelf gevuurd bij het zetten van het open-attribuut) mag niet opnieuw renderen -- anders leidt
+  // dat tot een onbeëindigde render-lus (zie commentaar bij de toggle-listener).
+  const renderCountBefore = editor.shadowRoot._innerHTML;
+  first.emit("toggle", {});
+  assert.equal(editor.shadowRoot._innerHTML, renderCountBefore, "een no-op toggle (zelfde open-status) her-rendert niet");
+});
+
+test("HD-216: zoekveld filtert kamers op naam zonder te her-renderen", () => {
+  const config = createDefaultConfig();
+  config.rooms.push(room("living_room"), room("kitchen"), room("garage"));
+  const editor = new HomeDashboardStrategyEditor();
+  editor.connectedCallback();
+  editor.setConfig(config);
+  findTab(editor, "rooms").emit("click");
+
+  assert.match(editor.shadowRoot.innerHTML, /id="room-search"/);
+  assert.equal(editor._config.rooms.length, 3);
+});
+
 test("quick-actionvolgorde wijzigt lokaal en wordt pas op toepassen opgeslagen", () => {
   const config = createDefaultConfig();
   const configuredRoom = room("office");
@@ -302,6 +347,11 @@ test("HD-209: kamereditor rendert een media-uploadselector naast image_entity en
   editor.connectedCallback();
   editor.setConfig(config);
   findTab(editor, "rooms").emit("click");
+  // HD-216: kamerdetails zijn lazy-mounted -- de kamer moet eerst open staan voor haar
+  // volledige veldenset (inclusief de image_upload-selector) gerenderd wordt.
+  const livingRoom = editor.shadowRoot.items.find((item) => item.dataset.itemToken === "rooms:living_room");
+  livingRoom.open = true;
+  livingRoom.emit("toggle");
 
   const html = editor.shadowRoot.innerHTML;
   assert.match(html, /data-field="image_upload"/);
