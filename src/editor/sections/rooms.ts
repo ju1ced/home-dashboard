@@ -3,6 +3,61 @@ import { escapeHtml, getEditorItemToken, renderSelector } from "../shared";
 
 export type RoomNestedCollection = "light_groups" | "cover_controls" | "smart_plugs";
 
+export interface SmartPlugSuggestion {
+  switchEntity: string;
+  powerEntity: string;
+  energyEntity?: string;
+  voltageEntity?: string;
+}
+
+const SMART_PLUG_SUFFIXES: Record<"power" | "energy" | "voltage", readonly string[]> = {
+  power: ["power", "vermogen"],
+  energy: ["energy", "energie"],
+  voltage: ["voltage", "spanning"]
+};
+
+/**
+ * HD-216: a room's switch and sensor already present in its flat `power_entities` list are matched
+ * by naming stem + a known power/energy/voltage suffix (a switch and a sensor sharing the same
+ * object-id stem, the sensor's ending in one of SMART_PLUG_SUFFIXES) -- a pure, client-side
+ * heuristic over entities the room already references, not a registry or `hass.states` lookup.
+ * Only a power match is required: `energyEntity` and `voltageEntity` stay optional, matching
+ * smartPlugCard()'s own graceful degradation.
+ */
+export function suggestSmartPlugPairs(powerEntities: readonly string[]): SmartPlugSuggestion[] {
+  const switches = powerEntities.filter((entity) => entity.startsWith("switch."));
+  const sensors = powerEntities.filter((entity) => entity.startsWith("sensor."));
+  const findMatch = (stem: string, kind: "power" | "energy" | "voltage") => sensors.find((sensor) => {
+    const objectId = sensor.slice("sensor.".length);
+    return SMART_PLUG_SUFFIXES[kind].some((suffix) => objectId === `${stem}_${suffix}`);
+  });
+  const suggestions: SmartPlugSuggestion[] = [];
+  for (const switchEntity of switches) {
+    const stem = switchEntity.slice("switch.".length);
+    const powerEntity = findMatch(stem, "power");
+    if (!powerEntity) continue;
+    const energyEntity = findMatch(stem, "energy");
+    const voltageEntity = findMatch(stem, "voltage");
+    suggestions.push({ switchEntity, powerEntity, ...(energyEntity ? { energyEntity } : {}), ...(voltageEntity ? { voltageEntity } : {}) });
+  }
+  return suggestions;
+}
+
+/** Pure mutator: promotes a suggested pair into a `smart_plugs` entry and removes the promoted
+ * entities from the room's flat `power_entities` list, so the Verbruik tab stops listing the same
+ * device twice (once ungrouped, once inside the new smart-plug card). */
+export function promoteToSmartPlug(config: HomeDashboardConfigV1, roomIndex: number, suggestion: SmartPlugSuggestion): void {
+  const room = config.rooms[roomIndex];
+  if (!room) return;
+  (room.smart_plugs ??= []).push({
+    key: `plug_${room.smart_plugs.length + 1}`, name: "", switch_entity: suggestion.switchEntity, power_entity: suggestion.powerEntity,
+    energy_entity: suggestion.energyEntity ?? "", voltage_entity: suggestion.voltageEntity ?? "", protected: false, protection_reason: "",
+    energy_day_entity: "", energy_month_entity: "", energy_year_entity: ""
+  });
+  const consumed = new Set([suggestion.switchEntity, suggestion.powerEntity, suggestion.energyEntity, suggestion.voltageEntity].filter(Boolean));
+  room.power_entities = room.power_entities.filter((entity) => !consumed.has(entity));
+}
+
 export function visibleRoomControls(room: RoomConfig): string[] {
   if (room.control_entities !== undefined) return room.control_entities;
   const light = room.control_light_entity ? [room.control_light_entity] : [...room.light_entities, ...room.light_switch_entities];
@@ -28,7 +83,12 @@ function renderRoomControlDeck(room: RoomConfig, roomIndex: number): string {
   const covers = (room.cover_controls ?? []).map((item, itemIndex) => `<article class="nested-item"><div class="item-toolbar"><strong>${escapeHtml(item.name || item.key)}</strong><button type="button" data-room-nested-remove="cover_controls" data-room-index="${roomIndex}" data-item-index="${itemIndex}">Verwijder</button></div><label>Sleutel<input data-room-nested-collection="cover_controls" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="key" value="${escapeHtml(item.key)}"></label><label>Naam<input data-room-nested-collection="cover_controls" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="name" value="${escapeHtml(item.name)}"></label><label>Cover${renderRoomNestedSelector(roomIndex, "cover_controls", itemIndex, "entity", item.entity, { entity: { domain: "cover" } })}</label><label>Type<select data-room-nested-collection="cover_controls" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="kind">${["shutter", "screen", "awning"].map((value) => `<option value="${value}" ${item.kind === value ? "selected" : ""}>${value}</option>`).join("")}</select></label><label>Bevestiging<select data-room-nested-collection="cover_controls" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="confirmation"><option value="movement" ${item.confirmation === "movement" ? "selected" : ""}>Bij beweging</option><option value="none" ${item.confirmation === "none" ? "selected" : ""}>Geen</option></select></label></article>`).join("");
   const plugs = (room.smart_plugs ?? []).map((item, itemIndex) => `<article class="nested-item"><div class="item-toolbar"><strong>${escapeHtml(item.name || item.key)}</strong><button type="button" data-room-nested-remove="smart_plugs" data-room-index="${roomIndex}" data-item-index="${itemIndex}">Verwijder</button></div><h6>Basis</h6><label>Sleutel<input data-room-nested-collection="smart_plugs" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="key" value="${escapeHtml(item.key)}"></label><label>Naam<input data-room-nested-collection="smart_plugs" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="name" value="${escapeHtml(item.name)}"></label><label>Schakelaar${renderRoomNestedSelector(roomIndex, "smart_plugs", itemIndex, "switch_entity", item.switch_entity, { entity: { domain: "switch" } })}</label><label>Actueel vermogen${renderRoomNestedSelector(roomIndex, "smart_plugs", itemIndex, "power_entity", item.power_entity, { entity: { domain: "sensor" } })}</label><label class="check"><input type="checkbox" data-room-nested-collection="smart_plugs" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="protected" ${item.protected ? "checked" : ""}>Beveiligd, niet schakelbaar</label><label>Uitleg<input data-room-nested-collection="smart_plugs" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="protection_reason" value="${escapeHtml(item.protection_reason ?? "")}"></label><h6>Energieperiodes</h6><label>Energie totaal${renderRoomNestedSelector(roomIndex, "smart_plugs", itemIndex, "energy_entity", item.energy_entity, { entity: { domain: "sensor" } })}</label><label>Spanning${renderRoomNestedSelector(roomIndex, "smart_plugs", itemIndex, "voltage_entity", item.voltage_entity, { entity: { domain: "sensor" } })}</label><label>Dag${renderRoomNestedSelector(roomIndex, "smart_plugs", itemIndex, "energy_day_entity", item.energy_day_entity ?? "", { entity: { domain: "sensor" } })}</label><label>Dagperiode<select data-room-nested-collection="smart_plugs" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="energy_day_period">${renderPeriodOptions(item.energy_day_period)}</select></label><label>Maand${renderRoomNestedSelector(roomIndex, "smart_plugs", itemIndex, "energy_month_entity", item.energy_month_entity ?? "", { entity: { domain: "sensor" } })}</label><label>Maandperiode<select data-room-nested-collection="smart_plugs" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="energy_month_period">${renderPeriodOptions(item.energy_month_period)}</select></label><label>Jaar${renderRoomNestedSelector(roomIndex, "smart_plugs", itemIndex, "energy_year_entity", item.energy_year_entity ?? "", { entity: { domain: "sensor" } })}</label><label>Jaarperiode<select data-room-nested-collection="smart_plugs" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="energy_year_period">${renderPeriodOptions(item.energy_year_period)}</select></label></article>`).join("");
   const roomEnergy = room.room_energy ?? { power_entity: "", day_entity: "", month_entity: "", year_entity: "" };
-  return `<h4>Control Deck</h4><label>Privacyveilige kamerafbeelding${renderSelector("rooms", roomIndex, "image_entity", room.image_entity ?? "", { entity: { domain: "image" } })}</label><label>Kamerfoto uploaden<small>Upload een foto rechtstreeks, zonder eerst een Image-hulpmiddel aan te maken via HA Instellingen. Zijn zowel een kamerafbeelding als een upload ingesteld, dan krijgt de upload voorrang.</small>${renderSelector("rooms", roomIndex, "image_upload", room.image_upload ?? null, { media: { accept: ["image/*"], image_upload: true } })}</label><div class="nested-collection"><h5>Lichtgroepen</h5>${lightGroups}<button type="button" data-room-nested-add="light_groups" data-room-index="${roomIndex}">Lichtgroep toevoegen</button></div><div class="nested-collection"><h5>Getypeerde openingen</h5>${covers}<button type="button" data-room-nested-add="cover_controls" data-room-index="${roomIndex}">Opening toevoegen</button></div><div class="nested-collection"><h5>Smart plugs</h5><small>Voor apparaten die je hier volledig wil volgen: vermogen, dag/maand/jaar-verbruik, vergrendeling. Zwaarder dan de simpele lijst hierboven, met een eigen interactieve kaart.</small>${plugs}<button type="button" data-room-nested-add="smart_plugs" data-room-index="${roomIndex}">Smart plug toevoegen</button></div><h5>Kamerenergie</h5><label>Actueel vermogen${renderSelector("rooms", roomIndex, "room_energy.power_entity", roomEnergy.power_entity, { entity: { domain: "sensor" } })}</label><label>Vandaag${renderSelector("rooms", roomIndex, "room_energy.day_entity", roomEnergy.day_entity, { entity: { domain: "sensor" } })}</label><label>Dagperiode<select data-path="rooms.${roomIndex}.room_energy.day_period">${renderPeriodOptions(roomEnergy.day_period)}</select></label><label>Maand${renderSelector("rooms", roomIndex, "room_energy.month_entity", roomEnergy.month_entity, { entity: { domain: "sensor" } })}</label><label>Maandperiode<select data-path="rooms.${roomIndex}.room_energy.month_period">${renderPeriodOptions(roomEnergy.month_period)}</select></label><label>Jaar${renderSelector("rooms", roomIndex, "room_energy.year_entity", roomEnergy.year_entity, { entity: { domain: "sensor" } })}</label><label>Jaarperiode<select data-path="rooms.${roomIndex}.room_energy.year_period">${renderPeriodOptions(roomEnergy.year_period)}</select></label>`;
+  const suggestions = suggestSmartPlugPairs(room.power_entities);
+  const suggestionsMarkup = suggestions.length ? `<div class="guidance"><strong>Voorgestelde koppelingen</strong><small>Op naamgelijkenis gevonden binnen Apparaten en power. Eén klik maakt er een smart-plug-item van en haalt de gekoppelde entiteiten uit die platte lijst, zodat ze niet dubbel komen te staan.</small>${suggestions.map((suggestion) => {
+    const parts = [suggestion.switchEntity, suggestion.powerEntity, suggestion.energyEntity, suggestion.voltageEntity].filter(Boolean) as string[];
+    return `<button type="button" data-room-plug-suggestion="${roomIndex}" data-switch-entity="${escapeHtml(suggestion.switchEntity)}" data-power-entity="${escapeHtml(suggestion.powerEntity)}" data-energy-entity="${escapeHtml(suggestion.energyEntity ?? "")}" data-voltage-entity="${escapeHtml(suggestion.voltageEntity ?? "")}">Koppel als smart plug (haalt ${parts.map((entity) => escapeHtml(entity)).join(", ")} uit Apparaten en power)</button>`;
+  }).join("")}</div>` : "";
+  return `<h4>Control Deck</h4><label>Privacyveilige kamerafbeelding${renderSelector("rooms", roomIndex, "image_entity", room.image_entity ?? "", { entity: { domain: "image" } })}</label><label>Kamerfoto uploaden<small>Upload een foto rechtstreeks, zonder eerst een Image-hulpmiddel aan te maken via HA Instellingen. Zijn zowel een kamerafbeelding als een upload ingesteld, dan krijgt de upload voorrang.</small>${renderSelector("rooms", roomIndex, "image_upload", room.image_upload ?? null, { media: { accept: ["image/*"], image_upload: true } })}</label><div class="nested-collection"><h5>Lichtgroepen</h5>${lightGroups}<button type="button" data-room-nested-add="light_groups" data-room-index="${roomIndex}">Lichtgroep toevoegen</button></div><div class="nested-collection"><h5>Getypeerde openingen</h5>${covers}<button type="button" data-room-nested-add="cover_controls" data-room-index="${roomIndex}">Opening toevoegen</button></div><div class="nested-collection"><h5>Smart plugs</h5><small>Voor apparaten die je hier volledig wil volgen: vermogen, dag/maand/jaar-verbruik, vergrendeling. Zwaarder dan de simpele lijst hierboven, met een eigen interactieve kaart.</small>${suggestionsMarkup}${plugs}<button type="button" data-room-nested-add="smart_plugs" data-room-index="${roomIndex}">Smart plug toevoegen</button></div><h5>Kamerenergie</h5><label>Actueel vermogen${renderSelector("rooms", roomIndex, "room_energy.power_entity", roomEnergy.power_entity, { entity: { domain: "sensor" } })}</label><label>Vandaag${renderSelector("rooms", roomIndex, "room_energy.day_entity", roomEnergy.day_entity, { entity: { domain: "sensor" } })}</label><label>Dagperiode<select data-path="rooms.${roomIndex}.room_energy.day_period">${renderPeriodOptions(roomEnergy.day_period)}</select></label><label>Maand${renderSelector("rooms", roomIndex, "room_energy.month_entity", roomEnergy.month_entity, { entity: { domain: "sensor" } })}</label><label>Maandperiode<select data-path="rooms.${roomIndex}.room_energy.month_period">${renderPeriodOptions(roomEnergy.month_period)}</select></label><label>Jaar${renderSelector("rooms", roomIndex, "room_energy.year_entity", roomEnergy.year_entity, { entity: { domain: "sensor" } })}</label><label>Jaarperiode<select data-path="rooms.${roomIndex}.room_energy.year_period">${renderPeriodOptions(roomEnergy.year_period)}</select></label>`;
 }
 
 function renderRoomBody(config: HomeDashboardConfigV1, roomConfig: RoomConfig, index: number): string {
@@ -172,4 +232,15 @@ export function bindRoomEvents(shadowRoot: ShadowRoot, config: HomeDashboardConf
   shadowRoot.querySelectorAll<HTMLButtonElement>("[data-room-move]").forEach((controlButton) => controlButton.addEventListener("click", () => handlers.moveItem(config.rooms, Number(controlButton.dataset.index), controlButton.dataset.roomMove as "up" | "down")));
   bindControlOrderEvents(shadowRoot, shadowRoot, config);
   shadowRoot.querySelectorAll<HTMLButtonElement>("[data-room-control-apply]").forEach((controlButton) => controlButton.addEventListener("click", () => handlers.commit()));
+  shadowRoot.querySelectorAll<HTMLButtonElement>("[data-room-plug-suggestion]").forEach((controlButton) => controlButton.addEventListener("click", () => {
+    const energyEntity = controlButton.dataset.energyEntity || undefined;
+    const voltageEntity = controlButton.dataset.voltageEntity || undefined;
+    promoteToSmartPlug(config, Number(controlButton.dataset.roomPlugSuggestion), {
+      switchEntity: controlButton.dataset.switchEntity ?? "",
+      powerEntity: controlButton.dataset.powerEntity ?? "",
+      ...(energyEntity ? { energyEntity } : {}),
+      ...(voltageEntity ? { voltageEntity } : {})
+    });
+    handlers.commit();
+  }));
 }
