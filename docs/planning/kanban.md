@@ -14,9 +14,7 @@ De kolom **Volgorde** vertaalt afhankelijkheden naar de aanbevolen uitvoering: f
 
 ## In uitvoering
 
-| Ticket | Prioriteit | Categorie | Volgorde | Toelichting |
-|---|---|---|---|---|
-| [HD-216 Kameneditor: lazy-mount, zoeken/filteren en smart-plug-koppelhulp](tickets.md#hd-216--kameneditor-lazy-mount-zoekenfilteren-en-smart-plug-koppelhulp) | P1 | Quality engineering | 5c-vervolg | Alle drie scope-items klaar en getest (`pnpm test`, `pnpm run test:browser`); wacht op PR/review |
+Geen tickets.
 
 ## Review/validatie
 
@@ -62,7 +60,8 @@ De kolom **Volgorde** vertaalt afhankelijkheden naar de aanbevolen uitvoering: f
 | [HD-214 Centrale actionallowlist is gedefinieerd maar nergens uitgevoerd](tickets.md#hd-214--centrale-actionallowlist-actionconfigprivacy_action_key-is-gedefinieerd-maar-nergens-uitgevoerd) | P2 | Quality engineering | PR #74 · `v0.8.0-alpha.28` |
 | [HD-215 GUI-configuratie-editor opsplitsen per sectie](tickets.md#hd-215--gui-configuratie-editor-opsplitsen-per-sectie) | P2 | Quality engineering | PR #77 |
 | [HD-180 HACS lifecycle en compatibiliteitsmatrix bijwerken](tickets.md#hd-180--hacs-lifecycle-en-compatibiliteitsmatrix-bijwerken) | P1 | Release engineering | Live HACS-test 6 okt 2026, geen PR nodig (documentatie + live verificatie) |
-| [HD-181 Admin-dashboardgrens uitwerken](tickets.md#hd-181--admin-dashboardgrens-uitwerken) | P2 | Diagnostiek | PR volgt |
+| [HD-181 Admin-dashboardgrens uitwerken](tickets.md#hd-181--admin-dashboardgrens-uitwerken) | P2 | Diagnostiek | PR #80 |
+| [HD-216 Kameneditor: lazy-mount, zoeken/filteren en smart-plug-koppelhulp](tickets.md#hd-216--kameneditor-lazy-mount-zoekenfilteren-en-smart-plug-koppelhulp) | P1 | Quality engineering | PR #81 · `v0.8.0-alpha.29` |
 
 ## Geblokkeerd
 
