@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8.2 — 2026-10-12
+
+Eén ticket sinds `v0.8.1` (HD-219).
+
+- **Verbruik-tab: de "Verbruik per periode"-sectie toont voortaan één gecombineerde, gestapelde staafdiagram in plaats van zes losse, ongelabelde per-apparaat sparklines.** Een verticale as-schaal, periodelabels afgeleid uit de echte buckettijdstempel (nooit een hardgecodeerde dag-/maandlijst), en een kleurenlegende die elk apparaat consistent aan zijn kleur koppelt. Elke staafsegment komt rechtstreeks van een echte statistiekwaarde; een bron zonder data voor een bucket krijgt een zichtbaar gearceerd "geen data"-segment, nooit een stilzwijgende nul.
+- **Nieuw: "Grootste verbruikers"-ranglijst.** Rangschikt de kamer's smart-plug-periodebronnen aflopend op verbruik voor de actieve periode, met naam, percentage t.o.v. de gerangschikte bronnen (nooit een fictief woningtotaal), absolute waarde en een proportionele balk.
+- Onderzocht of de bestaande Apparaatvergelijking-sectie's apparaatnaam-labels een echte renderbug hadden (gemeld via een live-screenshotvergelijking): geen bug gevonden, enkel een leesbaarheidsartefact van een lage schermresolutie.
+- Hoofdbundelbudget 216 kB → 222 kB (gemeten 220.061 bytes) voor de nieuwe grafiek en ranglijst.
+- Zie [D-075](docs/design/decision-log.md) voor de volledige analyse. [Testchecklist en rollback](docs/releases/testing-v0.8.2.md).
+
 ## 0.8.1 — 2026-10-12
 
 Twee tickets sinds `v0.8.0`.
