@@ -336,6 +336,26 @@ test("HD-206: energySummary valt alleen terug op het plugtotaal als er geen kame
   assert.match(body, /roomDayEntity \? energyKwh\(this\.currentHass\?\.states\?\.\[roomDayEntity\]\) : this\.plugPeriodTotal\(room\.smart_plugs \?\? \[\], "energy_day_entity"\)/);
 });
 
+test("HD-208: plugPeriodTotal dekt dag/maand/jaar en dedupliceert per entity-ID", async () => {
+  const source = await readFile(sourceUrl, "utf8");
+  const plugPeriodTotalMatch = source.match(/private plugPeriodTotal\([\s\S]*?\n  \}/);
+  assert.ok(plugPeriodTotalMatch, "plugPeriodTotal methode niet gevonden");
+  const body = plugPeriodTotalMatch[0];
+  assert.match(body, /"energy_day_entity" \| "energy_month_entity" \| "energy_year_entity"/, "plugPeriodTotal moet ook jaar ondersteunen, niet alleen dag\/maand");
+  assert.match(body, /all\.indexOf\(entity\) === index/, "plugPeriodTotal moet op entity-ID dedupliceren zodat een gedeelde sensor niet dubbel telt");
+});
+
+test("HD-208: energyPeriodGroup valt terug op het plugtotaal per periode, nooit op power_entities", async () => {
+  const source = await readFile(sourceUrl, "utf8");
+  const energyPeriodGroupMatch = source.match(/private energyPeriodGroup\(room: RoomConfig\): HTMLElement \| undefined \{[\s\S]*?\n  \}\n\n  private/);
+  assert.ok(energyPeriodGroupMatch, "energyPeriodGroup methode niet gevonden");
+  const body = energyPeriodGroupMatch[0];
+  assert.match(body, /const plugPeriodFallback = roomEntity \? undefined : this\.plugPeriodTotal\(room\.smart_plugs \?\? \[\], plugPeriodKey\);/, "zonder een kamerbron voor de actieve periode moet het plugtotaal als terugval dienen");
+  assert.match(body, /plugPeriodFallback !== undefined/, "de kaart moet ook verschijnen wanneer alleen het plugtotaal iets oplevert, niet alleen bij een kamerbron of power_entities-lezing");
+  assert.match(body, /"Bron: samengevoegd uit smart plugs"/, "de teruggevallen periodewaarde moet haar eigen, eerlijke bronlabel tonen, geen fictieve single-entity bron");
+  assert.doesNotMatch(body, /plugPeriodKey[\s\S]{0,40}power_entities|power_entities[\s\S]{0,40}plugPeriodKey/, "power_entities mag nooit meetellen in een dag-\/maand-\/jaartotaal (alleen in de huidige-vermogenlezing)");
+});
+
 test("HD-206: de hero toont meerdere echte statuspillen en een eerlijke placeholderillustratie", async () => {
   const source = await readFile(sourceUrl, "utf8");
   assert.match(source, /private heroPills\(room: RoomConfig\): HTMLElement\[\]/);

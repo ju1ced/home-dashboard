@@ -215,6 +215,35 @@ for (const variant of ["normal", "dark", "warning", "missing", "unknown", "unava
       const comboTotalText = await page.evaluate(() => document.querySelector("home-dashboard-room-detail").shadowRoot.querySelector(".energy-card")?.textContent ?? "");
       assert.match(comboTotalText, /700 W/, `${label}: the Energie tab's room-total card shows the same combined wattage as the plugs-stage summary and rail, not a blank value`);
 
+      // HD-208: a room with no room_energy at all, two smart plugs with DIFFERENT month entities and the SAME
+      // year entity, and no day entity anywhere. Proves the room-total card's day/month/year fallback: (a) sums
+      // plug period entities when room_energy has none for that period, (b) dedupes a period entity shared by
+      // two plugs instead of double-counting it, and (c) degrades per period -- "Vandaag" still reads "Niet
+      // geconfigureerd" for this room while "Maand"/"Jaar" show real combined totals.
+      const periodFallbackMounted = await page.evaluate(() => {
+        const fixture = window.roomFixture;
+        const room = fixture.config.rooms.find((candidate) => candidate.key === "period_fallback_mixed");
+        const detail = document.createElement("home-dashboard-room-detail");
+        detail.setConfig({ type: "custom:home-dashboard-room-detail", room });
+        detail.hass = fixture.hass;
+        document.body.replaceChildren(detail);
+        return true;
+      });
+      assert.equal(periodFallbackMounted, true, `${label}: period-fallback room detail mounted`);
+      await page.waitForFunction(() => document.querySelector("home-dashboard-room-detail")?.shadowRoot?.querySelector(".control-deck"));
+      await selectCapability("Verbruik");
+      const periodFallbackDayText = await page.evaluate(() => document.querySelector("home-dashboard-room-detail").shadowRoot.querySelector(".energy-card")?.textContent ?? "");
+      assert.match(periodFallbackDayText, /15 W/, `${label}: the room-total card still shows the configured current-wattage reading regardless of period`);
+      assert.match(periodFallbackDayText, /Niet geconfigureerd/, `${label}: with no day entity anywhere (room_energy or plugs), the default "Vandaag" period still honestly reads Niet geconfigureerd`);
+      await page.evaluate(() => document.querySelector("home-dashboard-room-detail").shadowRoot.querySelector('[data-control-key="energy-period:month"]').click());
+      const periodFallbackMonthText = await page.evaluate(() => document.querySelector("home-dashboard-room-detail").shadowRoot.querySelector(".energy-card")?.textContent ?? "");
+      assert.match(periodFallbackMonthText, /8,0 kWh/, `${label}: "Maand" sums the two plugs' different month entities (3 + 5 kWh)`);
+      assert.match(periodFallbackMonthText, /samengevoegd uit smart plugs/, `${label}: the fallback total names its combined-plugs source, not a fabricated single-entity source line`);
+      await page.evaluate(() => document.querySelector("home-dashboard-room-detail").shadowRoot.querySelector('[data-control-key="energy-period:year"]').click());
+      const periodFallbackYearText = await page.evaluate(() => document.querySelector("home-dashboard-room-detail").shadowRoot.querySelector(".energy-card")?.textContent ?? "");
+      assert.match(periodFallbackYearText, /40 kWh/, `${label}: "Jaar" dedupes the two plugs sharing one year entity (40, not 80)`);
+      assert.doesNotMatch(periodFallbackYearText, /80 kWh/, `${label}: the shared year entity must never be double-counted`);
+
       // HD-212: mountCard()'s fallback catch-path (shared by the LINAK desk card and history-graph)
       // was never actually exercised by any test -- only the card_config pass-through was checked
       // (tests/room-cards-source.test.mjs). Simulate both real failure modes: loadCardHelpers()

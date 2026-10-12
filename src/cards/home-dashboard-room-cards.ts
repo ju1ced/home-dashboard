@@ -1161,9 +1161,11 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     return room.power_entities.some((entity, index) => !plugEntities.has(entity) && room.power_entities.indexOf(entity) === index && this.entityWatts(entity) !== undefined);
   }
 
-  /** Sums a smart plug period total (day/month) across configured plugs; undefined when nothing reports. */
-  private plugPeriodTotal(plugs: NonNullable<RoomConfig["smart_plugs"]>, key: "energy_day_entity" | "energy_month_entity"): number | undefined {
-    const values = plugs.map((plug) => plug[key] ? energyKwh(this.currentHass?.states?.[plug[key]!]) : undefined).filter((value): value is number => value !== undefined);
+  /** Sums a smart plug period total (day/month/year) across configured plugs, deduplicated by entity ID so two
+   * plugs mapped to the same period sensor are never counted twice; undefined when nothing reports. */
+  private plugPeriodTotal(plugs: NonNullable<RoomConfig["smart_plugs"]>, key: "energy_day_entity" | "energy_month_entity" | "energy_year_entity"): number | undefined {
+    const entities = plugs.map((plug) => plug[key]).filter((entity, index, all): entity is string => Boolean(entity) && all.indexOf(entity) === index);
+    const values = entities.map((entity) => energyKwh(this.currentHass?.states?.[entity])).filter((value): value is number => value !== undefined);
     return values.length ? values.reduce((sum, value) => sum + value, 0) : undefined;
   }
 
@@ -1256,17 +1258,29 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     const grid = element("div", "energy-grid");
     const roomEntity = this.activeEnergyPeriod === "day" ? room.room_energy?.day_entity : this.activeEnergyPeriod === "month" ? room.room_energy?.month_entity : room.room_energy?.year_entity;
     const roomPeriod = this.activeEnergyPeriod === "day" ? room.room_energy?.day_period : this.activeEnergyPeriod === "month" ? room.room_energy?.month_period : room.room_energy?.year_period;
-    if (room.room_energy?.power_entity || roomEntity || hasPowerEntitiesReading) {
+    // HD-208: when the room has no dedicated room_energy.*_entity for the active period, fall back to summing
+    // every smart plug's matching period entity -- never power_entities, which has no real period total to
+    // report (fabricating one from a bare current-wattage reading would misrepresent a day/month/year figure).
+    const plugPeriodKey = this.activeEnergyPeriod === "day" ? "energy_day_entity" : this.activeEnergyPeriod === "month" ? "energy_month_entity" : "energy_year_entity";
+    const plugPeriodDigits = this.activeEnergyPeriod === "day" ? 2 : this.activeEnergyPeriod === "month" ? 1 : 0;
+    const plugPeriodFallback = roomEntity ? undefined : this.plugPeriodTotal(room.smart_plugs ?? [], plugPeriodKey);
+    if (room.room_energy?.power_entity || roomEntity || hasPowerEntitiesReading || plugPeriodFallback !== undefined) {
       const card = element("article", "info energy-card");
       const roomState = roomEntity ? this.currentHass?.states?.[roomEntity] : undefined;
       const currentText = room.room_energy?.power_entity
         ? stateText(this.currentHass?.states?.[room.room_energy.power_entity])
         : hasPowerEntitiesReading && currentWatts !== undefined ? `${Math.round(currentWatts)} W` : "";
+      const periodText = roomEntity
+        ? stateText(roomState)
+        : plugPeriodFallback !== undefined ? `${plugPeriodFallback.toFixed(plugPeriodDigits).replace(".", ",")} kWh` : "Niet geconfigureerd";
+      const periodSource = roomEntity
+        ? sourceContext(roomState, `${room.name} energie`)
+        : plugPeriodFallback !== undefined ? "Bron: samengevoegd uit smart plugs" : "Bron: niet geconfigureerd";
       card.append(
         element("strong", "", `${room.name} totaal`),
-        element("small", "", [currentText, roomEntity ? stateText(roomState) : "Niet geconfigureerd"].filter(Boolean).join(" · ")),
+        element("small", "", [currentText, periodText].filter(Boolean).join(" · ")),
         element("small", "energy-period-context", periodContext(roomPeriod, periodLabel)),
-        element("small", "energy-source-context", roomEntity ? sourceContext(roomState, `${room.name} energie`) : "Bron: niet geconfigureerd")
+        element("small", "energy-source-context", periodSource)
       );
       grid.append(card);
     }

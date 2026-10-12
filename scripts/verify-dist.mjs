@@ -57,7 +57,12 @@ const errors = [];
 // + de privacy-toggleknop in de camerastrook, actions doorgegeven via de view-strategy-
 // keten) en dedupliceert perform()'s inline bevestigingscontrole naar de al-geteste
 // executeEntityControl. Gemeten kandidaat: 214.427 bytes.
-const maxBundleBytes = 215_000;
+// 215_000 -> 216_000 (D-074, HD-208): de vorige marge was al slechts 199 bytes (D-070/D-071).
+// Deze ticket laat de kamertotaalkaart het dag-/maand-/jaartotaal van de smart plugs
+// optellen (met entity-ID-dedup) wanneer er geen losse room_energy-periodesensor is
+// geconfigureerd -- een genuine, voorheen ontbrekende aggregatie die niet zonder
+// leesbaarheidsverlies in de bestaande marge paste. Gemeten kandidaat: 215.187 bytes.
+const maxBundleBytes = 216_000;
 // De editor is alleen nodig voor wie de visuele configuratie-UI opent: geen
 // runtime-performancepad, dus een ruimer budget. Gemeten op 93.887 bytes na de
 // split; dit is puur een plafond om een ongemerkte opblazing te signaleren.

@@ -697,7 +697,7 @@ Drie kleine, niet-blokkerende hiaten oplossen die de finale verificatie van HD-2
 ### HD-208 — Control Deck visueel afbakenen, zinloze tekst schrappen en Kamerverbruik echt combineren
 
 - **Epic:** Kamers
-- **Status:** Backlog
+- **Status:** Klaar — visuele opschoning en "nu"-vermogencombinatie gemerged via PR #55 (`v0.8.0-alpha.24`); de eigenaar meldde nadien via een live-screenshot dat de kamertotaalkaart's dag-/maand-/jaarcijfer de smart-plug-periodesensoren nog niet meetelde. Dit vervolggat is opgelost en de smart-plug-periodesensoren tellen nu mee met deduplicatie (zie [D-074](../design/decision-log.md#d-074--hd-208-vervolg-kamertotaalkaart-telt-smart-plug-periodesensoren-mee-dagmaandjaar)).
 - **Prioriteit:** P0
 - **Omvang:** L
 - **Eigenaar:** Rooms-agent + GUI-configagent

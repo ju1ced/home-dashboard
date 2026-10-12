@@ -45,7 +45,10 @@ test("release assets are deterministic for a given bundle", async () => {
   // D-066 (HD-214) verhoogt opnieuw voor de echte uitvoering van ActionConfig/
   // privacy_action_key (privacy-toggleknop + executeConfiguredAction):
   // 213_000 -> 215_000, gemeten 214.427 bytes.
-  assert.ok(bundle.length <= 215_000);
+  // D-074 (HD-208) verhoogt opnieuw voor het dag-/maand-/jaar-terugvalsom
+  // over smart plugs (met entity-ID-dedup) in de kamertotaalkaart:
+  // 215_000 -> 216_000, gemeten 215.187 bytes.
+  assert.ok(bundle.length <= 216_000);
   assert.equal(bundle.includes(Buffer.from("sourceMappingURL")), false);
   assert.equal(editorBundle.includes(Buffer.from("sourceMappingURL")), false);
   const result = spawnSync(process.execPath, ["scripts/create-release-assets.mjs"], { cwd: rootPath, encoding: "utf8", env: { ...process.env, GITHUB_SHA: commit, RELEASE_TAG: tag } });
