@@ -244,18 +244,22 @@ for (const variant of ["normal", "dark", "warning", "missing", "unknown", "unava
       assert.match(periodFallbackYearText, /40 kWh/, `${label}: "Jaar" dedupes the two plugs sharing one year entity (40, not 80)`);
       assert.doesNotMatch(periodFallbackYearText, /80 kWh/, `${label}: the shared year entity must never be double-counted`);
 
-      // HD-219: multi-bucket statistics for the same period_fallback_mixed fixture, with one bucket where
-      // plug B has no data at all. Proves the combined stacked chart aligns real bucket timestamps (never
-      // array index) and renders a visibly distinct "missing" segment for that bucket instead of silently
-      // showing an incomplete stack as complete -- and that "Grootste verbruikers" ranks both sources
-      // descending by their current-period value.
+      // HD-219/HD-220: multi-bucket, cumulative-sum statistics for the same period_fallback_mixed fixture.
+      // Plug A has three buckets (the oldest is the undisplayed delta baseline -- sum 0 -> 3 -> 8, i.e.
+      // deltas of 3 and 5); plug B has only that same baseline bucket and nothing after it. Proves: (a) the
+      // combined chart converts cumulative sums into real per-bucket deltas rather than plotting the raw
+      // running total (HD-220 -- a live screenshot showed a ~565 kWh scale for a ~1 kWh/day room before this
+      // fix), (b) the chart aligns real bucket timestamps (never array index) and drops only the baseline
+      // column, and (c) a bucket a source has no data for renders a visibly distinct "missing" segment
+      // instead of silently showing an incomplete stack as complete -- and that "Grootste verbruikers"
+      // ranks both sources descending by their current-period value.
       await page.evaluate(() => {
         const { hass } = window.roomFixture;
         hass.connection.sendMessagePromise = async (message) => {
           if (message.type === "recorder/statistics_during_period") {
             const result = {};
             for (const id of message.statistic_ids) {
-              if (id.includes("period_fallback_a_month")) result[id] = [{ start: 0, sum: 3 }, { start: 86_400_000, sum: 1 }];
+              if (id.includes("period_fallback_a_month")) result[id] = [{ start: 0, sum: 0 }, { start: 86_400_000, sum: 3 }, { start: 172_800_000, sum: 8 }];
               if (id.includes("period_fallback_b_month")) result[id] = [{ start: 0, sum: 5 }];
             }
             return result;
@@ -266,12 +270,39 @@ for (const variant of ["normal", "dark", "warning", "missing", "unknown", "unava
         document.querySelector("home-dashboard-room-detail").shadowRoot.querySelector('[data-control-key="energy-period:month"]').click();
       });
       await page.waitForFunction(() => document.querySelector("home-dashboard-room-detail")?.shadowRoot?.querySelector(".stat-chart"));
-      assert.equal(await page.locator(".stat-chart-column").count(), 2, `${label}: the combined chart renders one column per real statistics bucket, aligned by timestamp`);
+      assert.equal(await page.locator(".stat-chart-column").count(), 2, `${label}: the baseline bucket is dropped, leaving one column per real displayed delta`);
+      const chartAriaLabel = await page.locator(".stat-chart").getAttribute("aria-label");
+      assert.match(chartAriaLabel, /3 kilowattuur/, `${label}: the first displayed bucket's total reflects a real delta (3), not the raw cumulative sum`);
+      assert.match(chartAriaLabel, /5 kilowattuur/, `${label}: the second displayed bucket's total reflects a real delta (8-3=5), not the raw cumulative sum (8)`);
+      assert.doesNotMatch(chartAriaLabel, /8 kilowattuur/, `${label}: the raw cumulative sum (8) must never appear as a bucket total -- only the per-bucket delta`);
       assert.ok(await page.locator(".stat-chart-segment-missing").count() >= 1, `${label}: a bucket where one source has no data shows a visibly distinct missing segment, never a silently complete stack`);
       assert.equal(await page.locator(".stat-chart-legend-item").count(), 2, `${label}: the legend lists both smart-plug sources`);
-      assert.equal(await page.locator(".energy-ranking .energy-bar-row").count(), 2, `${label}: Grootste verbruikers ranks both smart-plug sources for the active period`);
-      const rankingText = await page.locator(".energy-ranking").textContent();
+      // Scoped to .stage: HD-220 also added a Grootste verbruikers instance to the legacy details-energy
+      // panel (co-present in the DOM, just hidden), so an unscoped .energy-ranking locator would match both.
+      assert.equal(await page.locator(".stage .energy-ranking .energy-bar-row").count(), 2, `${label}: Grootste verbruikers ranks both smart-plug sources for the active period`);
+      const rankingText = await page.locator(".stage .energy-ranking").textContent();
       assert.match(rankingText, /Terugvalplug B[\s\S]*Terugvalplug A/, `${label}: Grootste verbruikers ranks descending (plug B's 5 kWh month value above plug A's 3 kWh)`);
+
+      // HD-220: a smart plug with an empty name (schema-valid, live-confirmed to happen via HD-216's
+      // pairing helper) must never produce a blank label anywhere energy data names it -- the Kamerenergie
+      // per-plug card title, and Grootste verbruikers (which shares plugPeriodSources() with the combined
+      // chart's legend).
+      const blankNameMounted = await page.evaluate(() => {
+        const fixture = window.roomFixture;
+        const room = fixture.config.rooms.find((candidate) => candidate.key === "blank_plug_name");
+        const detail = document.createElement("home-dashboard-room-detail");
+        detail.setConfig({ type: "custom:home-dashboard-room-detail", room });
+        detail.hass = fixture.hass;
+        document.body.replaceChildren(detail);
+        return true;
+      });
+      assert.equal(blankNameMounted, true, `${label}: blank-plug-name room detail mounted`);
+      await page.waitForFunction(() => document.querySelector("home-dashboard-room-detail")?.shadowRoot?.querySelector(".control-deck"));
+      await selectCapability("Verbruik");
+      const blankNameCardTitle = await page.evaluate(() => document.querySelector("home-dashboard-room-detail").shadowRoot.querySelector(".stage .energy-card:not(:first-child) strong")?.textContent ?? "");
+      assert.equal(blankNameCardTitle, "Naamloze stekker", `${label}: a blank plug.name falls back to its switch entity's friendly_name, never a blank card title`);
+      const blankNameRankingText = await page.locator(".stage .energy-ranking").textContent();
+      assert.match(blankNameRankingText, /Naamloze stekker/, `${label}: Grootste verbruikers falls back to the same friendly_name, never a blank ranking label`);
 
       // HD-212: mountCard()'s fallback catch-path (shared by the LINAK desk card and history-graph)
       // was never actually exercised by any test -- only the card_config pass-through was checked
@@ -334,17 +365,28 @@ assert.equal(await lightCapability.getAttribute("aria-selected"), "true", "capab
 assert.equal(await page.locator('.capability-rail button[aria-selected="true"]').count(), 1, "only one capability is selected");
 assert.equal(await lightCapability.evaluate((button) => button.getRootNode().activeElement === button), true, "capability activation preserves keyboard focus");
 await selectCapability("Verbruik");
+// HD-220: the owner asked for a combined now/day/month/year overview that doesn't depend on the active
+// period tab (unlike energyPeriodGroup()'s single-number card). Checked here, before any period-tab
+// interaction below, so it's proven independent of the period selector.
+assert.equal(await page.locator(".stage .summary-strip .summary-metric").count(), 4, "the Verbruik tab shows a combined now/day/month/year summary strip");
+const energySummaryText = await page.locator(".stage .summary-strip").first().textContent();
+assert.match(energySummaryText, /nu/, "the combined summary strip labels the current-wattage metric");
+assert.match(energySummaryText, /vandaag/, "the combined summary strip labels the day total");
+assert.match(energySummaryText, /deze maand/, "the combined summary strip labels the month total");
+assert.match(energySummaryText, /dit jaar/, "the combined summary strip labels the year-to-date total, never claiming a rolling 12 months it doesn't have");
 assert.equal(await page.locator(".stage .period-selector").count(), 1, "the v3 energy stage reuses the existing energyPeriodGroup period selector instead of a fabricated summary");
 assert.equal(await page.locator(".stage .energy-source-context").count(), 3, "the v3 energy stage shows the same source/freshness context as the richer energy view");
 assert.match(await page.locator(".stage .energy-period-context").first().textContent(), /Lopende vandaag/, "the v3 energy stage identifies the running period");
-assert.equal(await page.locator(".stage .energy-comparison").getAttribute("role"), "img", "the v3 energy stage keeps the accessible device-comparison chart");
-assert.match(await page.locator(".stage .energy-comparison").getAttribute("aria-label"), /Schaal nul tot .*kilowattuur.*Mediahoek.*Netwerkhoek/, "the v3 energy stage keeps scale, unit and text alternative");
+// HD-220: Apparaatvergelijking is gone (the owner asked for only one of it/Grootste verbruikers to stay
+// active) -- "Grootste verbruikers" is the accessible device-comparison chart that remains.
+assert.equal(await page.locator(".stage .energy-ranking").getAttribute("role"), "img", "the v3 energy stage keeps an accessible device-comparison chart (Grootste verbruikers)");
+assert.match(await page.locator(".stage .energy-ranking").getAttribute("aria-label"), /Grootste verbruikers.*Mediahoek.*Netwerkhoek|Grootste verbruikers.*Netwerkhoek.*Mediahoek/, "Grootste verbruikers names both devices in its text alternative");
 await page.getByRole("tab", { name: "Energie" }).click();
 assert.equal(await page.locator(".details-card .energy-source-context").count(), 3, "energy detail tab keeps its unchanged source and update context");
 assert.match(await page.locator(".details-card .energy-period-context").first().textContent(), /Lopende vandaag/, "energy cards identify the running period");
 assert.match(await page.locator(".details-card .energy-source-context").first().textContent(), /dagen oud/, "energy update context makes stale fixture data explicit");
-assert.equal(await page.locator(".details-card .energy-comparison").getAttribute("role"), "img", "device comparison exposes an accessible chart role");
-assert.match(await page.locator(".details-card .energy-comparison").getAttribute("aria-label"), /Schaal nul tot .*kilowattuur.*Mediahoek.*Netwerkhoek/, "energy chart has scale, unit and text alternative");
+assert.equal(await page.locator(".details-card .energy-ranking").getAttribute("role"), "img", "device comparison (Grootste verbruikers) exposes an accessible chart role");
+assert.match(await page.locator(".details-card .energy-ranking").getAttribute("aria-label"), /Grootste verbruikers.*Mediahoek.*Netwerkhoek|Grootste verbruikers.*Netwerkhoek.*Mediahoek/, "energy chart has a text alternative naming both devices");
 await page.locator(".details-card").getByRole("button", { name: "Jaar" }).click();
 assert.ok(await page.locator(".details-card .energy-period-context", { hasText: "Afgesloten jaar" }).count() >= 2, "completed periods are distinguished from running periods");
 await selectCapability("Smart plugs");

@@ -191,9 +191,13 @@ test("Control Deck-editor dekt alle plugmetingen en privacyveilige afbeeldingen"
 
 test("kamerdetail behoudt niet-bedienbare kamerbronnen als zichtbare status", async () => {
   const source = await readFile(sourceUrl, "utf8");
-  for (const title of ["Comfort & klimaat", "Veiligheid", "Camera's", "Apparaten & energie", "Historie"]) {
+  // HD-220: "Apparaten & energie" (room.power_entities, rendered raw and often noisy -- e.g. a mode
+  // switch with no numeric power value) is deliberately removed from both the Verbruik tab and the
+  // legacy details-energy panel; the owner asked for only Kamerenergie to remain.
+  for (const title of ["Comfort & klimaat", "Veiligheid", "Camera's", "Historie"]) {
     assert.ok(source.includes(title), `${title} ontbreekt`);
   }
+  assert.doesNotMatch(source, /"Apparaten & energie"/, "de Apparaten & energie-sectie is bewust verwijderd (HD-220)");
   assert.match(source, /room\.hvac\.comfort_entities/);
   assert.match(source, /room\.safety_entities/);
   assert.match(source, /room\.camera_entities/);
@@ -354,6 +358,32 @@ test("HD-208: energyPeriodGroup valt terug op het plugtotaal per periode, nooit 
   assert.match(body, /plugPeriodFallback !== undefined/, "de kaart moet ook verschijnen wanneer alleen het plugtotaal iets oplevert, niet alleen bij een kamerbron of power_entities-lezing");
   assert.match(body, /"Bron: samengevoegd uit smart plugs"/, "de teruggevallen periodewaarde moet haar eigen, eerlijke bronlabel tonen, geen fictieve single-entity bron");
   assert.doesNotMatch(body, /plugPeriodKey[\s\S]{0,40}power_entities|power_entities[\s\S]{0,40}plugPeriodKey/, "power_entities mag nooit meetellen in een dag-\/maand-\/jaartotaal (alleen in de huidige-vermogenlezing)");
+});
+
+test("HD-220: een lege plug.name mag nooit een leeg label opleveren in Kamerenergie, de staafdiagram of Grootste verbruikers", async () => {
+  const source = await readFile(sourceUrl, "utf8");
+  // Live bevestigd: smart plugs aangemaakt via HD-216's koppelhulp zonder ingetypte naam lieten elke
+  // energielabel (kaarttitel, staafdiagramlegende, ranglijst) leeg, omdat plug.name rechtstreeks gebruikt
+  // werd zonder de terugval die smartPlugCard() elders al wel toepast.
+  const energyPeriodGroupMatch = source.match(/private energyPeriodGroup\(room: RoomConfig\): HTMLElement \| undefined \{[\s\S]*?\n  \}\n\n  \/\*\* Rail/);
+  assert.ok(energyPeriodGroupMatch, "energyPeriodGroup methode niet gevonden");
+  assert.match(energyPeriodGroupMatch[0], /const plugName = plug\.name \|\| friendlyName\(this\.currentHass\?\.states\?\.\[plug\.switch_entity\], "Smart plug"\);/, "energyPeriodGroup moet een lege plug.name opvangen via een stabiele naam (switch entity), net als smartPlugCard()");
+  const plugPeriodSourcesMatch = source.match(/private plugPeriodSources\(room: RoomConfig\)[\s\S]*?\n  \}/);
+  assert.ok(plugPeriodSourcesMatch, "plugPeriodSources methode niet gevonden");
+  assert.match(plugPeriodSourcesMatch[0], /name: plug\.name \|\| friendlyName\(/, "plugPeriodSources (gedeeld door de staafdiagram en Grootste verbruikers) moet een lege plug.name opvangen");
+});
+
+test("HD-220: Apparaatvergelijking is verwijderd, Grootste verbruikers blijft de enige apparaatvergelijking", async () => {
+  const source = await readFile(sourceUrl, "utf8");
+  // "Apparaatvergelijking" mag nog in commentaar staan (historische context), maar de kaart zelf -- haar
+  // figcaption-tekst -- moet weg zijn.
+  assert.doesNotMatch(source, /`Apparaatvergelijking/, "de Apparaatvergelijking-kaart zelf moet volledig verwijderd zijn -- Grootste verbruikers is de enige overgebleven vergelijking");
+  assert.match(source, /"Grootste verbruikers"/, "Grootste verbruikers moet aanwezig blijven");
+});
+
+test('HD-220: "Apparaten & energie" is volledig verwijderd (bediening zit al onder Smart plugs)', async () => {
+  const source = await readFile(sourceUrl, "utf8");
+  assert.doesNotMatch(source, /"Apparaten & energie"/, '"Apparaten & energie" moet volledig verwijderd zijn uit zowel de Verbruik-tab als het legacy energiepaneel');
 });
 
 test("HD-206: de hero toont meerdere echte statuspillen en een eerlijke placeholderillustratie", async () => {

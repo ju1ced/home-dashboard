@@ -1651,3 +1651,43 @@ Live vergelijking tussen de ontwerpstudie en de huidige implementatie (`energySt
 **Validatie**
 
 `pnpm test`, `pnpm run test:browser`, `git diff --check`, bundlebudget-check, onafhankelijke review tegen de oorspronkelijke ontwerpstudie (artifact `FnV91MaTVuLRHfeuCkYL3d`) voor visuele gelijkenis zonder de gefabriceerde-datafout over te nemen.
+
+---
+
+### HD-220 — Live verbruikspagina-bevindingen: cumulatieve-som-bug, lege labels, dubbele vergelijking, nutteloze sectie
+
+- **Epic:** Kamers
+- **Status:** Klaar — zie [D-076](../design/decision-log.md#d-076--hd-220-live-verbruikspagina-bevindingen-opgelost-cumulatieve-som-bug-lege-labels-dubbele-vergelijking-apparaten--energie) voor de volledige analyse en besluiten.
+- **Prioriteit:** P0
+- **Omvang:** M
+- **Eigenaar:** Rooms-agent
+- **Afhankelijkheden:** HD-219 (gemerged, `v0.8.2`) — lost een echte databug en drie scope-/duidelijkheidsvragen op die direct na HD-219's release live bleken
+
+**Doel**
+
+Vier live bevindingen van de eigenaar op de `v0.8.2`-Verbruik-tab oplossen: (1) de gecombineerde staafdiagram toont een onrealistische schaal (foutieve data, geen cosmetisch probleem), (2) Apparaatvergelijking én Grootste verbruikers tonen allebei lege apparaatlabels, (3) beide secties tonen dezelfde vergelijking dubbel, en (4) het overzicht met nu/lopende dag/lopende maand/jaar ontbreekt. Een vervolgbericht voegde toe dat "Apparaten & energie" volledig weg mag, want de bediening zit al onder Smart plugs.
+
+**Achtergrond**
+
+Zie D-076 voor de volledige root-causeanalyse. Samengevat: HA's langetermijnstatistiek-`sum`-veld is een doorlopend cumulatief totaal, geen waarde per bucket — de staafdiagram plotte dat rauwe getal. `plug.name` werd op meerdere plekken zonder terugval gebruikt, wat een lege smart-plugnaam (schema-geldig, ontstaat bv. via HD-216's koppelhulp zonder ingetypte naam) direct zichtbaar maakte als een leeg label.
+
+**Scope**
+
+1. **`deltaSeries()`:** nieuwe zuivere functie die een cumulatieve reeks omzet naar een waarde per bucket; eerste bucket wordt `undefined` (geen fabricage). `STATISTICS_PERIOD_SPAN` haalt één extra basislijnbucket op; `energyStatisticsChart()` laat die na de omzetting vallen.
+2. **Terugvalnaam voor lege `plug.name`:** `plugPeriodSources()` en `energyPeriodGroup()`'s per-plug-kaart vallen terug op de switch-entiteit se friendly_name (stabiel, periodeonafhankelijk), net als `smartPlugCard()`'s bestaande titel.
+3. **Apparaatvergelijking verwijderd** uit `energyPeriodGroup()`; Grootste verbruikers blijft de enige apparaatvergelijking. Het legacy "Energie"-detailtabblad krijgt in plaats daarvan ook Grootste verbruikers (voorheen toonde het alleen Apparaatvergelijking).
+4. **"Apparaten & energie" volledig verwijderd** uit zowel de Verbruik-tab als het legacy energiepaneel. Numerieke `power_entities`-vermogenslezingen blijven meetellen in de gecombineerde "nu"-waarde; alleen de losse rauwe opsomming verdwijnt.
+5. **Nieuwe `energySummaryStrip()`:** toont nu/vandaag/deze maand/dit jaar gelijktijdig, periodetab-onafhankelijk, hergebruikt `roomCurrentWatts()`/`plugPeriodTotal()`. Het jaarcijfer heet expliciet "dit jaar" (kalenderjaar-tot-nu), niet "laatste 12 maand" — dit project heeft geen rollende-12-maandenstatistiek.
+
+**Acceptatiecriteria**
+
+- Een gestapelde staafdiagram toont nooit een cumulatief lopend totaal als bucketwaarde; elke getoonde kolom is een echte waarde-per-periode, bewezen met gemockte monotoon stijgende cumulatieve teststatistiek.
+- Geen enkel energielabel (kaarttitel, staafdiagramlegende, Grootste-verbruikers-rij) is ooit leeg wanneer `plug.name` leeg is — bewezen met een specifieke fixture.
+- Apparaatvergelijking bestaat nergens meer in de broncode; Grootste verbruikers is overal de enige apparaatvergelijking.
+- "Apparaten & energie" bestaat nergens meer.
+- De Verbruik-tab toont een combinatie-samenvatting met nu/vandaag/deze maand/dit jaar, zichtbaar ongeacht welke periodetab actief is.
+- Normal/warning/missing/unavailable blijven afgedekt in fixtures/tests; bundelbudget-check (222 kB, D-075) — gemeten binnen budget zonder verhoging nodig.
+
+**Validatie**
+
+`pnpm test`, `pnpm run test:browser`, `git diff --check`, bundlebudget-check.

@@ -207,7 +207,10 @@ export function filterRoomLogbookEvents(entries: readonly LogbookEntryLike[], al
 }
 
 export type StatisticsPeriod = "day" | "month" | "year";
-const STATISTICS_PERIOD_SPAN: Record<StatisticsPeriod, number> = { day: 7 * 86_400_000, month: 365 * 86_400_000, year: 5 * 365 * 86_400_000 };
+// HD-220: each span fetches one extra leading bucket beyond what's actually displayed (8 days/13 months/6
+// years instead of 7/12/5), purely as a delta baseline for deltaSeries() -- the oldest combined column is
+// always dropped before rendering (see energyStatisticsChart()).
+const STATISTICS_PERIOD_SPAN: Record<StatisticsPeriod, number> = { day: 8 * 86_400_000, month: 396 * 86_400_000, year: 6 * 365 * 86_400_000 };
 
 export type StatisticBucket = { start: number; value: number | undefined };
 
@@ -215,11 +218,32 @@ export type StatisticBucket = { start: number; value: number | undefined };
  * `undefined` (not an empty array) means the key is entirely absent from the response -- the HA-documented
  * signal that this source has no long-term statistics at all (see D-205 verification notes); an empty
  * array means it does have long-term statistics but none fall in this window. Callers must keep those two
- * cases visually distinct and never substitute a fabricated zero for either. */
+ * cases visually distinct and never substitute a fabricated zero for either.
+ *
+ * Note: `value` here is `sum` as HA's recorder stores it -- a running CUMULATIVE total since the entity was
+ * first tracked, not a per-bucket amount (confirmed live, HD-220: a 7-day chart built directly from this
+ * showed a ~565 kWh scale for a room that uses ~1-2 kWh/day). Callers that need "how much in this bucket"
+ * must run this through `deltaSeries()`; this function itself stays a faithful, untransformed read of what
+ * the response actually contains, matching its existing tested contract. */
 export function extractStatisticSeries(response: unknown, statisticId: string): StatisticBucket[] | undefined {
   const rows = (response as Record<string, Array<{ start: number; sum?: number | null; state?: number | null }>> | null | undefined)?.[statisticId];
   if (!rows) return undefined;
   return rows.map((row) => ({ start: row.start, value: row.sum ?? row.state ?? undefined }));
+}
+
+/** Converts a cumulative-sum series (as `extractStatisticSeries` returns it) into a per-bucket delta series:
+ * `value[i] = value[i] - value[i-1]`. The first bucket has no prior reference and becomes `undefined` --
+ * never a fabricated delta -- which is why callers fetch one extra leading bucket (see
+ * `STATISTICS_PERIOD_SPAN`) and drop it after this conversion instead of displaying a guaranteed-empty
+ * first column. A bucket is `undefined` whenever either it or its predecessor lacks a value, so a gap in
+ * the underlying data never produces a fabricated or silently-wrong delta on either side of the gap. */
+export function deltaSeries(series: StatisticBucket[] | undefined): StatisticBucket[] | undefined {
+  if (!series) return undefined;
+  return series.map((bucket, index) => {
+    if (index === 0) return { start: bucket.start, value: undefined };
+    const previous = series[index - 1]!.value;
+    return { start: bucket.start, value: bucket.value !== undefined && previous !== undefined ? bucket.value - previous : undefined };
+  });
 }
 
 /** Derives a bucket's label from its own real `start` timestamp -- never a hardcoded day-/month-name list,
@@ -817,7 +841,12 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
       const entity = plug[key];
       if (!entity || seen.has(entity)) return;
       seen.add(entity);
-      sources.push({ name: plug.name, entity });
+      // HD-220: a blank plug.name (e.g. a smart plug promoted via HD-216's pairing helper without ever
+      // typing a name) must not produce a blank chart/ranking label -- same fallback already used by
+      // smartPlugCard()'s own title.
+      // The switch entity (not the period entity) gives a stable fallback name that never changes depending
+      // on which period tab is active.
+      sources.push({ name: plug.name || friendlyName(this.currentHass?.states?.[plug.switch_entity], "Smart plug"), entity });
     });
     return sources;
   }
@@ -918,10 +947,16 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
       if (response === undefined) {
         wrapper.append(element("p", "info unavailable", "Historische verbruiksstatistiek wordt geladen of is niet beschikbaar."));
       } else {
-        const perSourceSeries = chartSources.map(({ entity }) => extractStatisticSeries(response, entity));
-        const { columns, missing } = combineStatisticBuckets(perSourceSeries);
+        // HD-220: recorder statistics' "sum" is a running cumulative total, not a per-bucket amount
+        // (confirmed live: a raw-sum chart showed a ~565 kWh scale for a room using ~1-2 kWh/day) --
+        // deltaSeries() converts it to "how much in this bucket" before charting. Its first bucket is
+        // always undefined (no prior baseline), which is exactly why STATISTICS_PERIOD_SPAN fetches one
+        // extra leading bucket: it is dropped below so every DISPLAYED column has a real delta.
+        const perSourceSeries = chartSources.map(({ entity }) => deltaSeries(extractStatisticSeries(response, entity)));
+        const combined = combineStatisticBuckets(perSourceSeries);
+        const columns = combined.columns.slice(1);
         wrapper.append(columns.length
-          ? this.statisticsBarChart(chartSources, columns, missing, period, periodLabel)
+          ? this.statisticsBarChart(chartSources, columns, combined.missing, period, periodLabel)
           : element("p", "info unavailable", perSourceSeries.every((series) => series === undefined) ? "Geen langetermijnstatistiek voor deze bronnen." : `Geen data voor deze ${periodLabel}periode.`));
       }
     }
@@ -1333,12 +1368,38 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     return stage;
   }
 
+  /** HD-220: one at-a-glance strip combining every smart plug's now/day/month/year(-to-date) totals, shown
+   * regardless of the active period tab -- the owner's own request after comparing against the design
+   * study ("ik mis het overzicht met nu, lopende dag, lopende maand en... van alle gecombineerde smart
+   * plugs"). Reuses `roomCurrentWatts()`/`plugPeriodTotal()` so these numbers never disagree with the rail,
+   * the Smart plugs tab or the room-total card below. The "year" figure is the room's calendar-year-to-date
+   * utility_meter total (`energy_year_entity`), not a rolling trailing-12-months window -- this project has
+   * no rolling-window statistic to report honestly, so it is labelled "dit jaar", never "laatste 12 maand". */
+  private energySummaryStrip(room: RoomConfig): HTMLElement | undefined {
+    const plugs = room.smart_plugs ?? [];
+    if (!plugs.length) return undefined;
+    const nowWatts = this.roomCurrentWatts(room);
+    const dayTotal = this.plugPeriodTotal(plugs, "energy_day_entity");
+    const monthTotal = this.plugPeriodTotal(plugs, "energy_month_entity");
+    const yearTotal = this.plugPeriodTotal(plugs, "energy_year_entity");
+    if (nowWatts === undefined && dayTotal === undefined && monthTotal === undefined && yearTotal === undefined) return undefined;
+    const summary = element("div", "summary-strip");
+    const metric = (value: string, label: string): HTMLElement => { const item = element("div", "summary-metric"); item.append(element("strong", "", value), element("span", "", label)); return item; };
+    summary.append(
+      metric(nowWatts === undefined ? "—" : `${Math.round(nowWatts)} W`, "nu"),
+      metric(dayTotal === undefined ? "—" : `${dayTotal.toFixed(2).replace(".", ",")} kWh`, "vandaag"),
+      metric(monthTotal === undefined ? "—" : `${monthTotal.toFixed(1).replace(".", ",")} kWh`, "deze maand"),
+      metric(yearTotal === undefined ? "—" : `${yearTotal.toFixed(0)} kWh`, "dit jaar")
+    );
+    return summary;
+  }
+
   private energyStage(room: RoomConfig): HTMLElement {
     const stage = element("div", "stage-body");
-    const power = this.informationGroup("Apparaten & energie", room.power_entities.map((entity): [string, DeviceRole] => [entity, "power"]));
+    const summary = this.energySummaryStrip(room);
     const periodEnergy = this.energyPeriodGroup(room);
     const statisticsChart = this.energyStatisticsChart(room);
-    if (power) stage.append(power);
+    if (summary) stage.append(summary);
     if (periodEnergy) stage.append(periodEnergy);
     if (statisticsChart) stage.append(statisticsChart);
     if (!stage.childElementCount) stage.append(element("p", "info unavailable", "Geen verbruiksgegevens geconfigureerd voor deze kamer."));
@@ -1416,45 +1477,29 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
       );
       grid.append(card);
     }
-    const comparisons: Array<{ name: string; value: number; source: string }> = [];
+    // HD-220: the Apparaatvergelijking comparison that used to live here is gone -- it duplicated
+    // "Grootste verbruikers" (HD-219, energyStatisticsChart()) with less information (no sort, no
+    // percentage) and the owner asked for only one of the two to remain active.
     (room.smart_plugs ?? []).forEach((plug) => {
       const entity = this.activeEnergyPeriod === "day" ? plug.energy_day_entity : this.activeEnergyPeriod === "month" ? plug.energy_month_entity : plug.energy_year_entity;
       const plugPeriod = this.activeEnergyPeriod === "day" ? plug.energy_day_period : this.activeEnergyPeriod === "month" ? plug.energy_month_period : plug.energy_year_period;
       if (!entity) return;
       const state = this.currentHass?.states?.[entity];
+      // HD-220: a blank plug.name (e.g. a smart plug promoted via HD-216's pairing helper without ever
+      // typing a name) must not produce a blank card title or source line -- same fallback already used
+      // by smartPlugCard()'s own title. The switch entity (not the period entity) gives a stable name
+      // that never changes depending on which period tab is active.
+      const plugName = plug.name || friendlyName(this.currentHass?.states?.[plug.switch_entity], "Smart plug");
       const card = element("article", "info energy-card");
       card.append(
-        element("strong", "", plug.name),
+        element("strong", "", plugName),
         element("small", "", stateText(state)),
         element("small", "energy-period-context", periodContext(plugPeriod, periodLabel)),
-        element("small", "energy-source-context", sourceContext(state, `${plug.name} energie`))
+        element("small", "energy-source-context", sourceContext(state, `${plugName} energie`))
       );
       grid.append(card);
-      const value = energyKwh(state);
-      if (value !== undefined) comparisons.push({ name: plug.name, value, source: friendlyName(state, `${plug.name} energie`) });
     });
     wrapper.append(selector, grid.childElementCount ? grid : element("p", "info unavailable", "Geen bron voor deze periode geconfigureerd."));
-    if (comparisons.length > 1) {
-      const maximum = Math.max(...comparisons.map((entry) => entry.value), 0);
-      const figure = element("figure", "energy-comparison");
-      figure.setAttribute("role", "img");
-      figure.setAttribute("aria-label", `Apparaatvergelijking voor ${periodLabel.toLowerCase()} in kilowattuur. Schaal nul tot ${maximum.toLocaleString("nl-BE")} kilowattuur. ${comparisons.map((entry) => `${entry.name} ${entry.value.toLocaleString("nl-BE")} kilowattuur`).join("; ")}.`);
-      figure.append(element("figcaption", "", `Apparaatvergelijking · ${periodLabel} · kWh`), element("small", "energy-scale", `Schaal 0–${maximum.toLocaleString("nl-BE")} kWh · periodestatus per bron`));
-      const bars = element("div", "energy-bars");
-      comparisons.forEach((entry) => {
-        const row = element("div", "energy-bar-row");
-        const label = element("span", "energy-bar-label", entry.name);
-        const track = element("span", "energy-bar-track");
-        const bar = element("span", "energy-bar");
-        bar.style.setProperty("--energy-share", `${maximum > 0 ? Math.max((entry.value / maximum) * 100, 2) : 0}%`);
-        track.append(bar);
-        row.append(label, track, element("strong", "energy-bar-value", `${entry.value.toLocaleString("nl-BE")} kWh`));
-        row.title = `Bron: ${entry.source}`;
-        bars.append(row);
-      });
-      figure.append(bars, element("small", "energy-comparison-note", "Vergelijking van afzonderlijk gemapte apparaatbronnen; niet optellen tot een woningtotaal."));
-      wrapper.append(figure);
-    }
     return group("Kamerenergie", wrapper);
   }
 
@@ -1702,10 +1747,15 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     });
 
     const energy = element("div", "room-column energy");
-    const power = this.informationGroup("Apparaten & energie", room.power_entities.map((entity): [string, DeviceRole] => [entity, "power"]));
     const periodEnergy = this.energyPeriodGroup(room);
-    if (power) energy.append(power);
     if (periodEnergy) energy.append(periodEnergy);
+    // HD-220: this legacy details-tab panel never rendered energyStatisticsChart()'s heavier statistics-
+    // backed chart, but it did show the now-removed Apparaatvergelijking comparison -- "Grootste
+    // verbruikers" is a cheap, current-state-only replacement (no statistics cache dependency) so this
+    // panel keeps a device comparison instead of losing one entirely.
+    const legacyPeriodLabel = this.activeEnergyPeriod === "day" ? "dag" : this.activeEnergyPeriod === "month" ? "maand" : "jaar";
+    const legacyRanking = this.topConsumersCard(room, this.activeEnergyPeriod, legacyPeriodLabel);
+    if (legacyRanking) energy.append(legacyRanking);
     panels.get("history")?.append(this.historyPanel(room));
 
     if ((room.smart_plugs?.length ?? 0) > 0) {
