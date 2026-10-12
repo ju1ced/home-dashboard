@@ -1615,7 +1615,7 @@ Tijdens een live MCP-sessie (niet via de editor, via de Home Assistant MCP-tool 
 ### HD-219 — Verbruik-tab: één gecombineerde dag-/maand-/jaargrafiek en een "Grootste verbruikers"-ranglijst
 
 - **Epic:** Kamers
-- **Status:** Backlog
+- **Status:** Klaar — gecombineerde, gestapelde staafdiagram (as-schaal, periodelabels, kleurenlegende) en "Grootste verbruikers"-ranglijst geïmplementeerd zonder gefabriceerde data; zie [D-075](../design/decision-log.md#d-075--hd-219-gecombineerde-staafdiagram-en-grootste-verbruikers-ranglijst-voor-verbruik-tab). Punt 5 (Apparaatvergelijking-labels) onderzocht: geen renderbug gevonden.
 - **Prioriteit:** P1
 - **Omvang:** L
 - **Eigenaar:** Rooms-agent

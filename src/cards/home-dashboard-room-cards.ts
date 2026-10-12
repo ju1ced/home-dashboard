@@ -49,7 +49,7 @@ declare global {
 }
 
 const HTMLElementBase = (typeof HTMLElement === "undefined" ? class {} : HTMLElement) as typeof HTMLElement;
-const roomStyles = `:host{display:block;min-width:0;--room-surface:var(--ha-card-background,var(--card-background-color))}.hero{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:24px;border-radius:22px;background:var(--hd-hero,var(--primary-color,#245c4d));color:var(--hd-hero-text,#fff)}.hero-copy{display:grid;gap:4px}.eyebrow{font-size:.74rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.8}.hero h1,.hero h2{margin:0;font-size:1.7rem}.hero p{margin:0;opacity:.78}@media(max-width:600px){.hero{padding:18px}.hero h1,.hero h2{font-size:1.55rem}}`;
+const roomStyles = `:host{display:block;min-width:0;--room-surface:var(--ha-card-background,var(--card-background-color));--stat-color-0:#087fb9;--stat-color-1:#467783;--stat-color-2:#a96800;--stat-color-3:#6d6084;--stat-color-4:#af5540}.hero{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:24px;border-radius:22px;background:var(--hd-hero,var(--primary-color,#245c4d));color:var(--hd-hero-text,#fff)}.hero-copy{display:grid;gap:4px}.eyebrow{font-size:.74rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.8}.hero h1,.hero h2{margin:0;font-size:1.7rem}.hero p{margin:0;opacity:.78}@media(max-width:600px){.hero{padding:18px}.hero h1,.hero h2{font-size:1.55rem}}`;
 
 export function roomPath(room: Pick<RoomConfig, "key">): string {
   return `room-${room.key.replaceAll("_", "-")}`;
@@ -206,7 +206,7 @@ export function filterRoomLogbookEvents(entries: readonly LogbookEntryLike[], al
     .slice(0, limit);
 }
 
-type StatisticsPeriod = "day" | "month" | "year";
+export type StatisticsPeriod = "day" | "month" | "year";
 const STATISTICS_PERIOD_SPAN: Record<StatisticsPeriod, number> = { day: 7 * 86_400_000, month: 365 * 86_400_000, year: 5 * 365 * 86_400_000 };
 
 export type StatisticBucket = { start: number; value: number | undefined };
@@ -220,6 +220,46 @@ export function extractStatisticSeries(response: unknown, statisticId: string): 
   const rows = (response as Record<string, Array<{ start: number; sum?: number | null; state?: number | null }>> | null | undefined)?.[statisticId];
   if (!rows) return undefined;
   return rows.map((row) => ({ start: row.start, value: row.sum ?? row.state ?? undefined }));
+}
+
+/** Derives a bucket's label from its own real `start` timestamp -- never a hardcoded day-/month-name list,
+ * so a label always matches the data it sits under (HD-219: the design study it replaces fabricated this
+ * with a fixed ["Do","Vr",...] array, independent of what period the mock data actually represented). */
+export function statisticsBucketLabel(period: StatisticsPeriod, startMs: number): string {
+  const date = new Date(startMs);
+  if (period === "day") return date.toLocaleDateString("nl-BE", { weekday: "short" });
+  if (period === "month") return date.toLocaleDateString("nl-BE", { month: "short" });
+  return date.toLocaleDateString("nl-BE", { year: "numeric" });
+}
+
+export type CombinedStatisticColumn = { start: number; values: Array<number | undefined> };
+
+/** Aligns several sources' bucketed series by their real bucket `start` (the union of every source's own
+ * starts, sorted ascending) -- never by array index, so a source missing one bucket that another source
+ * has shows as `undefined` for that bucket instead of silently shifting into the wrong column. `missing[i]`
+ * is true only when source `i` has no long-term statistics at all (mirrors `extractStatisticSeries`'s own
+ * undefined-vs-empty distinction), never when it merely lacks one bucket. */
+export function combineStatisticBuckets(series: ReadonlyArray<StatisticBucket[] | undefined>): { columns: CombinedStatisticColumn[]; missing: boolean[] } {
+  const missing = series.map((entry) => entry === undefined);
+  const starts = [...new Set(series.flatMap((entry) => (entry ?? []).map((bucket) => bucket.start)))].sort((a, b) => a - b);
+  const columns = starts.map((start) => ({
+    start,
+    values: series.map((entry) => entry?.find((bucket) => bucket.start === start)?.value),
+  }));
+  return { columns, missing };
+}
+
+export type RankedEnergySource = { name: string; value: number; share: number };
+
+/** Ranks entries descending by value; `share` is each entry's fraction (0..1) of the SUM of the ranked
+ * entries themselves -- never a fabricated whole-room/whole-home total (same "niet optellen tot een
+ * woningtotaal" caveat as the Apparaatvergelijking comparison section). `share` is 0, never NaN, when the
+ * total is 0. */
+export function rankEnergySources(entries: ReadonlyArray<{ name: string; value: number }>): RankedEnergySource[] {
+  const total = entries.reduce((sum, entry) => sum + entry.value, 0);
+  return [...entries]
+    .sort((a, b) => b.value - a.value)
+    .map((entry) => ({ name: entry.name, value: entry.value, share: total > 0 ? entry.value / total : 0 }));
 }
 
 function entityIcon(entity: string, state?: StateLike): string {
@@ -765,37 +805,129 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     return figure;
   }
 
-  private statisticBarsSvg(series: StatisticBucket[]): SVGSVGElement {
-    const max = Math.max(...series.map((bucket) => bucket.value ?? 0), 0);
-    const bars = series.map((bucket, index) => {
-      const x = index * 16 + 3;
-      if (bucket.value === undefined) return `<rect x="${x}" y="50" width="10" height="4" class="stat-bar-missing"/>`;
-      const height = max > 0 ? Math.max((bucket.value / max) * 52, 2) : 2;
-      return `<rect x="${x}" y="${54 - height}" width="10" height="${height}" class="stat-bar"/>`;
-    }).join("");
-    return this.chartSvg(bars, series.length * 16);
+  /** The room's smart-plug period sources for the active day/month/year selection, deduplicated by entity
+   * ID so two plugs mapped to the same sensor are never double-counted or double-charted (same dedup as
+   * `plugPeriodTotal()`). Shared by the combined statistics chart and the "Grootste verbruikers" ranking
+   * (HD-219) -- both must agree on exactly the same source set. */
+  private plugPeriodSources(room: RoomConfig): Array<{ name: string; entity: string }> {
+    const key = this.activeEnergyPeriod === "day" ? "energy_day_entity" : this.activeEnergyPeriod === "month" ? "energy_month_entity" : "energy_year_entity";
+    const seen = new Set<string>();
+    const sources: Array<{ name: string; entity: string }> = [];
+    (room.smart_plugs ?? []).forEach((plug) => {
+      const entity = plug[key];
+      if (!entity || seen.has(entity)) return;
+      seen.add(entity);
+      sources.push({ name: plug.name, entity });
+    });
+    return sources;
   }
 
-  /** The Verbruik tab's day-by-day/month-by-month/year-by-year bar chart per device, alongside (not
-   * replacing) `energyPeriodGroup()`'s single-number cards. Absent vs. empty vs. loading/unavailable are
-   * kept visually distinct per bucket and per source -- never a fabricated zero (D-058 point 5). */
+  /** One stacked bar per real statistics bucket -- never fabricated: a source missing one bucket renders a
+   * visibly distinct "geen data"-marker for that segment instead of silently vanishing or blending into 0
+   * (D-058 point 5, HD-219). Colors are fixed, theme-independent tokens (same styling constraint as
+   * HD-208) so one color always means the same source across both the stack and the legend. */
+  private statisticsBarChart(sources: Array<{ name: string; entity: string }>, columns: CombinedStatisticColumn[], missing: boolean[], period: StatisticsPeriod, periodLabel: string): HTMLElement {
+    const totals = columns.map((column) => column.values.reduce<number>((sum, value) => sum + (value ?? 0), 0));
+    const maximum = Math.max(...totals, 0);
+    const figure = element("figure", "stat-chart");
+    figure.setAttribute("role", "img");
+    figure.setAttribute("aria-label", `Verbruik per ${periodLabel} in kilowattuur, gestapeld per bron. Schaal nul tot ${maximum.toLocaleString("nl-BE")} kilowattuur. ${columns.map((column, index) => `${statisticsBucketLabel(period, column.start)}: ${totals[index]!.toLocaleString("nl-BE")} kilowattuur`).join("; ")}.`);
+    const scale = element("div", "stat-chart-scale");
+    scale.append(element("span", "", `${maximum.toLocaleString("nl-BE")} kWh`), element("span", "", maximum > 0 ? (maximum / 2).toLocaleString("nl-BE") : "0"), element("span", "", "0"));
+    const bars = element("div", "stat-chart-bars");
+    columns.forEach((column) => {
+      const columnEl = element("div", "stat-chart-column");
+      const stack = element("div", "stat-chart-stack");
+      sources.forEach((source, sourceIndex) => {
+        const value = column.values[sourceIndex];
+        const segment = element("span", `stat-chart-segment${value === undefined ? " stat-chart-segment-missing" : ""}`);
+        segment.style.setProperty("--stat-color", `var(--stat-color-${sourceIndex % 5})`);
+        segment.style.setProperty("--stat-height", value === undefined ? "4px" : `${maximum > 0 ? Math.max((value / maximum) * 100, value > 0 ? 2 : 0) : 0}%`);
+        segment.title = `${source.name}: ${value === undefined ? "geen data" : `${value.toLocaleString("nl-BE")} kWh`}`;
+        stack.append(segment);
+      });
+      columnEl.append(stack, element("span", "stat-chart-label", statisticsBucketLabel(period, column.start)));
+      bars.append(columnEl);
+    });
+    const legend = element("div", "stat-chart-legend");
+    sources.forEach((source, index) => {
+      const dot = element("span", "stat-chart-legend-dot");
+      dot.style.setProperty("--stat-color", `var(--stat-color-${index % 5})`);
+      const item = element("span", "stat-chart-legend-item");
+      item.append(dot, document.createTextNode(missing[index] ? `${source.name} (geen langetermijnstatistiek)` : source.name));
+      legend.append(item);
+    });
+    figure.append(element("figcaption", "", `Verbruik per ${periodLabel} · kWh`), scale, bars, legend);
+    return figure;
+  }
+
+  /** "Grootste verbruikers": ranks this room's smart-plug period sources (same deduplicated source set as
+   * `plugPeriodSources()`/`plugPeriodTotal()`) descending by their current value for the active period.
+   * Each row's percentage is a share of the SUM of those same ranked sources -- never a fabricated
+   * whole-room total (same caveat as the Apparaatvergelijking comparison section). */
+  private topConsumersCard(room: RoomConfig, period: StatisticsPeriod, periodLabel: string): HTMLElement | undefined {
+    const digits = period === "day" ? 2 : period === "month" ? 1 : 0;
+    const entries: Array<{ name: string; value: number }> = [];
+    this.plugPeriodSources(room).forEach(({ name, entity }) => {
+      const value = energyKwh(this.currentHass?.states?.[entity]);
+      if (value !== undefined) entries.push({ name, value });
+    });
+    if (!entries.length) return undefined;
+    const ranked = rankEnergySources(entries);
+    const figure = element("figure", "energy-ranking");
+    figure.setAttribute("role", "img");
+    figure.setAttribute("aria-label", `Grootste verbruikers voor ${periodLabel.toLowerCase()} in kilowattuur. ${ranked.map((entry) => `${entry.name} ${entry.value.toLocaleString("nl-BE")} kilowattuur, ${Math.round(entry.share * 100)} procent`).join("; ")}.`);
+    figure.append(element("figcaption", "", "Grootste verbruikers"));
+    const rows = element("div", "energy-bars");
+    ranked.forEach((entry) => {
+      const row = element("div", "energy-bar-row");
+      const track = element("span", "energy-bar-track");
+      const bar = element("span", "energy-bar");
+      bar.style.setProperty("--energy-share", `${Math.max(entry.share * 100, entry.value > 0 ? 2 : 0)}%`);
+      track.append(bar);
+      row.append(
+        element("span", "energy-bar-label", entry.name),
+        track,
+        element("strong", "energy-bar-value", `${entry.value.toFixed(digits).replace(".", ",")} kWh · ${Math.round(entry.share * 100)}%`)
+      );
+      rows.append(row);
+    });
+    figure.append(rows, element("small", "energy-comparison-note", "Percentage t.o.v. de gerangschikte apparaatbronnen; niet optellen tot een woningtotaal."));
+    return figure;
+  }
+
+  /** The Verbruik tab's combined dag-/maand-/jaarstaafdiagram (HD-219: one stacked bar per real statistics
+   * bucket, replacing the previous one-tiny-chart-per-device grid) plus the "Grootste verbruikers" ranking,
+   * alongside `energyPeriodGroup()`'s single-number cards. Absent vs. empty vs. loading/unavailable are
+   * kept visually distinct per bucket and per source -- never a fabricated value (D-058 point 5). */
   private energyStatisticsChart(room: RoomConfig): HTMLElement | undefined {
-    const sources = this.energyStatisticSources(room);
-    if (!sources.length) return undefined;
     const period = this.activeEnergyPeriod;
     const periodLabel = period === "day" ? "dag" : period === "month" ? "maand" : "jaar";
-    const key = this.cacheKey(room, period, sources.map((source) => source.entity));
-    const response = this.statisticsCache.get(key);
-    if (response === undefined) return this.emptyGroup(`Verbruik per ${periodLabel}`, "Historische verbruiksstatistiek wordt geladen of is niet beschikbaar.");
+    const plugSources = this.plugPeriodSources(room);
+    const roomEntity = period === "day" ? room.room_energy?.day_entity : period === "month" ? room.room_energy?.month_entity : room.room_energy?.year_entity;
+    // A room-level period entity already includes any smart-plug consumption it overlaps with (same
+    // authoritative-not-additive assumption as HD-208's room-total card), so it only joins the chart's own
+    // source set when there are no smart-plug sources to stack it against -- never alongside them, which
+    // would double-count.
+    const chartSources = plugSources.length ? plugSources : (roomEntity ? [{ name: `${room.name} totaal`, entity: roomEntity }] : []);
     const wrapper = element("div", "energy-grid");
-    sources.forEach(({ name, entity }) => {
-      const series = extractStatisticSeries(response, entity);
-      wrapper.append(
-        !series ? this.statFigure(name, "Geen langetermijnstatistiek voor deze bron.", `${name}: geen langetermijnstatistiek beschikbaar.`)
-          : !series.length ? this.statFigure(name, `Geen data voor deze ${periodLabel}periode.`, `${name}: geen data in deze periode.`)
-            : this.statFigure(name, this.statisticBarsSvg(series), `${name}, ${periodLabel}-staafdiagram: ${series.map((bucket) => bucket.value !== undefined ? `${bucket.value.toLocaleString("nl-BE")} kWh` : "geen data").join("; ")}.`)
-      );
-    });
+    if (chartSources.length) {
+      const allSources = this.energyStatisticSources(room);
+      const key = this.cacheKey(room, period, allSources.map((source) => source.entity));
+      const response = this.statisticsCache.get(key);
+      if (response === undefined) {
+        wrapper.append(element("p", "info unavailable", "Historische verbruiksstatistiek wordt geladen of is niet beschikbaar."));
+      } else {
+        const perSourceSeries = chartSources.map(({ entity }) => extractStatisticSeries(response, entity));
+        const { columns, missing } = combineStatisticBuckets(perSourceSeries);
+        wrapper.append(columns.length
+          ? this.statisticsBarChart(chartSources, columns, missing, period, periodLabel)
+          : element("p", "info unavailable", perSourceSeries.every((series) => series === undefined) ? "Geen langetermijnstatistiek voor deze bronnen." : `Geen data voor deze ${periodLabel}periode.`));
+      }
+    }
+    const ranking = this.topConsumersCard(room, period, periodLabel);
+    if (ranking) wrapper.append(ranking);
+    if (!wrapper.childElementCount) return undefined;
     return group(`Verbruik per ${periodLabel}`, wrapper);
   }
 
@@ -1424,10 +1556,10 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     style.textContent = `
       ${roomStyles}
       .detail,.control-deck,.room-layout-primary,.room-column,.mushroom-controls,.group,.detail-panel,.stage,.stage-body{display:grid;gap:18px;min-width:0;align-content:start}.detail{width:100%}.control-deck{grid-template-columns:minmax(150px,.24fr) minmax(0,1fr);gap:12px;padding:14px;border:1px solid var(--divider-color);border-radius:18px;background:var(--room-surface);box-shadow:0 1px 2px rgb(20 35 28/.06),0 7px 24px rgb(20 35 28/.035);overflow:hidden}.capability-rail{display:grid;gap:7px;align-content:start}.capability-rail button,.detail-tabs button{min-height:44px;border:1px solid var(--divider-color);border-radius:11px;padding:9px 12px;background:var(--room-surface);color:var(--primary-text-color);font:inherit;text-align:left}.capability-rail button[aria-selected=true],.detail-tabs button[aria-selected=true]{border-color:var(--primary-color);background:color-mix(in srgb,var(--primary-color) 10%,var(--room-surface));color:var(--primary-color);font-weight:700}.deck-content{display:grid;gap:12px;min-width:0}.detail-tabs{display:flex;gap:7px;overflow-x:auto}.detail-tabs button{flex:1 0 auto;text-align:center}.detail-panel[hidden]{display:none}.room-layout-primary{grid-template-columns:1.2fr .8fr .7fr}.group{gap:10px}.group-heading{min-height:32px;display:flex;align-items:center}.details-card{display:grid}
-      .info-list,.mushroom-grid,.plug-grid,.energy-grid,.group-grid,.device-grid,.cover-grid,.comfort-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:9px}.energy-period{display:grid;gap:10px}.period-selector{display:flex;gap:7px;flex-wrap:wrap}.period-selector button{min-height:44px;padding:8px 13px;border:1px solid var(--divider-color);border-radius:999px;background:var(--room-surface);color:inherit}.period-selector button[aria-pressed=true]{border-color:var(--primary-color);background:var(--primary-color);color:var(--text-primary-color,#fff);font-weight:700}.energy-card{display:grid;gap:4px}.energy-comparison{display:grid;gap:9px;margin:0;padding:12px;border:1px solid var(--divider-color);border-radius:12px;background:var(--room-surface)}.energy-comparison figcaption{font-weight:700}.energy-bars{display:grid;gap:8px}.energy-bar-row{display:grid;grid-template-columns:minmax(90px,.7fr) minmax(100px,1.4fr) auto;gap:8px;align-items:center}.energy-bar-track{height:12px;border-radius:999px;background:var(--secondary-background-color);overflow:hidden}.energy-bar{display:block;width:var(--energy-share);height:100%;border-radius:inherit;background:var(--primary-color)}.energy-bar-value{font-variant-numeric:tabular-nums}.action-feedback{margin:0;padding:10px 12px;border:1px solid var(--divider-color);border-radius:12px;background:var(--room-surface)}.action-feedback.pending{border-color:var(--primary-color)}.action-feedback.success{border-color:var(--success-color,#2e7d32)}.action-feedback.error{border-color:var(--error-color,#b3261e)}
+      .info-list,.mushroom-grid,.plug-grid,.energy-grid,.group-grid,.device-grid,.cover-grid,.comfort-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:9px}.energy-period{display:grid;gap:10px}.period-selector{display:flex;gap:7px;flex-wrap:wrap}.period-selector button{min-height:44px;padding:8px 13px;border:1px solid var(--divider-color);border-radius:999px;background:var(--room-surface);color:inherit}.period-selector button[aria-pressed=true]{border-color:var(--primary-color);background:var(--primary-color);color:var(--text-primary-color,#fff);font-weight:700}.energy-card{display:grid;gap:4px}.energy-comparison{display:grid;gap:9px;margin:0;padding:12px;border:1px solid var(--divider-color);border-radius:12px;background:var(--room-surface)}.energy-comparison figcaption{font-weight:700}.energy-bars{display:grid;gap:8px}.energy-bar-row{display:grid;grid-template-columns:minmax(90px,.7fr) minmax(100px,1.4fr) auto;gap:8px;align-items:center}.energy-bar-track{height:12px;border-radius:999px;background:var(--secondary-background-color);overflow:hidden}.energy-bar{display:block;width:var(--energy-share);height:100%;border-radius:inherit;background:var(--primary-color)}.energy-bar-value{font-variant-numeric:tabular-nums}.stat-chart{display:grid;gap:9px;margin:0;padding:12px;border:1px solid var(--divider-color);border-radius:12px;background:var(--room-surface)}.stat-chart figcaption{font-weight:700}.stat-chart-scale{display:flex;flex-direction:column;justify-content:space-between;height:140px;color:var(--secondary-text-color);font-size:.74rem;font-variant-numeric:tabular-nums;text-align:right}.stat-chart-bars{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(26px,1fr);gap:7px;align-items:end;height:140px;padding-bottom:18px;border-bottom:1px solid var(--divider-color)}.stat-chart-column{position:relative;height:100%;display:flex;flex-direction:column;justify-content:flex-end}.stat-chart-stack{display:flex;flex-direction:column-reverse;min-height:2px;border-radius:5px 5px 2px 2px;overflow:hidden}.stat-chart-segment{display:block;width:100%;min-height:2px;height:var(--stat-height);background:var(--stat-color)}.stat-chart-segment-missing{background:repeating-linear-gradient(135deg,var(--stat-color) 0 3px,transparent 3px 6px);opacity:.55}.stat-chart-label{position:absolute;left:0;right:0;bottom:-18px;color:var(--secondary-text-color);font-size:.68rem;text-align:center}.stat-chart-legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}.stat-chart-legend-item{display:inline-flex;align-items:center;gap:5px;color:var(--secondary-text-color);font-size:.74rem}.stat-chart-legend-dot{width:8px;height:8px;border-radius:3px;background:var(--stat-color)}.energy-ranking{display:grid;gap:9px;margin:0;padding:12px;border:1px solid var(--divider-color);border-radius:12px;background:var(--room-surface)}.energy-ranking figcaption{font-weight:700}.action-feedback{margin:0;padding:10px 12px;border:1px solid var(--divider-color);border-radius:12px;background:var(--room-surface)}.action-feedback.pending{border-color:var(--primary-color)}.action-feedback.success{border-color:var(--success-color,#2e7d32)}.action-feedback.error{border-color:var(--error-color,#b3261e)}
       .info,.state-badge,.mushroom-card,.command,.plug-lock{background:var(--room-surface);color:var(--primary-text-color);border:1px solid var(--divider-color);border-radius:12px;padding:10px;font:inherit;overflow-wrap:anywhere}.info,.state-badge,.mushroom-card{text-align:left}.warning{border-color:var(--error-color,#b3261e)}.unavailable{opacity:.72}
       button{cursor:pointer;min-height:44px;min-width:44px}button:disabled{cursor:default;opacity:.48;background:var(--secondary-background-color)}button:focus-visible{outline:2px solid var(--primary-color);outline-offset:2px}.mushroom-card{display:grid;grid-template-columns:40px minmax(0,1fr);gap:10px;align-items:center;min-height:76px;padding:12px;border-radius:16px}.light-card.active,.light-group-card.active{border-color:var(--primary-color);background:color-mix(in srgb,var(--primary-color) 10%,var(--room-surface))}.light-group-card.mixed{border-color:color-mix(in srgb,var(--primary-color) 45%,var(--divider-color));background:color-mix(in srgb,var(--primary-color) 5%,var(--room-surface))}.mushroom-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--secondary-background-color);color:var(--primary-color)}.mushroom-copy{display:grid;gap:2px}small{color:var(--secondary-text-color)}.commands{grid-column:1/-1}.smart-plug-card{grid-template-columns:minmax(0,1fr)}.smart-plug-card.active{border-color:var(--primary-color)}.plug-lock{color:var(--primary-color);font-weight:700}
-      .room-photo{width:110px;min-height:96px;border-radius:16px;background:linear-gradient(135deg,#ffffff33,transparent),var(--hd-hero);background-size:cover;background-position:center;flex:none;display:grid;place-items:center;gap:4px;padding:8px;box-sizing:border-box;text-align:center}.room-photo ha-icon{width:32px;height:32px;opacity:.85}.room-photo-caption{font-size:.68rem;opacity:.85}.embedded-card{min-height:120px}.embedded-card:empty::before{content:"Kaart wordt geladen…"}.stat-svg{width:100%;height:56px;display:block}.stat-bar{fill:var(--primary-color)}.stat-bar-missing{fill:var(--secondary-background-color)}.stat-line{fill:none;stroke:var(--primary-color);stroke-width:2}.stat-line-alt{fill:none;stroke:var(--error-color,#b3261e);stroke-width:2}
+      .room-photo{width:110px;min-height:96px;border-radius:16px;background:linear-gradient(135deg,#ffffff33,transparent),var(--hd-hero);background-size:cover;background-position:center;flex:none;display:grid;place-items:center;gap:4px;padding:8px;box-sizing:border-box;text-align:center}.room-photo ha-icon{width:32px;height:32px;opacity:.85}.room-photo-caption{font-size:.68rem;opacity:.85}.embedded-card{min-height:120px}.embedded-card:empty::before{content:"Kaart wordt geladen…"}.stat-svg{width:100%;height:56px;display:block}.stat-line{fill:none;stroke:var(--primary-color);stroke-width:2}.stat-line-alt{fill:none;stroke:var(--error-color,#b3261e);stroke-width:2}
       .hero-pills{display:flex;flex-wrap:wrap;gap:8px}.hero-pill{padding:4px 10px;border-radius:999px;background:#ffffff26;font-size:.78rem;font-weight:600}
       .deck-title{display:grid;gap:2px}
       .stage-head{align-items:flex-start}

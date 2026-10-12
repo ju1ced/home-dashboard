@@ -62,7 +62,13 @@ const errors = [];
 // optellen (met entity-ID-dedup) wanneer er geen losse room_energy-periodesensor is
 // geconfigureerd -- een genuine, voorheen ontbrekende aggregatie die niet zonder
 // leesbaarheidsverlies in de bestaande marge paste. Gemeten kandidaat: 215.187 bytes.
-const maxBundleBytes = 216_000;
+// 216_000 -> 222_000 (D-075, HD-219): de losse per-apparaat-sparklines in "Verbruik per
+// periode" zijn vervangen door één echte gecombineerde, gestapelde staafdiagram (met
+// as-schaal, periodelabels en kleurenlegende) plus een nieuwe "Grootste verbruikers"-
+// ranglijst -- een genuine visuele uitbreiding, geen marginale toevoeging. De verwijderde
+// statisticBarsSvg()/.stat-bar-CSS leverden een deel van de ruimte terug. Gemeten
+// kandidaat: 220.061 bytes.
+const maxBundleBytes = 222_000;
 // De editor is alleen nodig voor wie de visuele configuratie-UI opent: geen
 // runtime-performancepad, dus een ruimer budget. Gemeten op 93.887 bytes na de
 // split; dit is puur een plafond om een ongemerkte opblazing te signaleren.
