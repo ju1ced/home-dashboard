@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { migrateConfig, favoriteRooms, roomControlSources, planRoomControl, planEntityControl, executeRoomControl, validateConfig, validateConfigSchema, getHomeStructureSignature, resolveLightGroupState, extractStatisticSeries, filterRoomLogbookEvents, temperatureHumidityEntities } from '../dist/home-dashboard.js';
+import { migrateConfig, favoriteRooms, roomControlSources, planRoomControl, planEntityControl, executeRoomControl, validateConfig, validateConfigSchema, getHomeStructureSignature, resolveLightGroupState, extractStatisticSeries, combineStatisticBuckets, statisticsBucketLabel, rankEnergySources, filterRoomLogbookEvents, temperatureHumidityEntities } from '../dist/home-dashboard.js';
 
 const ref = (domain, key) => [domain, key].join('.');
 function setup() {
@@ -235,4 +235,45 @@ test('HD-205: extractStatisticSeries onderscheidt afwezige langetermijnstatistie
   assert.deepEqual(extractStatisticSeries(response, withStats), [
     { start: 0, value: 1.5 }, { start: 1, value: 0 }, { start: 2, value: undefined }
   ]);
+});
+
+test('HD-219: combineStatisticBuckets lijnt bronnen uit op hun echte bucket-start, nooit op array-index', () => {
+  // Source A has buckets 0 and 1; source B has buckets 1 and 2 (A misses 2, B misses 0) -- a naive
+  // index-based alignment would silently pair A's bucket-1 value with B's bucket-2 slot.
+  const a = [{ start: 0, value: 1 }, { start: 1, value: 2 }];
+  const b = [{ start: 1, value: 10 }, { start: 2, value: 20 }];
+  const { columns, missing } = combineStatisticBuckets([a, b]);
+  assert.deepEqual(columns, [
+    { start: 0, values: [1, undefined] },
+    { start: 1, values: [2, 10] },
+    { start: 2, values: [undefined, 20] }
+  ]);
+  assert.deepEqual(missing, [false, false]);
+});
+
+test('HD-219: combineStatisticBuckets markeert alleen een bron zonder enige langetermijnstatistiek als missing', () => {
+  const withData = [{ start: 0, value: 5 }];
+  const { columns, missing } = combineStatisticBuckets([withData, undefined]);
+  assert.deepEqual(columns, [{ start: 0, values: [5, undefined] }]);
+  assert.deepEqual(missing, [false, true]);
+});
+
+test('HD-219: statisticsBucketLabel leidt het label af uit de echte buckettijdstempel, nooit uit een vaste lijst', () => {
+  const monday = Date.UTC(2026, 9, 12); // 12 oktober 2026 is een maandag
+  assert.equal(statisticsBucketLabel('day', monday), new Date(monday).toLocaleDateString('nl-BE', { weekday: 'short' }));
+  assert.equal(statisticsBucketLabel('month', monday), new Date(monday).toLocaleDateString('nl-BE', { month: 'short' }));
+  assert.equal(statisticsBucketLabel('year', monday), new Date(monday).toLocaleDateString('nl-BE', { year: 'numeric' }));
+});
+
+test('HD-219: rankEnergySources rangschikt aflopend met een percentage t.o.v. de gerangschikte bronnen zelf', () => {
+  const ranked = rankEnergySources([{ name: 'Koelkast', value: 3 }, { name: 'Oven', value: 1 }, { name: 'Vaatwasser', value: 6 }]);
+  assert.deepEqual(ranked.map((entry) => entry.name), ['Vaatwasser', 'Koelkast', 'Oven']);
+  assert.equal(ranked[0].share, 0.6);
+  assert.equal(ranked[1].share, 0.3);
+  assert.ok(Math.abs(ranked.reduce((sum, entry) => sum + entry.share, 0) - 1) < 1e-9);
+});
+
+test('HD-219: rankEnergySources geeft nooit NaN terug wanneer alle waarden nul zijn', () => {
+  const ranked = rankEnergySources([{ name: 'A', value: 0 }, { name: 'B', value: 0 }]);
+  assert.ok(ranked.every((entry) => entry.share === 0));
 });

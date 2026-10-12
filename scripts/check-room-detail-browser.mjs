@@ -244,6 +244,35 @@ for (const variant of ["normal", "dark", "warning", "missing", "unknown", "unava
       assert.match(periodFallbackYearText, /40 kWh/, `${label}: "Jaar" dedupes the two plugs sharing one year entity (40, not 80)`);
       assert.doesNotMatch(periodFallbackYearText, /80 kWh/, `${label}: the shared year entity must never be double-counted`);
 
+      // HD-219: multi-bucket statistics for the same period_fallback_mixed fixture, with one bucket where
+      // plug B has no data at all. Proves the combined stacked chart aligns real bucket timestamps (never
+      // array index) and renders a visibly distinct "missing" segment for that bucket instead of silently
+      // showing an incomplete stack as complete -- and that "Grootste verbruikers" ranks both sources
+      // descending by their current-period value.
+      await page.evaluate(() => {
+        const { hass } = window.roomFixture;
+        hass.connection.sendMessagePromise = async (message) => {
+          if (message.type === "recorder/statistics_during_period") {
+            const result = {};
+            for (const id of message.statistic_ids) {
+              if (id.includes("period_fallback_a_month")) result[id] = [{ start: 0, sum: 3 }, { start: 86_400_000, sum: 1 }];
+              if (id.includes("period_fallback_b_month")) result[id] = [{ start: 0, sum: 5 }];
+            }
+            return result;
+          }
+          throw new Error("HD-219 test: unexpected ws call");
+        };
+        document.querySelector("home-dashboard-room-detail").hass = { ...hass };
+        document.querySelector("home-dashboard-room-detail").shadowRoot.querySelector('[data-control-key="energy-period:month"]').click();
+      });
+      await page.waitForFunction(() => document.querySelector("home-dashboard-room-detail")?.shadowRoot?.querySelector(".stat-chart"));
+      assert.equal(await page.locator(".stat-chart-column").count(), 2, `${label}: the combined chart renders one column per real statistics bucket, aligned by timestamp`);
+      assert.ok(await page.locator(".stat-chart-segment-missing").count() >= 1, `${label}: a bucket where one source has no data shows a visibly distinct missing segment, never a silently complete stack`);
+      assert.equal(await page.locator(".stat-chart-legend-item").count(), 2, `${label}: the legend lists both smart-plug sources`);
+      assert.equal(await page.locator(".energy-ranking .energy-bar-row").count(), 2, `${label}: Grootste verbruikers ranks both smart-plug sources for the active period`);
+      const rankingText = await page.locator(".energy-ranking").textContent();
+      assert.match(rankingText, /Terugvalplug B[\s\S]*Terugvalplug A/, `${label}: Grootste verbruikers ranks descending (plug B's 5 kWh month value above plug A's 3 kWh)`);
+
       // HD-212: mountCard()'s fallback catch-path (shared by the LINAK desk card and history-graph)
       // was never actually exercised by any test -- only the card_config pass-through was checked
       // (tests/room-cards-source.test.mjs). Simulate both real failure modes: loadCardHelpers()
