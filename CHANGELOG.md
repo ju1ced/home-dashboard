@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.1 — 2026-10-12
+
+Twee tickets sinds `v0.8.0`.
+
+- **Fix: de kamertotaalkaart ("Verbruik") toonde "Niet geconfigureerd" voor dag-/maand-/jaartotalen zodra er geen losse `room_energy`-periodesensor was geconfigureerd — ook wanneer alle smart plugs in de kamer hun eigen, correct resolvende periodesensor al hadden (HD-208, D-074).** Gemeld door de eigenaar via een live-screenshot van Keuken: 7 actieve, correct resolvende smart-plug-periodesensoren, maar de kamertotaalkaart bleef "Niet geconfigureerd" tonen. De kamertotaalkaart telt nu de smart-plug-periodesensoren samen (met deduplicatie per entity-ID, zodat een gedeelde sensor niet dubbel telt) wanneer er geen losse kamerbrede periodesensor is. `power_entities` blijft bewust buiten elke dag-/maand-/jaarberekening.
+- **Nieuw: de kamereditor zoekt dag-/maand-/jaar-periodesensoren automatisch op bij een smart plug (HD-217).** Voorheen moesten de drie periodesensoren (`energy_day_entity`/`energy_month_entity`/`energy_year_entity`) altijd apart, handmatig ingevuld worden via losse entity-selectors. Wanneer de browser Home Assistant's `callWS`-contract aanbiedt, stelt de editor nu automatisch de bijpassende `utility_meter`-helper per periode voor (gekoppeld via diens eigen `source`-veld) — altijd als een te bevestigen voorstel, nooit stil overgenomen. Zonder `callWS` (oudere embedding) werkt de editor exact zoals voorheen, geen regressie.
+- Hoofdbundelbudget 215 kB → 216 kB (gemeten 215.187 bytes) voor HD-208's terugvalsom.
+- Zie [D-074](docs/design/decision-log.md) voor HD-208's volledige analyse. [Testchecklist en rollback](docs/releases/testing-v0.8.1.md).
+
 ## 0.8.0 — 2026-10-07
 
 Zelfde inhoud als `0.8.0-alpha.30` — geen functionele wijziging. Dit is een releaseproces-/versioneringswijziging: vanaf nu dragen releasetags geen `-alpha.N`-achtervoegsel meer.
