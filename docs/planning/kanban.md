@@ -10,6 +10,7 @@ De kolom **Volgorde** vertaalt afhankelijkheden naar de aanbevolen uitvoering: f
 |---|---|---|---|---|
 | [HD-112 Runtimebevindingen oplossen](tickets.md#hd-112--runtimebevindingen-oplossen) | P1 | Runtimeacceptatie | 1d · Voorwaardelijk | Live gevonden bevindingen oplossen in kleine, geïsoleerde regressieslices |
 | [HD-192 v1-documentatie en release readiness afronden](tickets.md#hd-192--v1-documentatie-en-release-readiness-afronden) | P1 | Release engineering | 6c | Documentatie laten overeenkomen met de werkelijk bewezen v1-scope |
+| [HD-219 Verbruik-tab: gecombineerde dag-/maand-/jaargrafiek + Grootste verbruikers-ranglijst](tickets.md#hd-219--verbruik-tab-één-gecombineerde-dag-maand-jaargrafiek-en-een-grootste-verbruikers-ranglijst) | P1 | Kamers | L | Eigenaar vergeleek live Keuken met ontwerpstudie-artifact: huidige per-apparaat-sparklines missen as/legende/dagnamen, geen ranglijst bestaat |
 
 
 ## In uitvoering

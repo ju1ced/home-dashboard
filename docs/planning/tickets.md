@@ -1609,3 +1609,45 @@ Tijdens een live MCP-sessie (niet via de editor, via de Home Assistant MCP-tool 
 **Validatie**
 
 `pnpm test`, `pnpm run test:browser`, `git diff --check`, bundle-sizecheck. Live Home Assistant-bevestiging van de exacte `callWS`-commandovorm blijft, zoals elke nieuwe HA-frontend-aanname in dit project, een afzonderlijke menselijke testsessie vóór release.
+
+---
+
+### HD-219 — Verbruik-tab: één gecombineerde dag-/maand-/jaargrafiek en een "Grootste verbruikers"-ranglijst
+
+- **Epic:** Kamers
+- **Status:** Backlog
+- **Prioriteit:** P1
+- **Omvang:** L
+- **Eigenaar:** Rooms-agent
+- **Afhankelijkheden:** HD-208 (gemerged, `v0.8.1`) — bouwt voort op de nu al correct samengevoegde dag-/maand-/jaartotalen
+
+**Doel**
+
+De eigenaar vergeleek de live Keuken-pagina met een eerdere Control-Deck-ontwerpstudie (artifact `FnV91MaTVuLRHfeuCkYL3d`, gebouwd 24 september 2026) en concludeerde: "we zijn nog ver van de gedroomde layout". Twee concrete, structurele gaten uit die vergelijking oplossen: (1) de "Verbruik per dag"-sectie toont vandaag zes losse, ongelabelde per-apparaat SVG-sparklines in plaats van één gecombineerde, gelabelde staafdiagram met dag-as en legende; (2) er bestaat geen "Grootste verbruikers"-ranglijst die apparaten op verbruik rangschikt.
+
+**Achtergrond**
+
+Live vergelijking tussen de ontwerpstudie en de huidige implementatie (`energyStatisticsChart()`, `src/cards/home-dashboard-room-cards.ts:782`) toont: de huidige sectie rendert per smart-plug-bron een eigen, kleine `statisticBarsSvg()`-grafiek (16px per staaf, geen as, geen legende, geen dagnamen) — functioneel correct maar visueel en informatief ver onder de ontwerpstudie. Die ontwerpstudie's `energySeries()`/`chartSegments()`-functies (fictief testharnas, geen productiecode) tonen het gewenste eindbeeld: één combinatie-staafdiagram per periode (dag/week-totaal per dag, maand-totaal per week, jaar-totaal per maand) met een gestapelde kleurverdeling per apparaat, een as-schaal links, dagnamen onder elke staaf, en een kleurenlegende onderaan — plus een aparte "Grootste verbruikers"-kaart die de top-5 apparaten op maandverbruik rangschikt met percentage-van-totaal en een gekleurde balk.
+
+**Belangrijke makelbeperking — niet zomaar overnemen:** de ontwerpstudie's `chartSegments(room, value, dayIndex)` (regel 719 van het artifact) **fabriceert** de per-apparaat-aandelen binnen elke dagstaaf met een willekeurige formule (`Math.max(.04,(p.day + ((dayIndex+i)%3)*.07))`) — er bestaat geen echte historische per-apparaat-per-dag-opsplitsing achter die mockup. Dat botst rechtstreeks met D-058 punt 5 ("nooit een gefabriceerde grafiek voor ontbrekende/lege/ladende data"), een principe dat dit project tot nu toe overal heeft aangehouden (zie `energyStatisticsChart()`'s eigen documentatiecommentaar op dezelfde regel). De echte implementatie moet de gestapelde per-apparaat-waarden per dag/week/maand afleiden uit de al bestaande, echte `statisticsCache`/`extractStatisticSeries()`-infrastructuur (al gebruikt voor de huidige per-apparaat-sparklines) — nooit uit een fictieve verdeelformule.
+
+**Scope**
+
+1. **Gecombineerde staafdiagram, per periode (dag/maand/jaar):** vervang `energyStatisticsChart()`'s huidige "één grafiekje per bron"-rendering door één `bar-chart`-achtige component die per tijdseenheid (dag voor "Vandaag", week voor "Maand", maand voor "Jaar" — exacte periode-indeling te bevestigen tegen wat de bestaande `loadStatistics()`-aanroep al teruggeeft) een gestapelde staaf toont, opgebouwd uit de werkelijke per-apparaat-statistiekreeksen. Een bron zonder data voor een bepaalde periode-eenheid draagt 0 bij aan die staaf, nooit een gefabriceerde waarde (consistent met bestaand D-058-gedrag).
+2. **As-schaal en dag-/periodelabels:** een verticale schaal (max/midden/0) en horizontale labels per staaf (dagnamen voor "Vandaag", weeknummers of -bereiken voor "Maand", maandafkortingen voor "Jaar").
+3. **Kleurenlegende:** één kleur per apparaatbron, geprojecteerd op zowel de gestapelde staven als een legende-rij onderaan — herbruikbare kleurentoken, geen HA-themakleur-afhankelijkheid (zelfde beperking als HD-208's stylingpas).
+4. **"Grootste verbruikers"-ranglijst (nieuwe kaart):** een losse kaart naast of onder de grafiek die de geconfigureerde apparaatbronnen (smart_plugs + eventueel room_energy, zelfde brondefinitie als HD-208's `plugPeriodTotal()`) aflopend op verbruik voor de actieve periode rangschikt, met per rij: naam, percentage van het bekende totaal (som van de gerangschikte bronnen, niet een fictief woningtotaal — zelfde "niet optellen tot een woningtotaal"-voorbehoud als de bestaande Apparaatvergelijking-sectie), absolute waarde, en een proportionele balk.
+5. **Apparaatvergelijking-labels verifiëren:** de bestaande `energyPeriodGroup()`'s vergelijkingsbalkjes (regel ~1312) zetten `entry.name` al als zichtbaar label — bij de live screenshotvergelijking leek dat label afwezig of onleesbaar. Vóór nieuwe code: bevestigen of dit een echt renderprobleem is (bv. CSS-breedte/overflow/kleur) of enkel een leesbaarheidsprobleem op lage schermresolutie, en zo nodig apart repareren (los van punt 1–4, kan als quick-fix vooraf).
+6. **Visuele afwerking:** kaartomkadering/spacing van de nieuwe grafiek- en ranglijstkaart consistent met de bestaande `.energy-comparison`/`.energy-card`-stijl (geen nieuwe, afwijkende designtaal binnen dezelfde pagina).
+
+**Acceptatiecriteria**
+
+- De "Verbruik per dag/maand/jaar"-sectie toont één gecombineerde, gestapelde staafdiagram met as-schaal, periodelabels en kleurenlegende — geen losse per-apparaat-sparklines meer als enige weergave (een per-apparaat-detailweergave mag blijven bestaan als aanvulling, niet als vervanging van de combinatiegrafiek, naar inzicht van de implementatie).
+- Geen enkele gestapelde waarde is ooit gefabriceerd: elke staafsegment-hoogte komt rechtstreeks van een echte statistiekwaarde voor die bron en dat tijdvak; ontbrekende data voor één bron in één periode-eenheid blijft zichtbaar als "geen data" (bv. nulhoogte of gearceerd segment), nooit stilzwijgend weggelaten of geïnterpoleerd.
+- "Grootste verbruikers" rangschikt correct aflopend, toont een eerlijk percentage (nooit opgeteld tot een fictief woningtotaal), en bevat geen bron zonder geldige waarde voor de actieve periode.
+- Normal/warning/missing/unavailable blijven afgedekt in fixtures/tests; 390×844/tablet/1440 zonder overflow; 44×44 px-targets behouden waar van toepassing (periodeselectors, eventuele interactieve ranglijst-elementen).
+- Bundelbudget-check tegen het actuele budget (216 kB hoofdbundel, D-074) — eventuele verhoging expliciet beargumenteerd en gedocumenteerd, zoals bij elke eerdere bundelverhoging in dit project.
+
+**Validatie**
+
+`pnpm test`, `pnpm run test:browser`, `git diff --check`, bundlebudget-check, onafhankelijke review tegen de oorspronkelijke ontwerpstudie (artifact `FnV91MaTVuLRHfeuCkYL3d`) voor visuele gelijkenis zonder de gefabriceerde-datafout over te nemen.
