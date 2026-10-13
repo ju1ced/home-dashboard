@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { migrateConfig, favoriteRooms, roomControlSources, planRoomControl, planEntityControl, executeRoomControl, validateConfig, validateConfigSchema, getHomeStructureSignature, resolveLightGroupState, extractStatisticSeries, combineStatisticBuckets, statisticsBucketLabel, rankEnergySources, filterRoomLogbookEvents, temperatureHumidityEntities } from '../dist/home-dashboard.js';
+import { migrateConfig, favoriteRooms, roomControlSources, planRoomControl, planEntityControl, executeRoomControl, validateConfig, validateConfigSchema, getHomeStructureSignature, resolveLightGroupState, extractStatisticSeries, combineStatisticBuckets, deltaSeries, statisticsBucketLabel, rankEnergySources, filterRoomLogbookEvents, temperatureHumidityEntities } from '../dist/home-dashboard.js';
 
 const ref = (domain, key) => [domain, key].join('.');
 function setup() {
@@ -276,4 +276,27 @@ test('HD-219: rankEnergySources rangschikt aflopend met een percentage t.o.v. de
 test('HD-219: rankEnergySources geeft nooit NaN terug wanneer alle waarden nul zijn', () => {
   const ranked = rankEnergySources([{ name: 'A', value: 0 }, { name: 'B', value: 0 }]);
   assert.ok(ranked.every((entry) => entry.share === 0));
+});
+
+test('HD-220: deltaSeries zet een cumulatief lopend totaal (sum) om in een echt bedrag per bucket', () => {
+  // HA's recorder-sum is cumulatief, niet een waarde per bucket (live bevestigd: een 7-dagengrafiek
+  // toonde een schaal van ~565 kWh voor een kamer die ~1-2 kWh per dag verbruikt). Het eerste element
+  // heeft geen voorganger en wordt dus undefined, nooit een gefabriceerde waarde.
+  const cumulative = [{ start: 0, value: 10 }, { start: 1, value: 13 }, { start: 2, value: 13 }, { start: 3, value: 20 }];
+  assert.deepEqual(deltaSeries(cumulative), [
+    { start: 0, value: undefined },
+    { start: 1, value: 3 },
+    { start: 2, value: 0 },
+    { start: 3, value: 7 }
+  ]);
+});
+
+test('HD-220: deltaSeries geeft undefined terug zodra één van beide eindpunten ontbreekt, nooit een gefabriceerd verschil', () => {
+  const withGap = [{ start: 0, value: 10 }, { start: 1, value: undefined }, { start: 2, value: 15 }];
+  assert.deepEqual(deltaSeries(withGap), [
+    { start: 0, value: undefined },
+    { start: 1, value: undefined },
+    { start: 2, value: undefined }
+  ]);
+  assert.equal(deltaSeries(undefined), undefined);
 });

@@ -66,7 +66,8 @@ De kolom **Volgorde** vertaalt afhankelijkheden naar de aanbevolen uitvoering: f
 | [HD-181 Admin-dashboardgrens uitwerken](tickets.md#hd-181--admin-dashboardgrens-uitwerken) | P2 | Diagnostiek | PR #80 |
 | [HD-216 Kameneditor: lazy-mount, zoeken/filteren en smart-plug-koppelhulp](tickets.md#hd-216--kameneditor-lazy-mount-zoekenfilteren-en-smart-plug-koppelhulp) | P1 | Quality engineering | PR #81 · `v0.8.0-alpha.29` |
 | [HD-218 HACS-pin voor home-dashboard valt herhaaldelijk terug op main-tracking](tickets.md#hd-218--hacs-pin-voor-home-dashboard-valt-herhaaldelijk-terug-op-main-tracking) | P2 | Runtimeacceptatie | PR #87 · `v0.8.0` (kernoorzaak: prerelease-tags onzichtbaar voor HACS) |
-| [HD-219 Verbruik-tab: gecombineerde dag-/maand-/jaargrafiek + Grootste verbruikers-ranglijst](tickets.md#hd-219--verbruik-tab-één-gecombineerde-dag-maand-jaargrafiek-en-een-grootste-verbruikers-ranglijst) | P1 | Kamers | D-075 (geen release-PR nog) | Eigenaar vergeleek live Keuken met ontwerpstudie-artifact: gecombineerde gestapelde staafdiagram + Grootste verbruikers-ranglijst zonder gefabriceerde data |
+| [HD-219 Verbruik-tab: gecombineerde dag-/maand-/jaargrafiek + Grootste verbruikers-ranglijst](tickets.md#hd-219--verbruik-tab-één-gecombineerde-dag-maand-jaargrafiek-en-een-grootste-verbruikers-ranglijst) | P1 | Kamers | PR #92 · `v0.8.2` (D-075) |
+| [HD-220 Live verbruikspagina-bevindingen: cumulatieve-som-bug, lege labels, dubbele vergelijking, nutteloze sectie](tickets.md#hd-220--live-verbruikspagina-bevindingen-cumulatieve-som-bug-lege-labels-dubbele-vergelijking-nutteloze-sectie) | P0 | Kamers | D-076 (nog geen release-PR) |
 
 ## Geblokkeerd
 

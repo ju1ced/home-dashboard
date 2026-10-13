@@ -124,6 +124,13 @@ config.rooms.push(migrateConfig({rooms:[{key:'period_fallback_mixed',name:'Perio
   {key:'period_fallback_a',name:'Terugvalplug A',switch_entity:put('switch','period_fallback_a_switch','off',{friendly_name:'Terugvalplug A'}),power_entity:put('sensor','period_fallback_a_power','0',{unit_of_measurement:'W'}),energy_month_entity:put('sensor','period_fallback_a_month','3',{unit_of_measurement:'kWh'}),energy_year_entity:periodFallbackYearEntity},
   {key:'period_fallback_b',name:'Terugvalplug B',switch_entity:put('switch','period_fallback_b_switch','off',{friendly_name:'Terugvalplug B'}),power_entity:put('sensor','period_fallback_b_power','0',{unit_of_measurement:'W'}),energy_month_entity:put('sensor','period_fallback_b_month','5',{unit_of_measurement:'kWh'}),energy_year_entity:periodFallbackYearEntity}
 ]}]}).config.rooms[0]);
+// HD-220: a smart plug promoted via HD-216's pairing helper without ever typing a name -- name: '' is
+// schema-valid (no minLength constraint). Live-confirmed bug: every energy label (card title, source line,
+// comparison/ranking label) used plug.name raw and rendered blank. Proves the friendlyName(state, "Smart
+// plug")-style fallback now in place, matching smartPlugCard()'s own existing precedent.
+config.rooms.push(migrateConfig({rooms:[{key:'blank_plug_name',name:'Naamloos',area_id:'EXAMPLE_BLANK_PLUG_NAME',smart_plugs:[
+  {key:'blank_plug',name:'',switch_entity:put('switch','blank_plug_switch','off',{friendly_name:'Naamloze stekker'}),power_entity:put('sensor','blank_plug_power','0',{unit_of_measurement:'W'}),energy_day_entity:put('sensor','blank_plug_day','1.2',{friendly_name:'Naamloze stekker dag',unit_of_measurement:'kWh'})}
+]}]}).config.rooms[0]);
 // NOTE: 'hall' must stay the LAST room pushed -- scripts/check-room-detail-browser.mjs's open() helper reads
 // `fixture.config.rooms.at(-1).safety_entities` to source its safety sensor, so any new fixture room must be
 // inserted above this line, never below it.
