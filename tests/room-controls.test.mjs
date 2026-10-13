@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { migrateConfig, favoriteRooms, roomControlSources, planRoomControl, planEntityControl, executeRoomControl, validateConfig, validateConfigSchema, getHomeStructureSignature, resolveLightGroupState, extractStatisticSeries, combineStatisticBuckets, deltaSeries, statisticsBucketLabel, rankEnergySources, filterRoomLogbookEvents, temperatureHumidityEntities } from '../dist/home-dashboard.js';
+import { migrateConfig, favoriteRooms, roomControlSources, planRoomControl, planEntityControl, executeRoomControl, validateConfig, validateConfigSchema, getHomeStructureSignature, resolveLightGroupState, extractStatisticSeries, combineStatisticBuckets, deltaSeries, statisticsBucketLabel, statisticsWindowStart, rankEnergySources, filterRoomLogbookEvents, temperatureHumidityEntities } from '../dist/home-dashboard.js';
 
 const ref = (domain, key) => [domain, key].join('.');
 function setup() {
@@ -265,6 +265,27 @@ test('HD-219: statisticsBucketLabel leidt het label af uit de echte buckettijdst
   assert.equal(statisticsBucketLabel('year', monday), new Date(monday).toLocaleDateString('nl-BE', { year: 'numeric' }));
 });
 
+test('HD-221: statisticsWindowStart lijnt "dag" uit op de meest recente lokale maandag, min één dag als deltabasislijn', () => {
+  // 12 oktober 2026 is een maandag (zelfde kalenderfeit als de statisticsBucketLabel-test hierboven). De
+  // eigenaar meldde dat "Verbruik per dag" dinsdag-tot-dinsdag toonde i.p.v. een echte kalenderweek -- dit
+  // bewijst dat het venster voor élke dag van de week naar dezelfde week-maandag terugrekent, niet naar een
+  // rollend "N dagen geleden vanaf nu"-venster dat elke dag opschuift.
+  for (let offset = 0; offset < 7; offset++) {
+    const now = new Date(2026, 9, 12 + offset, 15, 0); // middag, veilig weg van middernachtgrenzen
+    const start = statisticsWindowStart('day', now);
+    assert.equal(start.getDay(), 0, `dag+${offset}: start moet een zondag zijn (de dag voor maandag, als deltabasislijn)`);
+    const monday = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1);
+    assert.equal(monday.getDay(), 1, `dag+${offset}: de dag na start moet een maandag zijn`);
+    assert.equal(monday.getDate(), 12, `dag+${offset}: moet steeds dezelfde week-maandag (12 oktober) teruggeven`);
+  }
+});
+
+test('HD-221: statisticsWindowStart laat maand/jaar ongewijzigd (spangebaseerd, geen kalenderuitlijning)', () => {
+  const now = new Date(2026, 9, 14, 12, 0);
+  assert.equal(statisticsWindowStart('month', now).getTime(), now.getTime() - 396 * 86_400_000);
+  assert.equal(statisticsWindowStart('year', now).getTime(), now.getTime() - 6 * 365 * 86_400_000);
+});
+
 test('HD-219: rankEnergySources rangschikt aflopend met een percentage t.o.v. de gerangschikte bronnen zelf', () => {
   const ranked = rankEnergySources([{ name: 'Koelkast', value: 3 }, { name: 'Oven', value: 1 }, { name: 'Vaatwasser', value: 6 }]);
   assert.deepEqual(ranked.map((entry) => entry.name), ['Vaatwasser', 'Koelkast', 'Oven']);
@@ -299,4 +320,11 @@ test('HD-220: deltaSeries geeft undefined terug zodra één van beide eindpunten
     { start: 2, value: undefined }
   ]);
   assert.equal(deltaSeries(undefined), undefined);
+});
+
+test('HD-221: deltaSeries laat een reeks met slechts één bucket ongewijzigd (geen vroegere waarde om van af te trekken)', () => {
+  // Live bevestigd: voor "jaar" bestaat er in een project van minder dan een jaar oud maar één buckets --
+  // die ene sum IS dan al het volledige verbruik sinds het begin van de meting, geen weg te gooien basislijn.
+  const single = [{ start: 0, value: 395.53 }];
+  assert.deepEqual(deltaSeries(single), single);
 });

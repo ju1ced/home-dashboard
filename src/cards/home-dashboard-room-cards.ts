@@ -136,22 +136,6 @@ function formatDateTime(date: Date): string {
   return `${date.toLocaleDateString("nl-BE")} ${date.toLocaleTimeString("nl-BE", { hour: "2-digit", minute: "2-digit" })}`;
 }
 
-function sourceContext(state: StateLike | undefined, fallback: string): string {
-  const source = friendlyName(state, fallback);
-  const updated = state?.last_updated ? new Date(state.last_updated) : undefined;
-  const ageMinutes = updated && Number.isFinite(updated.getTime()) ? Math.max(0, Math.floor((Date.now() - updated.getTime()) / 60_000)) : undefined;
-  const freshness = ageMinutes === undefined ? "versheid onbekend" : ageMinutes < 15 ? "recent" : ageMinutes < 1_440 ? `${Math.floor(ageMinutes / 60)} uur oud` : `${Math.floor(ageMinutes / 1_440)} dagen oud`;
-  const updateText = updated && Number.isFinite(updated.getTime())
-    ? `bijgewerkt ${formatDateTime(updated)} · ${freshness}`
-    : "update en versheid onbekend";
-  return `Bron: ${source} · ${updateText}`;
-}
-
-function periodContext(status: "running" | "completed" | undefined, label: string): string {
-  if (status === "running") return `Lopende ${label.toLowerCase()}`;
-  if (status === "completed") return `Afgesloten ${label.toLowerCase()}`;
-  return `Periodestatus voor ${label.toLowerCase()} niet gemapt`;
-}
 
 function energyKwh(state: StateLike | undefined): number | undefined {
   const value = Number(state?.state);
@@ -207,10 +191,24 @@ export function filterRoomLogbookEvents(entries: readonly LogbookEntryLike[], al
 }
 
 export type StatisticsPeriod = "day" | "month" | "year";
-// HD-220: each span fetches one extra leading bucket beyond what's actually displayed (8 days/13 months/6
-// years instead of 7/12/5), purely as a delta baseline for deltaSeries() -- the oldest combined column is
-// always dropped before rendering (see energyStatisticsChart()).
-const STATISTICS_PERIOD_SPAN: Record<StatisticsPeriod, number> = { day: 8 * 86_400_000, month: 396 * 86_400_000, year: 6 * 365 * 86_400_000 };
+// HD-220: month/year each fetch one extra leading bucket beyond what's actually displayed (13 months/6
+// years instead of 12/5), purely as a delta baseline for deltaSeries() -- the oldest combined column is
+// dropped before rendering when more than one is available (see energyStatisticsChart()). "day" is not
+// span-based at all -- see statisticsWindowStart() -- so it has no entry here.
+const STATISTICS_PERIOD_SPAN: Record<Exclude<StatisticsPeriod, "day">, number> = { month: 396 * 86_400_000, year: 6 * 365 * 86_400_000 };
+
+/** The statistics window's start time for the active period. HD-221: "day" is calendar-week-aligned to the
+ * most recent local Monday (the owner's own request: "Verbruik per dag" drifted day-to-day with a rolling
+ * lookback, e.g. showing Tuesday-to-Tuesday instead of a real week) rather than a fixed N-day lookback from
+ * "now" -- one extra leading day (the Sunday before) is included as deltaSeries()'s baseline bucket, same
+ * role STATISTICS_PERIOD_SPAN's extra bucket plays for month/year. Non-"day" periods are unchanged. */
+export function statisticsWindowStart(period: StatisticsPeriod, now: Date): Date {
+  if (period !== "day") return new Date(now.getTime() - STATISTICS_PERIOD_SPAN[period]);
+  const daysSinceMonday = (now.getDay() + 6) % 7; // getDay(): 0=Sun..6=Sat
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysSinceMonday);
+  monday.setDate(monday.getDate() - 1);
+  return monday;
+}
 
 export type StatisticBucket = { start: number; value: number | undefined };
 
@@ -236,9 +234,16 @@ export function extractStatisticSeries(response: unknown, statisticId: string): 
  * never a fabricated delta -- which is why callers fetch one extra leading bucket (see
  * `STATISTICS_PERIOD_SPAN`) and drop it after this conversion instead of displaying a guaranteed-empty
  * first column. A bucket is `undefined` whenever either it or its predecessor lacks a value, so a gap in
- * the underlying data never produces a fabricated or silently-wrong delta on either side of the gap. */
+ * the underlying data never produces a fabricated or silently-wrong delta on either side of the gap.
+ *
+ * HD-221: a series with only ONE bucket in HA's entire recorded history (common for "year" in a project
+ * under a year old -- live-confirmed: exactly one yearly bucket existed) is returned UNCHANGED instead of
+ * nulled out. There is no earlier reading anywhere to subtract, so that bucket's own sum already IS the
+ * complete total since the source started reporting -- treating it as a throwaway baseline would discard
+ * the only real data point a caller has. */
 export function deltaSeries(series: StatisticBucket[] | undefined): StatisticBucket[] | undefined {
   if (!series) return undefined;
+  if (series.length <= 1) return series;
   return series.map((bucket, index) => {
     if (index === 0) return { start: bucket.start, value: undefined };
     const previous = series[index - 1]!.value;
@@ -779,7 +784,7 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     if (!sources.length) return; // nothing mapped: never issue an empty recorder call
     const period = this.activeEnergyPeriod;
     const key = this.cacheKey(room, period, sources.map((source) => source.entity));
-    const start = new Date(Date.now() - STATISTICS_PERIOD_SPAN[period]).toISOString();
+    const start = statisticsWindowStart(period, new Date()).toISOString();
     this.loadWsResult(this.statisticsCache, this.statisticsInFlight, key, { type: "recorder/statistics_during_period", start_time: start, statistic_ids: sources.map((source) => source.entity), period, types: ["sum", "state"] });
   }
 
@@ -962,11 +967,16 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
         // HD-220: recorder statistics' "sum" is a running cumulative total, not a per-bucket amount
         // (confirmed live: a raw-sum chart showed a ~565 kWh scale for a room using ~1-2 kWh/day) --
         // deltaSeries() converts it to "how much in this bucket" before charting. Its first bucket is
-        // always undefined (no prior baseline), which is exactly why STATISTICS_PERIOD_SPAN fetches one
-        // extra leading bucket: it is dropped below so every DISPLAYED column has a real delta.
+        // normally undefined (no prior baseline), which is exactly why STATISTICS_PERIOD_SPAN fetches one
+        // extra leading bucket: it gets dropped below so every DISPLAYED column has a real delta.
+        // HD-221: that drop is only safe when there is MORE than one combined column -- a room whose
+        // longest-running source has only ever recorded a single bucket (live-confirmed for "year" in a
+        // project under a year old: exactly one yearly bucket existed) would otherwise lose its only real
+        // data point and show "no chart" even though deltaSeries() already kept that bucket's own value
+        // (see its length<=1 case above).
         const perSourceSeries = chartSources.map(({ entity }) => deltaSeries(extractStatisticSeries(response, entity)));
         const combined = combineStatisticBuckets(perSourceSeries);
-        const columns = combined.columns.slice(1);
+        const columns = combined.columns.length > 1 ? combined.columns.slice(1) : combined.columns;
         wrapper.append(columns.length
           ? this.statisticsBarChart(chartSources, columns, combined.missing, period, periodLabel)
           : element("p", "info unavailable", perSourceSeries.every((series) => series === undefined) ? "Geen langetermijnstatistiek voor deze bronnen." : `Geen data voor deze ${periodLabel}periode.`));
@@ -1348,6 +1358,17 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     return values.length ? values.reduce((sum, value) => sum + value, 0) : undefined;
   }
 
+  /** A period total preferring the room's own authoritative `room_energy.*_entity` (e.g. a circuit meter
+   * that may include non-plug devices too, same "authoritative, not additive" assumption as
+   * `roomCurrentWatts()`) and falling back to the summed smart-plug total only when absent -- the same
+   * fallback `energyPeriodGroup()`'s now-removed room-total card used to apply per period. */
+  private roomPeriodTotal(room: RoomConfig, period: "day" | "month" | "year"): number | undefined {
+    const roomEntity = period === "day" ? room.room_energy?.day_entity : period === "month" ? room.room_energy?.month_entity : room.room_energy?.year_entity;
+    if (roomEntity) return energyKwh(this.currentHass?.states?.[roomEntity]);
+    const plugKey = period === "day" ? "energy_day_entity" : period === "month" ? "energy_month_entity" : "energy_year_entity";
+    return this.plugPeriodTotal(room.smart_plugs ?? [], plugKey);
+  }
+
   /** A short "today" total for the rail: the room's own day source, else (only when no room-level source is configured
    * at all) the plugs' combined day total. When a room-level source IS configured but is currently unavailable, the
    * line is omitted rather than silently swapped for a different, smaller, unlabeled partial total. */
@@ -1380,20 +1401,20 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     return stage;
   }
 
-  /** HD-220: one at-a-glance strip combining every smart plug's now/day/month/year(-to-date) totals, shown
+  /** HD-220: one at-a-glance strip combining the room's now/day/month/year(-to-date) totals, shown
    * regardless of the active period tab -- the owner's own request after comparing against the design
    * study ("ik mis het overzicht met nu, lopende dag, lopende maand en... van alle gecombineerde smart
-   * plugs"). Reuses `roomCurrentWatts()`/`plugPeriodTotal()` so these numbers never disagree with the rail,
-   * the Smart plugs tab or the room-total card below. The "year" figure is the room's calendar-year-to-date
+   * plugs"). Reuses `roomCurrentWatts()`/`roomPeriodTotal()` so these numbers never disagree with the rail
+   * or the Smart plugs tab, and prefer the room's own authoritative `room_energy.*_entity` the same way
+   * `roomCurrentWatts()` does for "nu" (HD-221: a first version summed smart plugs unconditionally, silently
+   * ignoring a configured room-level meter). The "year" figure is the room's calendar-year-to-date
    * utility_meter total (`energy_year_entity`), not a rolling trailing-12-months window -- this project has
    * no rolling-window statistic to report honestly, so it is labelled "dit jaar", never "laatste 12 maand". */
   private energySummaryStrip(room: RoomConfig): HTMLElement | undefined {
-    const plugs = room.smart_plugs ?? [];
-    if (!plugs.length) return undefined;
     const nowWatts = this.roomCurrentWatts(room);
-    const dayTotal = this.plugPeriodTotal(plugs, "energy_day_entity");
-    const monthTotal = this.plugPeriodTotal(plugs, "energy_month_entity");
-    const yearTotal = this.plugPeriodTotal(plugs, "energy_year_entity");
+    const dayTotal = this.roomPeriodTotal(room, "day");
+    const monthTotal = this.roomPeriodTotal(room, "month");
+    const yearTotal = this.roomPeriodTotal(room, "year");
     if (nowWatts === undefined && dayTotal === undefined && monthTotal === undefined && yearTotal === undefined) return undefined;
     const summary = element("div", "summary-strip");
     const metric = (value: string, label: string): HTMLElement => { const item = element("div", "summary-metric"); item.append(element("strong", "", value), element("span", "", label)); return item; };
@@ -1448,70 +1469,19 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     card.append(lock, confirm); return card;
   }
 
+  /** HD-221: the owner asked for the "Keuken totaal" room-total card and the per-device cards that used to
+   * live here to be removed entirely -- `energySummaryStrip()` (now/day/month/year, period-tab-independent)
+   * and "Grootste verbruikers" (`energyStatisticsChart()`) already cover this information with less
+   * redundancy. All that remains here is the period selector itself: both `energyStatisticsChart()` and the
+   * legacy "Energie" details panel still depend on it to pick which period is active. */
   private energyPeriodGroup(room: RoomConfig): HTMLElement | undefined {
-    const currentWatts = this.roomCurrentWatts(room);
-    // A power_entities-sourced reading (whether alone or combined with smart_plugs) justifies showing the
-    // room-total card; a plugs-only room's current wattage is already surfaced on the Smart plugs tab, so
-    // plugs alone never justify this card on their own.
     const hasPowerEntitiesReading = !room.room_energy?.power_entity && this.hasExtraPowerReading(room);
     const configured = Boolean(room.room_energy && Object.values(room.room_energy).some(Boolean)) || (room.smart_plugs ?? []).some((plug) => plug.energy_day_entity || plug.energy_month_entity || plug.energy_year_entity) || hasPowerEntitiesReading;
     if (!configured) return undefined;
     const wrapper = element("div", "energy-period energy-period-card");
     const periods = [["day", "Vandaag"], ["month", "Maand"], ["year", "Jaar"]] as const;
-    const periodLabel = periods.find(([period]) => period === this.activeEnergyPeriod)?.[1] ?? "Periode";
     const selector = this.selectorGroup("Energieperiode", "energy-period", periods.map(([period, label]) => [period, label, this.activeEnergyPeriod === period, () => { this.activeEnergyPeriod = period; this.loadStatistics(room); this.render(true); }]));
-    const grid = element("div", "energy-grid");
-    const roomEntity = this.activeEnergyPeriod === "day" ? room.room_energy?.day_entity : this.activeEnergyPeriod === "month" ? room.room_energy?.month_entity : room.room_energy?.year_entity;
-    const roomPeriod = this.activeEnergyPeriod === "day" ? room.room_energy?.day_period : this.activeEnergyPeriod === "month" ? room.room_energy?.month_period : room.room_energy?.year_period;
-    // HD-208: when the room has no dedicated room_energy.*_entity for the active period, fall back to summing
-    // every smart plug's matching period entity -- never power_entities, which has no real period total to
-    // report (fabricating one from a bare current-wattage reading would misrepresent a day/month/year figure).
-    const plugPeriodKey = this.activeEnergyPeriod === "day" ? "energy_day_entity" : this.activeEnergyPeriod === "month" ? "energy_month_entity" : "energy_year_entity";
-    const plugPeriodDigits = this.activeEnergyPeriod === "day" ? 2 : this.activeEnergyPeriod === "month" ? 1 : 0;
-    const plugPeriodFallback = roomEntity ? undefined : this.plugPeriodTotal(room.smart_plugs ?? [], plugPeriodKey);
-    if (room.room_energy?.power_entity || roomEntity || hasPowerEntitiesReading || plugPeriodFallback !== undefined) {
-      const card = element("article", "info energy-card");
-      const roomState = roomEntity ? this.currentHass?.states?.[roomEntity] : undefined;
-      const currentText = room.room_energy?.power_entity
-        ? stateText(this.currentHass?.states?.[room.room_energy.power_entity])
-        : hasPowerEntitiesReading && currentWatts !== undefined ? `${Math.round(currentWatts)} W` : "";
-      const periodText = roomEntity
-        ? stateText(roomState)
-        : plugPeriodFallback !== undefined ? `${plugPeriodFallback.toFixed(plugPeriodDigits).replace(".", ",")} kWh` : "Niet geconfigureerd";
-      const periodSource = roomEntity
-        ? sourceContext(roomState, `${room.name} energie`)
-        : plugPeriodFallback !== undefined ? "Bron: samengevoegd uit smart plugs" : "Bron: niet geconfigureerd";
-      card.append(
-        element("strong", "", `${room.name} totaal`),
-        element("small", "", [currentText, periodText].filter(Boolean).join(" · ")),
-        element("small", "energy-period-context", periodContext(roomPeriod, periodLabel)),
-        element("small", "energy-source-context", periodSource)
-      );
-      grid.append(card);
-    }
-    // HD-220: the Apparaatvergelijking comparison that used to live here is gone -- it duplicated
-    // "Grootste verbruikers" (HD-219, energyStatisticsChart()) with less information (no sort, no
-    // percentage) and the owner asked for only one of the two to remain active.
-    (room.smart_plugs ?? []).forEach((plug) => {
-      const entity = this.activeEnergyPeriod === "day" ? plug.energy_day_entity : this.activeEnergyPeriod === "month" ? plug.energy_month_entity : plug.energy_year_entity;
-      const plugPeriod = this.activeEnergyPeriod === "day" ? plug.energy_day_period : this.activeEnergyPeriod === "month" ? plug.energy_month_period : plug.energy_year_period;
-      if (!entity) return;
-      const state = this.currentHass?.states?.[entity];
-      // HD-220: a blank plug.name (e.g. a smart plug promoted via HD-216's pairing helper without ever
-      // typing a name) must not produce a blank card title or source line -- same fallback already used
-      // by smartPlugCard()'s own title. The switch entity (not the period entity) gives a stable name
-      // that never changes depending on which period tab is active.
-      const plugName = plug.name || friendlyName(this.currentHass?.states?.[plug.switch_entity], "Smart plug");
-      const card = element("article", "info energy-card");
-      card.append(
-        element("strong", "", plugName),
-        element("small", "", stateText(state)),
-        element("small", "energy-period-context", periodContext(plugPeriod, periodLabel)),
-        element("small", "energy-source-context", sourceContext(state, `${plugName} energie`))
-      );
-      grid.append(card);
-    });
-    wrapper.append(selector, grid.childElementCount ? grid : element("p", "info unavailable", "Geen bron voor deze periode geconfigureerd."));
+    wrapper.append(selector);
     return group("Kamerenergie", wrapper);
   }
 
@@ -1616,7 +1586,7 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
     style.textContent = `
       ${roomStyles}
       .detail,.control-deck,.room-layout-primary,.room-column,.mushroom-controls,.group,.detail-panel,.stage,.stage-body{display:grid;gap:18px;min-width:0;align-content:start}.detail{width:100%}.control-deck{grid-template-columns:minmax(150px,.24fr) minmax(0,1fr);gap:12px;padding:14px;border:1px solid var(--divider-color);border-radius:18px;background:var(--room-surface);box-shadow:0 1px 2px rgb(20 35 28/.06),0 7px 24px rgb(20 35 28/.035);overflow:hidden}.capability-rail{display:grid;gap:7px;align-content:start}.capability-rail button,.detail-tabs button{min-height:44px;border:1px solid var(--divider-color);border-radius:11px;padding:9px 12px;background:var(--room-surface);color:var(--primary-text-color);font:inherit;text-align:left}.capability-rail button[aria-selected=true],.detail-tabs button[aria-selected=true]{border-color:var(--primary-color);background:color-mix(in srgb,var(--primary-color) 10%,var(--room-surface));color:var(--primary-color);font-weight:700}.deck-content{display:grid;gap:12px;min-width:0}.detail-tabs{display:flex;gap:7px;overflow-x:auto}.detail-tabs button{flex:1 0 auto;text-align:center}.detail-panel[hidden]{display:none}.room-layout-primary{grid-template-columns:1.2fr .8fr .7fr}.group{gap:10px}.group-heading{min-height:32px;display:flex;align-items:center}.details-card{display:grid}
-      .info-list,.mushroom-grid,.plug-grid,.energy-grid,.group-grid,.device-grid,.cover-grid,.comfort-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:9px}.energy-period{display:grid;gap:10px}.period-selector{display:flex;gap:7px;flex-wrap:wrap}.period-selector button{min-height:44px;padding:8px 13px;border:1px solid var(--divider-color);border-radius:999px;background:var(--room-surface);color:inherit}.period-selector button[aria-pressed=true]{border-color:var(--primary-color);background:var(--primary-color);color:var(--text-primary-color,#fff);font-weight:700}.energy-card{display:grid;gap:4px}.energy-comparison{display:grid;gap:9px;margin:0;padding:12px;border:1px solid var(--divider-color);border-radius:12px;background:var(--room-surface)}.energy-comparison figcaption{font-weight:700}.energy-bars{display:grid;gap:8px}.energy-bar-row{display:grid;grid-template-columns:minmax(90px,.7fr) minmax(100px,1.4fr) auto;gap:8px;align-items:center}.energy-bar-track{height:12px;border-radius:999px;background:var(--secondary-background-color);overflow:hidden}.energy-bar{display:block;width:var(--energy-share);height:100%;border-radius:inherit;background:var(--primary-color)}.energy-bar-value{font-variant-numeric:tabular-nums}.stat-chart{display:grid;gap:9px;margin:0;padding:12px;border:1px solid var(--divider-color);border-radius:12px;background:var(--room-surface)}.stat-chart figcaption{font-weight:700}.stat-chart-scale{display:flex;flex-direction:column;justify-content:space-between;height:140px;color:var(--secondary-text-color);font-size:.74rem;font-variant-numeric:tabular-nums;text-align:right}.stat-chart-bars{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(26px,1fr);gap:7px;align-items:end;height:140px;padding-bottom:18px;border-bottom:1px solid var(--divider-color)}.stat-chart-column{position:relative;align-self:end}.stat-chart-stack{display:flex;flex-direction:column-reverse;min-height:2px;border-radius:5px 5px 2px 2px;overflow:hidden}.stat-chart-segment{display:block;width:100%;min-height:2px;height:var(--stat-height);background:var(--stat-color)}.stat-chart-segment-missing{background:repeating-linear-gradient(135deg,var(--stat-color) 0 3px,transparent 3px 6px);opacity:.55}.stat-chart-label{position:absolute;left:0;right:0;bottom:-18px;color:var(--secondary-text-color);font-size:.68rem;text-align:center}.stat-chart-legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}.stat-chart-legend-item{display:inline-flex;align-items:center;gap:5px;color:var(--secondary-text-color);font-size:.74rem}.stat-chart-legend-dot{width:8px;height:8px;border-radius:3px;background:var(--stat-color)}.energy-ranking{display:grid;gap:9px;margin:0;padding:12px;border:1px solid var(--divider-color);border-radius:12px;background:var(--room-surface)}.energy-ranking figcaption{font-weight:700}.action-feedback{margin:0;padding:10px 12px;border:1px solid var(--divider-color);border-radius:12px;background:var(--room-surface)}.action-feedback.pending{border-color:var(--primary-color)}.action-feedback.success{border-color:var(--success-color,#2e7d32)}.action-feedback.error{border-color:var(--error-color,#b3261e)}
+      .info-list,.mushroom-grid,.plug-grid,.energy-grid,.group-grid,.device-grid,.cover-grid,.comfort-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:9px}.energy-period{display:grid;gap:10px}.period-selector{display:flex;gap:7px;flex-wrap:wrap}.period-selector button{min-height:44px;padding:8px 13px;border:1px solid var(--divider-color);border-radius:999px;background:var(--room-surface);color:inherit}.period-selector button[aria-pressed=true]{border-color:var(--primary-color);background:var(--primary-color);color:var(--text-primary-color,#fff);font-weight:700}.energy-comparison{display:grid;gap:9px;margin:0;padding:12px;border:1px solid var(--divider-color);border-radius:12px;background:var(--room-surface)}.energy-comparison figcaption{font-weight:700}.energy-bars{display:grid;gap:8px}.energy-bar-row{display:grid;grid-template-columns:minmax(90px,.7fr) minmax(100px,1.4fr) auto;gap:8px;align-items:center}.energy-bar-track{height:12px;border-radius:999px;background:var(--secondary-background-color);overflow:hidden}.energy-bar{display:block;width:var(--energy-share);height:100%;border-radius:inherit;background:var(--primary-color)}.energy-bar-value{font-variant-numeric:tabular-nums}.stat-chart{display:grid;gap:9px;margin:0;padding:12px;border:1px solid var(--divider-color);border-radius:12px;background:var(--room-surface)}.stat-chart figcaption{font-weight:700}.stat-chart-scale{display:flex;flex-direction:column;justify-content:space-between;height:140px;color:var(--secondary-text-color);font-size:.74rem;font-variant-numeric:tabular-nums;text-align:right}.stat-chart-bars{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(26px,1fr);gap:7px;align-items:end;height:140px;padding-bottom:18px;border-bottom:1px solid var(--divider-color)}.stat-chart-column{position:relative;align-self:end}.stat-chart-stack{display:flex;flex-direction:column-reverse;min-height:2px;border-radius:5px 5px 2px 2px;overflow:hidden}.stat-chart-segment{display:block;width:100%;min-height:2px;height:var(--stat-height);background:var(--stat-color)}.stat-chart-segment-missing{background:repeating-linear-gradient(135deg,var(--stat-color) 0 3px,transparent 3px 6px);opacity:.55}.stat-chart-label{position:absolute;left:0;right:0;bottom:-18px;color:var(--secondary-text-color);font-size:.68rem;text-align:center}.stat-chart-legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}.stat-chart-legend-item{display:inline-flex;align-items:center;gap:5px;color:var(--secondary-text-color);font-size:.74rem}.stat-chart-legend-dot{width:8px;height:8px;border-radius:3px;background:var(--stat-color)}.energy-ranking{display:grid;gap:9px;margin:0;padding:12px;border:1px solid var(--divider-color);border-radius:12px;background:var(--room-surface)}.energy-ranking figcaption{font-weight:700}.action-feedback{margin:0;padding:10px 12px;border:1px solid var(--divider-color);border-radius:12px;background:var(--room-surface)}.action-feedback.pending{border-color:var(--primary-color)}.action-feedback.success{border-color:var(--success-color,#2e7d32)}.action-feedback.error{border-color:var(--error-color,#b3261e)}
       .info,.state-badge,.mushroom-card,.command,.plug-lock{background:var(--room-surface);color:var(--primary-text-color);border:1px solid var(--divider-color);border-radius:12px;padding:10px;font:inherit;overflow-wrap:anywhere}.info,.state-badge,.mushroom-card{text-align:left}.warning{border-color:var(--error-color,#b3261e)}.unavailable{opacity:.72}
       button{cursor:pointer;min-height:44px;min-width:44px}button:disabled{cursor:default;opacity:.48;background:var(--secondary-background-color)}button:focus-visible{outline:2px solid var(--primary-color);outline-offset:2px}.mushroom-card{display:grid;grid-template-columns:40px minmax(0,1fr);gap:10px;align-items:center;min-height:76px;padding:12px;border-radius:16px}.light-card.active,.light-group-card.active{border-color:var(--primary-color);background:color-mix(in srgb,var(--primary-color) 10%,var(--room-surface))}.light-group-card.mixed{border-color:color-mix(in srgb,var(--primary-color) 45%,var(--divider-color));background:color-mix(in srgb,var(--primary-color) 5%,var(--room-surface))}.mushroom-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--secondary-background-color);color:var(--primary-color)}.mushroom-copy{display:grid;gap:2px}small{color:var(--secondary-text-color)}.commands{grid-column:1/-1}.smart-plug-card{grid-template-columns:minmax(0,1fr)}.smart-plug-card.active{border-color:var(--primary-color)}.plug-lock{color:var(--primary-color);font-weight:700}
       .room-photo{width:110px;min-height:96px;border-radius:16px;background:linear-gradient(135deg,#ffffff33,transparent),var(--hd-hero);background-size:cover;background-position:center;flex:none;display:grid;place-items:center;gap:4px;padding:8px;box-sizing:border-box;text-align:center}.room-photo ha-icon{width:32px;height:32px;opacity:.85}.room-photo-caption{font-size:.68rem;opacity:.85}.embedded-card{min-height:120px}.embedded-card:empty::before{content:"Kaart wordt geladen…"}.stat-svg{width:100%;height:56px;display:block}.stat-line{fill:none;stroke:var(--primary-color);stroke-width:2}.stat-line-alt{fill:none;stroke:var(--error-color,#b3261e);stroke-width:2}

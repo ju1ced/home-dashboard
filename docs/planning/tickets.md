@@ -1697,3 +1697,44 @@ Zie D-076 voor de volledige root-causeanalyse. Samengevat: HA's langetermijnstat
 De eigenaar meldde na `v0.8.3`: "De schaal is nog steeds niet ok" — met een screenshot waarin de gecombineerde staafdiagram leeg oogt (geen zichtbare balken), ook al toonde de as-schaal een correct getal (2,689 kWh, Nederlandse decimaalnotatie voor 2,689 — geen duizendtallen). Live statistiekdata voor alle zes Keuken-apparaten (opgehaald via de Home Assistant MCP-verbinding, read-only) bevestigde dat de onderliggende cijfers wél al correct waren sinds `v0.8.3`'s `deltaSeries()`-fix. De echte, nieuwe oorzaak: `.stat-chart-segment`'s hoogte was een CSS-percentage (`--stat-height`) zonder een voorouder-element met een *definitieve* hoogte (`.stat-chart-stack` had zelf geen expliciete hoogte; `.stat-chart-column` se `height:100%` resolveerde evenmin, want `.stat-chart-bars` gebruikt `align-items:end`, dus grid-items worden nooit uitgerekt). Een percentagehoogte zonder definitieve voorouder wordt door browsers genegeerd, waardoor elk segment terugviel op zijn `min-height:2px`/`6px`-ondergrens — ongeacht de echte waarde. Opgelost door elke staaf (`.stat-chart-stack`) een expliciete pixelhoogte te geven (JS, evenredig met de kolomtotaal t.o.v. het maximum), waarbinnen elk segment zijn eigen aandeel als percentage van de KOLOM se eigen totaal krijgt (niet van het algemene maximum zoals voorheen — een tweede, kleinere correctie voor wiskundig juiste verhoudingen binnen de staaf). Zie [D-077](../design/decision-log.md#d-077--hd-220-vervolg-staafdiagram-rendert-nu-echt-zichtbare-balken-filler-tekst-verwijderd) voor de volledige analyse.
 
 Tegelijk verwijderd: de generieke, inhoudsloze "Status en bediening blijven gescheiden in één overzicht"-notitie die op élke kamerfunctie-tab verscheen zodra niets in waarschuwing/onbeschikbaar stond (door de eigenaar expliciet "storend" genoemd) — dezelfde categorie overtollige tekst als HD-206/HD-208 al eerder opschoonden, hier gemist omdat die notitie niet Verbruik-specifiek is maar gedeeld door `stageHead()` voor alle vijf tabs.
+
+---
+
+### HD-221 — Nog meer live verbruikspagina-bevindingen: enkele-bucket-jaar, rollend dagvenster, Kamerenergie-tegels
+
+- **Epic:** Kamers
+- **Status:** Klaar (op het niet-reproduceerbare leesbaarheidspunt na) — zie [D-078](../design/decision-log.md#d-078--hd-221-nog-meer-live-verbruikspagina-bevindingen-enkele-bucket-jaar-rollend-dagvenster-kamerenergie-tegels) voor de volledige analyse en besluiten.
+- **Prioriteit:** P1
+- **Omvang:** M
+- **Eigenaar:** Rooms-agent
+- **Afhankelijkheden:** HD-220 (gemerged, `v0.8.4`) — vierde ronde directe live feedback op dezelfde Verbruik-tab, na elke voorgaande release
+
+**Doel**
+
+Vier live bevindingen van de eigenaar op de `v0.8.4`-Verbruik-tab: (1) de schaal is beter maar nog niet makkelijk leesbaar (geen concreet detail, blijft openstaand), (2) "Verbruik per dag" liep dinsdag-tot-dinsdag i.p.v. maandag-tot-zondag, (3) de "Keuken totaal"-kaart en per-apparaat-tegels onder Kamerenergie moesten weg (expliciet bevestigd), en (4) in "Jaar" was er geen grafiek.
+
+**Achtergrond**
+
+Zie D-078 voor de volledige root-causeanalyse. Samengevat: "Jaar" had in een project jonger dan een jaar maar één historische bucket — de bestaande "laat altijd de eerste kolom vallen"-logica (D-077) gooide die enige bucket weg. Het dagvenster was een rollend "N dagen geleden"-venster i.p.v. kalenderweek-uitgelijnd.
+
+**Scope**
+
+1. **`deltaSeries()`:** een reeks met precies één bucket blijft ongewijzigd (geen eerdere waarde om van af te trekken — die ene som is al het volledige verbruik sinds het begin van de meting).
+2. **`energyStatisticsChart()`:** laat de eerste/basislijnkolom alleen vallen wanneer er na combineren méér dan één kolom overblijft.
+3. **Nieuwe `statisticsWindowStart()`:** "dag" lijnt uit op de meest recente lokale maandag (min één dag als deltabasislijn); maand/jaar blijven spangebaseerd.
+4. **Kamerenergie-tegels verwijderd:** `energyPeriodGroup()` behoudt alleen de periodeselector; de "Keuken totaal"-kaart en per-apparaat-kaartjes zijn weg, zowel op de Verbruik-tab als het legacy Energie-tabblad.
+5. **Regressie onderweg gevonden en gefixt:** nieuwe gedeelde `roomPeriodTotal()` herstelt de voorrang van `room_energy`'s eigen periode-entiteit boven de som van de smart plugs in `energySummaryStrip()` (die voorrang bestond al in de verwijderde kaart, maar ontbrak in de eerste versie van de nieuwe samenvattingsstrip).
+
+**Acceptatiecriteria**
+
+- Een periode met slechts één historische bucket (bv. "Jaar" in een jong project) toont nog steeds een echte grafiek, nooit een lege "geen data"-melding wanneer er wél één geldige waarde is.
+- "Verbruik per dag" lijnt voor elke dag van de week uit op dezelfde week-maandag, bewezen voor alle zeven weekdagen.
+- Geen "Keuken totaal"-kaart of per-apparaat-kaartje bestaat nog ergens in de broncode.
+- `energySummaryStrip()` geeft voorrang aan `room_energy`'s eigen periode-entiteit boven de som van de smart plugs, net als de verwijderde kaart al deed.
+- Normal/warning/missing/unavailable blijven afgedekt in fixtures/tests; bundelbudget-check (222 kB, D-075) — gemeten binnen budget zonder verhoging nodig.
+
+**Validatie**
+
+`pnpm test`, `pnpm run test:browser`, `git diff --check`, bundlebudget-check.
+
+**Openstaand:** "nog steeds niet makkelijk leesbaar" is niet concreet genoeg om gericht op te lossen — vraagt om een vervolgscreenshot of nadere omschrijving van de eigenaar.
