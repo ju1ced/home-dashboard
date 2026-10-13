@@ -297,10 +297,12 @@ test("HD-208: roomCurrentWatts combineert power_entities met smart_plugs, met ro
   assert.match(body, /room\.power_entities\.filter/, "power_entities worden meegeteld wanneer room_energy.power_entity ontbreekt");
   assert.match(body, /plugEntities\.has\(entity\)/, "entiteiten die in beide lijsten voorkomen worden gededupliceerd");
   assert.match(body, /this\.plugWatts\(plugs\)/, "smart_plugs blijven meetellen via de bestaande plugWatts()");
-  // Called from the rail summary, the plugs-stage summary strip and the Energie tab's room-total card: one shared number everywhere.
+  // Called from the rail summary, the plugs-stage summary strip and the Verbruik-tab's combined summary
+  // strip (energySummaryStrip()) -- one shared number everywhere. HD-221: the Energie-tab's own room-total
+  // card was removed (the owner asked for it; energySummaryStrip()/Grootste verbruikers cover it instead).
   assert.match(source, /const watts = this\.roomCurrentWatts\(room\);/, "railsamenvatting gebruikt de gedeelde roomCurrentWatts");
   assert.match(source, /const totalWatts = this\.roomCurrentWatts\(room\);/, "plugs-stage samenvattingsstrip gebruikt de gedeelde roomCurrentWatts");
-  assert.match(source, /const currentWatts = this\.roomCurrentWatts\(room\);/, "Energie-tab roomtotaalkaart gebruikt de gedeelde roomCurrentWatts");
+  assert.match(source, /const nowWatts = this\.roomCurrentWatts\(room\);/, "energySummaryStrip gebruikt de gedeelde roomCurrentWatts");
 });
 
 test("HD-206: capabilityEntityRoles telt elke geconfigureerde energiebron mee, inclusief plug- en kamerperiodetotalen", async () => {
@@ -349,25 +351,24 @@ test("HD-208: plugPeriodTotal dekt dag/maand/jaar en dedupliceert per entity-ID"
   assert.match(body, /all\.indexOf\(entity\) === index/, "plugPeriodTotal moet op entity-ID dedupliceren zodat een gedeelde sensor niet dubbel telt");
 });
 
-test("HD-208: energyPeriodGroup valt terug op het plugtotaal per periode, nooit op power_entities", async () => {
+test("HD-221: roomPeriodTotal geeft voorrang aan room_energy en valt pas terug op het plugtotaal", async () => {
   const source = await readFile(sourceUrl, "utf8");
-  const energyPeriodGroupMatch = source.match(/private energyPeriodGroup\(room: RoomConfig\): HTMLElement \| undefined \{[\s\S]*?\n  \}\n\n  private/);
-  assert.ok(energyPeriodGroupMatch, "energyPeriodGroup methode niet gevonden");
-  const body = energyPeriodGroupMatch[0];
-  assert.match(body, /const plugPeriodFallback = roomEntity \? undefined : this\.plugPeriodTotal\(room\.smart_plugs \?\? \[\], plugPeriodKey\);/, "zonder een kamerbron voor de actieve periode moet het plugtotaal als terugval dienen");
-  assert.match(body, /plugPeriodFallback !== undefined/, "de kaart moet ook verschijnen wanneer alleen het plugtotaal iets oplevert, niet alleen bij een kamerbron of power_entities-lezing");
-  assert.match(body, /"Bron: samengevoegd uit smart plugs"/, "de teruggevallen periodewaarde moet haar eigen, eerlijke bronlabel tonen, geen fictieve single-entity bron");
-  assert.doesNotMatch(body, /plugPeriodKey[\s\S]{0,40}power_entities|power_entities[\s\S]{0,40}plugPeriodKey/, "power_entities mag nooit meetellen in een dag-\/maand-\/jaartotaal (alleen in de huidige-vermogenlezing)");
+  // HD-221: energyPeriodGroup()'s room-total kaart (en haar plugPeriodFallback-logica) is verwijderd op
+  // expliciet verzoek van de eigenaar -- diezelfde voorrang/terugval-regel leeft nu in roomPeriodTotal(),
+  // gedeeld door energySummaryStrip().
+  const match = source.match(/private roomPeriodTotal\(room: RoomConfig, period: "day" \| "month" \| "year"\): number \| undefined \{[\s\S]*?\n  \}/);
+  assert.ok(match, "roomPeriodTotal methode niet gevonden");
+  const body = match[0];
+  assert.match(body, /if \(roomEntity\) return energyKwh\(this\.currentHass\?\.states\?\.\[roomEntity\]\);/, "room_energy's eigen periode-entiteit blijft gezaghebbend, niet opgeteld");
+  assert.match(body, /return this\.plugPeriodTotal\(room\.smart_plugs \?\? \[\], plugKey\);/, "zonder een kamerbron voor de actieve periode moet het plugtotaal als terugval dienen");
+  assert.doesNotMatch(body, /power_entities/, "power_entities mag nooit meetellen in een dag-\/maand-\/jaartotaal (alleen in de huidige-vermogenlezing)");
 });
 
-test("HD-220: een lege plug.name mag nooit een leeg label opleveren in Kamerenergie, de staafdiagram of Grootste verbruikers", async () => {
+test("HD-220: een lege plug.name mag nooit een leeg label opleveren in de staafdiagram of Grootste verbruikers", async () => {
   const source = await readFile(sourceUrl, "utf8");
   // Live bevestigd: smart plugs aangemaakt via HD-216's koppelhulp zonder ingetypte naam lieten elke
-  // energielabel (kaarttitel, staafdiagramlegende, ranglijst) leeg, omdat plug.name rechtstreeks gebruikt
-  // werd zonder de terugval die smartPlugCard() elders al wel toepast.
-  const energyPeriodGroupMatch = source.match(/private energyPeriodGroup\(room: RoomConfig\): HTMLElement \| undefined \{[\s\S]*?\n  \}\n\n  \/\*\* Rail/);
-  assert.ok(energyPeriodGroupMatch, "energyPeriodGroup methode niet gevonden");
-  assert.match(energyPeriodGroupMatch[0], /const plugName = plug\.name \|\| friendlyName\(this\.currentHass\?\.states\?\.\[plug\.switch_entity\], "Smart plug"\);/, "energyPeriodGroup moet een lege plug.name opvangen via een stabiele naam (switch entity), net als smartPlugCard()");
+  // energielabel leeg, omdat plug.name rechtstreeks gebruikt werd zonder de terugval die smartPlugCard()
+  // elders al wel toepast.
   const plugPeriodSourcesMatch = source.match(/private plugPeriodSources\(room: RoomConfig\)[\s\S]*?\n  \}/);
   assert.ok(plugPeriodSourcesMatch, "plugPeriodSources methode niet gevonden");
   assert.match(plugPeriodSourcesMatch[0], /name: plug\.name \|\| friendlyName\(/, "plugPeriodSources (gedeeld door de staafdiagram en Grootste verbruikers) moet een lege plug.name opvangen");
