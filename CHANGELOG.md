@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.4 — 2026-10-13
+
+Eén ticket sinds `v0.8.3` (HD-220-vervolg), opgelost na live eigenaarsfeedback op de `v0.8.3`-Verbruik-tab.
+
+- **Fix: de gecombineerde staafdiagram toonde geen zichtbare balken, ook al was de schaal correct.** Oorzaak: een CSS-percentagehoogte zonder voorouder-element met een vaste hoogte om tegen te rekenen — browsers negeren dat, waardoor elke balk terugviel op een onzichtbare minimumhoogte, ongeacht de echte waarde. Elke balk krijgt nu een expliciete, berekende hoogte. Live statistiek van echte apparaten bevestigde dat de onderliggende cijfers al correct waren sinds `v0.8.3` — dit was puur een renderprobleem.
+- **Verwijderd: de generieke uitlegtekst ("Status en bediening blijven gescheiden in één overzicht")** die op elke kamerfunctie-tab verscheen zonder enige echte informatie toe te voegen.
+- Hoofdbundel ongewijzigd t.o.v. budget (222 kB), gemeten 219.876 bytes — kleiner dan `v0.8.3`.
+- Zie [D-077](docs/design/decision-log.md) voor de volledige analyse. [Testchecklist en rollback](docs/releases/testing-v0.8.4.md).
+
 ## 0.8.3 — 2026-10-13
 
 Eén ticket sinds `v0.8.2` (HD-220), opgelost na live eigenaarsfeedback op de `v0.8.2`-Verbruik-tab.
