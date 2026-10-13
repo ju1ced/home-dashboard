@@ -277,6 +277,14 @@ for (const variant of ["normal", "dark", "warning", "missing", "unknown", "unava
       assert.doesNotMatch(chartAriaLabel, /8 kilowattuur/, `${label}: the raw cumulative sum (8) must never appear as a bucket total -- only the per-bucket delta`);
       assert.ok(await page.locator(".stat-chart-segment-missing").count() >= 1, `${label}: a bucket where one source has no data shows a visibly distinct missing segment, never a silently complete stack`);
       assert.equal(await page.locator(".stat-chart-legend-item").count(), 2, `${label}: the legend lists both smart-plug sources`);
+      // HD-220 follow-up: a live screenshot showed every bar collapsed to an invisible ~2px sliver despite
+      // a correct underlying scale -- a percentage height on .stat-chart-segment resolved against an
+      // ambiguous (non-definite) ancestor height and silently floored. Proves each stack now gets a real,
+      // proportional pixel height (bucket totals here are 3 and 5, so the second bar must render taller).
+      const stackHeights = await page.locator(".stat-chart-stack").evaluateAll((stacks) => stacks.map((stack) => stack.getBoundingClientRect().height));
+      assert.equal(stackHeights.length, 2, `${label}: two stacked columns are rendered`);
+      assert.ok(stackHeights.every((height) => height > 10), `${label}: no bar collapses to the old invisible ~2px floor (got ${JSON.stringify(stackHeights)})`);
+      assert.ok(stackHeights[1] > stackHeights[0], `${label}: the larger bucket total (5) renders visibly taller than the smaller one (3) (got ${JSON.stringify(stackHeights)})`);
       // Scoped to .stage: HD-220 also added a Grootste verbruikers instance to the legacy details-energy
       // panel (co-present in the DOM, just hidden), so an unscoped .energy-ranking locator would match both.
       assert.equal(await page.locator(".stage .energy-ranking .energy-bar-row").count(), 2, `${label}: Grootste verbruikers ranks both smart-plug sources for the active period`);
