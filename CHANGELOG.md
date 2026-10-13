@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8.5 — 2026-10-13
+
+Eén ticket sinds `v0.8.4` (HD-221), opgelost na live eigenaarsfeedback op de `v0.8.4`-Verbruik-tab.
+
+- **Fix: in "Jaar" was er geen grafiek te zien** in een project dat nog geen jaar oud is. Oorzaak: er bestond maar één historische periodebucket ooit, en de bestaande "sla de eerste bucket over als basislijn"-logica gooide die enige bucket weg. Een reeks met precies één bucket wordt nu ongewijzigd gebruikt — er is dan ook geen eerdere waarde om van af te trekken.
+- **Fix: "Verbruik per dag" lijnt nu uit op de kalenderweek (maandag-zondag)**, in plaats van een rollend venster dat elke dag opschoof (dinsdag-tot-dinsdag).
+- **Verwijderd: de "Keuken totaal"-kaart en de losse per-apparaat-tegels onder Kamerenergie.** Het nu/vandaag/deze maand/dit jaar-overzicht en Grootste verbruikers dekken deze informatie al.
+- **Onderweg gevonden en gefixt:** het nu/dag/maand/jaar-overzicht negeerde stilzwijgend een geconfigureerde kamerbrede energiesensor en som altijd de smart plugs op; nu krijgt die sensor weer voorrang, net als voorheen.
+- Hoofdbundel ongewijzigd t.o.v. budget (222 kB), gemeten 217.709 bytes — kleiner dan `v0.8.4`.
+- Zie [D-078](docs/design/decision-log.md) voor de volledige analyse. [Testchecklist en rollback](docs/releases/testing-v0.8.5.md).
+
 ## 0.8.4 — 2026-10-13
 
 Eén ticket sinds `v0.8.3` (HD-220-vervolg), opgelost na live eigenaarsfeedback op de `v0.8.3`-Verbruik-tab.
