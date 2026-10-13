@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.8.3 — 2026-10-13
+
+Eén ticket sinds `v0.8.2` (HD-220), opgelost na live eigenaarsfeedback op de `v0.8.2`-Verbruik-tab.
+
+- **Fix: de gecombineerde staafdiagram toonde een onrealistische schaal (bv. 564,6 kWh voor een kamer die die dag 1,26 kWh verbruikte).** Oorzaak: Home Assistant's langetermijnstatistiek-`sum`-veld is een doorlopend cumulatief totaal sinds het begin van de meting, geen waarde per bucket. De grafiek rekent nu een echt verschil per periode uit; de eerste bucket in het venster dient enkel als basislijn en wordt niet getoond.
+- **Fix: lege apparaatlabels.** Een smart plug zonder ingetypte naam (schema-geldig) liet elk energielabel (kaarttitel, staafdiagramlegende, ranglijst) leeg. Valt nu terug op de naam van de schakelentiteit, net als elders in de kamereditor.
+- **Apparaatvergelijking verwijderd — Grootste verbruikers blijft de enige apparaatvergelijking.** Beide toonden dezelfde informatie dubbel; Grootste verbruikers is vollediger (gesorteerd, met percentage, met deduplicatie).
+- **"Apparaten & energie" volledig verwijderd** van de Verbruik-tab en het oudere Energie-tabblad — bediening zat al onder Smart plugs, en de vermogenslezingen tellen al mee in de gecombineerde "nu"-waarde.
+- **Nieuw: een combinatie-overzicht met nu/vandaag/deze maand/dit jaar**, gelijktijdig zichtbaar ongeacht welke periodetab actief is.
+- Hoofdbundel ongewijzigd t.o.v. budget (222 kB), gemeten 219.938 bytes — zelfs kleiner dan `v0.8.2`.
+- Zie [D-076](docs/design/decision-log.md) voor de volledige analyse. [Testchecklist en rollback](docs/releases/testing-v0.8.3.md).
+
 ## 0.8.2 — 2026-10-12
 
 Eén ticket sinds `v0.8.1` (HD-219).
