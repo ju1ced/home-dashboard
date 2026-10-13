@@ -278,6 +278,29 @@ export function combineStatisticBuckets(series: ReadonlyArray<StatisticBucket[] 
   return { columns, missing };
 }
 
+/** HD-222: "Verbruik per dag" must always show the full calendar week (Monday through Sunday), not just the
+ * days that have already happened -- the owner saw only "ma"/"di" on a Tuesday and asked for the whole
+ * week. `combineStatisticBuckets()` only ever produces a column for a timestamp some source actually
+ * reported, and HA's recorder never has a bucket for a day that hasn't started yet, so without this step
+ * the chart would visibly grow day by day instead of showing a stable 7-day shape. Pads to exactly 7
+ * columns, one per day starting at `mondayMs`; a day with no real column at all (typically a not-yet-lived
+ * future day, but also a genuine gap before any source started reporting) gets an explicit, fully-empty
+ * column -- every value `undefined`, rendered via the same "missing" marker as any other absent bucket,
+ * never a fabricated zero. An existing real column for that calendar day is kept as-is, untouched. */
+export function padToCalendarWeek(columns: CombinedStatisticColumn[], sourceCount: number, mondayMs: number): CombinedStatisticColumn[] {
+  const byDay = new Map<string, CombinedStatisticColumn>();
+  for (const column of columns) {
+    const date = new Date(column.start);
+    byDay.set(`${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`, column);
+  }
+  return Array.from({ length: 7 }, (_, dayIndex) => {
+    const dayDate = new Date(mondayMs);
+    dayDate.setDate(dayDate.getDate() + dayIndex);
+    const key = `${dayDate.getFullYear()}-${dayDate.getMonth()}-${dayDate.getDate()}`;
+    return byDay.get(key) ?? { start: dayDate.getTime(), values: new Array<number | undefined>(sourceCount).fill(undefined) };
+  });
+}
+
 export type RankedEnergySource = { name: string; value: number; share: number };
 
 /** Ranks entries descending by value; `share` is each entry's fraction (0..1) of the SUM of the ranked
@@ -880,7 +903,13 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
       const columnEl = element("div", "stat-chart-column");
       const stack = element("div", "stat-chart-stack");
       const total = totals[columnIndex]!;
-      stack.style.height = `${maximum > 0 ? Math.max((total / maximum) * chartHeightPx, total > 0 ? 2 : 0) : 0}px`;
+      // HD-222: a column with no real data anywhere (every source undefined -- typically a future day in
+      // a calendar-week-padded chart, see padToCalendarWeek()) must still reserve enough height for its
+      // "missing" markers to actually be visible, not just a bare total-based height that collapses to 0px
+      // and silently hides them again (the exact invisible-bar bug D-077 already fixed once, for a
+      // different reason).
+      const floorPx = column.values.reduce<number>((sum, value) => sum + (value === undefined ? 6 : 2), 0);
+      stack.style.height = `${Math.max(maximum > 0 ? (total / maximum) * chartHeightPx : 0, floorPx)}px`;
       sources.forEach((source, sourceIndex) => {
         const value = column.values[sourceIndex];
         const segment = element("span", `stat-chart-segment${value === undefined ? " stat-chart-segment-missing" : ""}`);
@@ -976,7 +1005,13 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
         // (see its length<=1 case above).
         const perSourceSeries = chartSources.map(({ entity }) => deltaSeries(extractStatisticSeries(response, entity)));
         const combined = combineStatisticBuckets(perSourceSeries);
-        const columns = combined.columns.length > 1 ? combined.columns.slice(1) : combined.columns;
+        const dropped = combined.columns.length > 1 ? combined.columns.slice(1) : combined.columns;
+        // HD-222: "day" always shows the full Monday-Sunday week, even for days that haven't happened yet
+        // (as empty/"missing" columns) -- the owner saw the chart showing only "ma"/"di" on a Tuesday and
+        // asked for the whole week, not one that visibly grows day by day.
+        const monday = new Date(statisticsWindowStart("day", new Date()));
+        monday.setDate(monday.getDate() + 1);
+        const columns = period === "day" ? padToCalendarWeek(dropped, chartSources.length, monday.getTime()) : dropped;
         wrapper.append(columns.length
           ? this.statisticsBarChart(chartSources, columns, combined.missing, period, periodLabel)
           : element("p", "info unavailable", perSourceSeries.every((series) => series === undefined) ? "Geen langetermijnstatistiek voor deze bronnen." : `Geen data voor deze ${periodLabel}periode.`));
