@@ -68,7 +68,8 @@ De kolom **Volgorde** vertaalt afhankelijkheden naar de aanbevolen uitvoering: f
 | [HD-218 HACS-pin voor home-dashboard valt herhaaldelijk terug op main-tracking](tickets.md#hd-218--hacs-pin-voor-home-dashboard-valt-herhaaldelijk-terug-op-main-tracking) | P2 | Runtimeacceptatie | PR #87 · `v0.8.0` (kernoorzaak: prerelease-tags onzichtbaar voor HACS) |
 | [HD-219 Verbruik-tab: gecombineerde dag-/maand-/jaargrafiek + Grootste verbruikers-ranglijst](tickets.md#hd-219--verbruik-tab-één-gecombineerde-dag-maand-jaargrafiek-en-een-grootste-verbruikers-ranglijst) | P1 | Kamers | PR #92 · `v0.8.2` (D-075) |
 | [HD-220 Live verbruikspagina-bevindingen: cumulatieve-som-bug, lege labels, dubbele vergelijking, nutteloze sectie](tickets.md#hd-220--live-verbruikspagina-bevindingen-cumulatieve-som-bug-lege-labels-dubbele-vergelijking-nutteloze-sectie) | P0 | Kamers | PR #94 · `v0.8.3` (D-076) · vervolg PR #96 · `v0.8.4` (D-077: staafdiagram echt zichtbaar, filler-tekst weg) |
-| [HD-221 Nog meer live verbruikspagina-bevindingen: enkele-bucket-jaar, rollend dagvenster, Kamerenergie-tegels](tickets.md#hd-221--nog-meer-live-verbruikspagina-bevindingen-enkele-bucket-jaar-rollend-dagvenster-kamerenergie-tegels) | P1 | Kamers | D-078 (nog geen release-PR) |
+| [HD-221 Nog meer live verbruikspagina-bevindingen: enkele-bucket-jaar, rollend dagvenster, Kamerenergie-tegels](tickets.md#hd-221--nog-meer-live-verbruikspagina-bevindingen-enkele-bucket-jaar-rollend-dagvenster-kamerenergie-tegels) | P1 | Kamers | PR #98 · `v0.8.5` (D-078) |
+| [HD-222 "Verbruik per dag" moet altijd de volledige kalenderweek tonen](tickets.md#hd-222--verbruik-per-dag-moet-altijd-de-volledige-kalenderweek-tonen) | P1 | Kamers | D-079 (nog geen release-PR) |
 
 ## Geblokkeerd
 

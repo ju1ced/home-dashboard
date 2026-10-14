@@ -1738,3 +1738,41 @@ Zie D-078 voor de volledige root-causeanalyse. Samengevat: "Jaar" had in een pro
 `pnpm test`, `pnpm run test:browser`, `git diff --check`, bundlebudget-check.
 
 **Openstaand:** "nog steeds niet makkelijk leesbaar" is niet concreet genoeg om gericht op te lossen — vraagt om een vervolgscreenshot of nadere omschrijving van de eigenaar.
+
+---
+
+### HD-222 — "Verbruik per dag" moet altijd de volledige kalenderweek tonen
+
+- **Epic:** Kamers
+- **Status:** Klaar — zie [D-079](../design/decision-log.md#d-079--hd-222-verbruik-per-dag-toont-nu-altijd-de-volledige-kalenderweek) voor de volledige analyse en besluiten.
+- **Prioriteit:** P1
+- **Omvang:** S
+- **Eigenaar:** Rooms-agent
+- **Afhankelijkheden:** HD-221 (gemerged, `v0.8.5`) — bouwt direct voort op `statisticsWindowStart()`'s maandaguitlijning, vijfde ronde directe live feedback op dezelfde Verbruik-tab
+
+**Doel**
+
+De eigenaar bekeek de `v0.8.5`-Verbruik-tab live en meldde: "beter, maar ik heb nu enkel ma & di. moet de hele week zijn". De week begon terecht op maandag (D-078), maar toonde alleen de dagen die al verstreken waren, niet een stabiele maandag-zondag vorm.
+
+**Achtergrond**
+
+Zie D-079 voor de volledige analyse. Samengevat: `combineStatisticBuckets()` maakt alleen een kolom voor een tijdstip dat een bron daadwerkelijk rapporteerde; HA's recorder heeft nooit een bucket voor een dag die nog niet begonnen is. Dit was D-078's eigen expliciet benoemde beperking, nu expliciet afgewezen door de eigenaar.
+
+**Scope**
+
+1. **Nieuwe `padToCalendarWeek(columns, sourceCount, mondayMs)`:** vult de "dag"-periode altijd aan tot precies 7 kolommen (maandag t/m zondag). Een bestaande echte kolom blijft ongewijzigd; een dag zonder echte kolom krijgt een volledig lege kolom (elke waarde `undefined`), nooit een gefabriceerde nul.
+2. **`energyStatisticsChart()`:** berekent de echte maandag via de bestaande `statisticsWindowStart("day", ...)` en past de opvulling alleen toe op de "dag"-periode.
+3. **`statisticsBarChart()`:** reserveert een minimale pixelhoogte per kolom (6px per ontbrekende bron, 2px per aanwezige), zodat een volledig lege, opgevulde kolom niet terugvalt op de onzichtbare 0px-ondergrens die D-077 al eens oploste.
+
+**Acceptatiecriteria**
+
+- "Verbruik per dag" toont altijd precies 7 kolommen, ongeacht welke dag van de week het is.
+- Een nog niet beleefde dag toont een zichtbare "geen data"-marker, nooit een verdwenen of 0px-hoge kolom.
+- Een bestaande echte kolom voor een reeds beleefde dag blijft ongewijzigd (geen dubbele telling, geen verlies van echte data).
+- Normal/warning/missing/unavailable blijven afgedekt in fixtures/tests; bundelbudget-check (222 kB, D-075) — gemeten binnen budget zonder verhoging nodig.
+
+**Validatie**
+
+`pnpm test`, `pnpm run test:browser`, `git diff --check`, bundlebudget-check.
+
+**Openstaand:** live Home Assistant-acceptatie blijft een afzonderlijke menselijke gate. De algemene "nog steeds niet makkelijk leesbaar"-opmerking (D-078) blijft openstaand; dit ticket loste alleen de volledige-week-vorm op.

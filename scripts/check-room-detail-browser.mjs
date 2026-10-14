@@ -331,6 +331,57 @@ for (const variant of ["normal", "dark", "warning", "missing", "unknown", "unava
       const blankNameRankingText = await page.locator(".stage .energy-ranking").textContent();
       assert.match(blankNameRankingText, /Naamloze stekker/, `${label}: Grootste verbruikers falls back to the same friendly_name, never a blank ranking label`);
 
+      // HD-222: a live screenshot showed the "day" chart rendering only "ma"/"di" on a Tuesday -- the chart
+      // shrank to however many days had actually elapsed since Monday, instead of showing a stable
+      // Monday-Sunday week shape. Mocks real statistics for only the baseline (Sunday) + Monday + Tuesday of
+      // the current calendar week, exactly like HA's recorder would for a day that hasn't started yet, and
+      // proves the rendered chart still pads out to all 7 days, with the un-elapsed ones showing a visible
+      // "missing" marker rather than disappearing.
+      const mondayMs = (() => {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const daysSinceMonday = (today.getDay() + 6) % 7;
+        today.setDate(today.getDate() - daysSinceMonday);
+        return today.getTime();
+      })();
+      const sundayMs = mondayMs - 86_400_000;
+      const tuesdayMs = mondayMs + 86_400_000;
+      await page.evaluate(({ sundayMs, mondayMs, tuesdayMs }) => {
+        const fixture = window.roomFixture;
+        const { hass } = fixture;
+        hass.connection.sendMessagePromise = async (message) => {
+          if (message.type === "recorder/statistics_during_period") {
+            const result = {};
+            for (const id of message.statistic_ids) {
+              if (id.includes("blank_plug_day")) result[id] = [{ start: sundayMs, sum: 0 }, { start: mondayMs, sum: 1.2 }, { start: tuesdayMs, sum: 2 }];
+            }
+            return result;
+          }
+          throw new Error("HD-222 test: unexpected ws call");
+        };
+        // setConfig()'s own synchronous first render already fetches "day" period statistics (its default
+        // active period) and caches the response under statisticsCache, which is never invalidated on a later
+        // same-key period re-visit -- so this mock must be installed BEFORE a fresh mount/setConfig, not after
+        // (reusing the earlier blank-name mount would silently keep serving that stale pre-mock cache entry).
+        const room = fixture.config.rooms.find((candidate) => candidate.key === "blank_plug_name");
+        const detail = document.createElement("home-dashboard-room-detail");
+        detail.setConfig({ type: "custom:home-dashboard-room-detail", room });
+        detail.hass = hass;
+        document.body.replaceChildren(detail);
+      }, { sundayMs, mondayMs, tuesdayMs });
+      await page.waitForFunction(() => document.querySelector("home-dashboard-room-detail")?.shadowRoot?.querySelector(".control-deck"));
+      await selectCapability("Verbruik");
+      await page.waitForFunction(() => document.querySelector("home-dashboard-room-detail")?.shadowRoot?.querySelector(".stat-chart"));
+      assert.equal(await page.locator(".stat-chart-column").count(), 7, `${label}: the "day" chart always shows the full calendar week (Monday through Sunday), never just the days that have already happened`);
+      const weekAriaLabel = await page.locator(".stat-chart").getAttribute("aria-label");
+      assert.match(weekAriaLabel, /1[.,]2 kilowattuur/, `${label}: Monday's real delta (1.2) is used, not discarded`);
+      assert.match(weekAriaLabel, /0[.,]8 kilowattuur/, `${label}: Tuesday's real delta (2-1.2=0.8) is used, not discarded`);
+      const weekMissingCount = await page.locator(".stat-chart-segment-missing").count();
+      assert.ok(weekMissingCount >= 5, `${label}: the 5 un-elapsed days (Wednesday-Sunday) each show a visible missing segment, not an invisible or absent column (got ${weekMissingCount})`);
+      const weekStackHeights = await page.locator(".stat-chart-stack").evaluateAll((stacks) => stacks.map((stack) => stack.getBoundingClientRect().height));
+      assert.equal(weekStackHeights.length, 7, `${label}: all 7 week columns render a stack`);
+      assert.ok(weekStackHeights.every((height) => height > 0), `${label}: a fully-empty future-day column still reserves real height for its missing marker, not the old invisible 0px collapse (got ${JSON.stringify(weekStackHeights)})`);
+
       // HD-212: mountCard()'s fallback catch-path (shared by the LINAK desk card and history-graph)
       // was never actually exercised by any test -- only the card_config pass-through was checked
       // (tests/room-cards-source.test.mjs). Simulate both real failure modes: loadCardHelpers()

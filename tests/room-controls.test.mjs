@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { migrateConfig, favoriteRooms, roomControlSources, planRoomControl, planEntityControl, executeRoomControl, validateConfig, validateConfigSchema, getHomeStructureSignature, resolveLightGroupState, extractStatisticSeries, combineStatisticBuckets, deltaSeries, statisticsBucketLabel, statisticsWindowStart, rankEnergySources, filterRoomLogbookEvents, temperatureHumidityEntities } from '../dist/home-dashboard.js';
+import { migrateConfig, favoriteRooms, roomControlSources, planRoomControl, planEntityControl, executeRoomControl, validateConfig, validateConfigSchema, getHomeStructureSignature, resolveLightGroupState, extractStatisticSeries, combineStatisticBuckets, deltaSeries, statisticsBucketLabel, statisticsWindowStart, padToCalendarWeek, rankEnergySources, filterRoomLogbookEvents, temperatureHumidityEntities } from '../dist/home-dashboard.js';
 
 const ref = (domain, key) => [domain, key].join('.');
 function setup() {
@@ -284,6 +284,32 @@ test('HD-221: statisticsWindowStart laat maand/jaar ongewijzigd (spangebaseerd, 
   const now = new Date(2026, 9, 14, 12, 0);
   assert.equal(statisticsWindowStart('month', now).getTime(), now.getTime() - 396 * 86_400_000);
   assert.equal(statisticsWindowStart('year', now).getTime(), now.getTime() - 6 * 365 * 86_400_000);
+});
+
+test('HD-222: padToCalendarWeek vult altijd zeven kolommen (maandag t/m zondag), ook zonder enige echte dag', () => {
+  const monday = new Date(2026, 9, 12).getTime(); // 12 oktober 2026 is een maandag
+  const padded = padToCalendarWeek([], 2, monday);
+  assert.equal(padded.length, 7);
+  padded.forEach((column, index) => {
+    assert.equal(new Date(column.start).getDate(), 12 + index, `kolom ${index} moet de juiste kalenderdag hebben`);
+    assert.deepEqual(column.values, [undefined, undefined], `kolom ${index} zonder echte data moet volledig leeg zijn, nooit een gefabriceerde 0`);
+  });
+});
+
+test('HD-222: padToCalendarWeek behoudt bestaande echte kolommen ongewijzigd en vult enkel de ontbrekende dagen', () => {
+  const monday = new Date(2026, 9, 12).getTime();
+  const tuesday = new Date(2026, 9, 13).getTime();
+  const real = [
+    { start: monday, values: [3, 5] },
+    { start: tuesday, values: [2, undefined] }
+  ];
+  const padded = padToCalendarWeek(real, 2, monday);
+  assert.equal(padded.length, 7);
+  assert.deepEqual(padded[0], real[0], 'maandag blijft de echte, ongewijzigde kolom');
+  assert.deepEqual(padded[1], real[1], 'dinsdag blijft de echte, ongewijzigde kolom');
+  for (let day = 2; day < 7; day++) {
+    assert.deepEqual(padded[day].values, [undefined, undefined], `dag ${day} (nog niet beleefd) moet volledig leeg zijn, geen gefabriceerde waarde`);
+  }
 });
 
 test('HD-219: rankEnergySources rangschikt aflopend met een percentage t.o.v. de gerangschikte bronnen zelf', () => {
