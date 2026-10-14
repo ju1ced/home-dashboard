@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.6 — 2026-10-14
+
+Eén ticket sinds `v0.8.5` (HD-222), opgelost na live eigenaarsfeedback op de `v0.8.5`-Verbruik-tab.
+
+- **Fix: "Verbruik per dag" toont nu altijd de volledige kalenderweek (maandag t/m zondag).** De week lijnde sinds `v0.8.5` al uit op maandag (D-078), maar toonde alleen de dagen die al verstreken waren — op een dinsdag dus enkel "ma"/"di". Oorzaak: HA's recorder geeft nooit een bucket terug voor een dag die nog niet begonnen is. De grafiek vult nu altijd aan tot 7 kolommen; een nog niet beleefde dag toont een zichtbare "geen data"-marker, nooit een verdwenen of gefabriceerde kolom.
+- Hoofdbundel ongewijzigd t.o.v. budget (222 kB), gemeten 218.219 bytes.
+- Zie [D-079](docs/design/decision-log.md) voor de volledige analyse. [Testchecklist en rollback](docs/releases/testing-v0.8.6.md).
+
 ## 0.8.5 — 2026-10-13
 
 Eén ticket sinds `v0.8.4` (HD-221), opgelost na live eigenaarsfeedback op de `v0.8.4`-Verbruik-tab.
