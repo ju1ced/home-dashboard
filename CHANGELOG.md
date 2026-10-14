@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.7 — 2026-10-14
+
+Eén ticket sinds `v0.8.6` (HD-223), opgelost na live eigenaarsfeedback op de `v0.8.6`-Verbruik-tab.
+
+- **Fix: "Verbruik per dag" en "Verbruik per maand" tonen nu een rollend venster, met vandaag/deze maand altijd als laatste kolom.** `v0.8.6`'s kalenderweek-vorm (maandag t/m zondag) toonde lege kolommen voor nog niet beleefde dagen — de eigenaar vond dit verwarrend en vroeg in plaats daarvan om de voorbije 7 dagen (resp. 12 maanden), altijd eindigend op vandaag/deze maand. "Verbruik per maand" krijgt voortaan dezelfde garantie: altijd 12 kolommen, ook als een bron nog geen volledig jaar historiek heeft.
+- Hoofdbundel ongewijzigd t.o.v. budget (222 kB), gemeten 218.314 bytes.
+- Zie [D-080](docs/design/decision-log.md) voor de volledige analyse. [Testchecklist en rollback](docs/releases/testing-v0.8.7.md).
+
 ## 0.8.6 — 2026-10-14
 
 Eén ticket sinds `v0.8.5` (HD-222), opgelost na live eigenaarsfeedback op de `v0.8.5`-Verbruik-tab.
