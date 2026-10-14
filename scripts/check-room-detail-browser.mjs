@@ -240,23 +240,31 @@ for (const variant of ["normal", "dark", "warning", "missing", "unknown", "unava
       assert.doesNotMatch(periodFallbackSummaryText, /80 kWh/, `${label}: the shared year entity must never be double-counted`);
       await page.evaluate(() => document.querySelector("home-dashboard-room-detail").shadowRoot.querySelector('[data-control-key="energy-period:month"]').click());
 
-      // HD-219/HD-220: multi-bucket, cumulative-sum statistics for the same period_fallback_mixed fixture.
-      // Plug A has three buckets (the oldest is the undisplayed delta baseline -- sum 0 -> 3 -> 8, i.e.
-      // deltas of 3 and 5); plug B has only that same baseline bucket and nothing after it. Proves: (a) the
-      // combined chart converts cumulative sums into real per-bucket deltas rather than plotting the raw
-      // running total (HD-220 -- a live screenshot showed a ~565 kWh scale for a ~1 kWh/day room before this
-      // fix), (b) the chart aligns real bucket timestamps (never array index) and drops only the baseline
-      // column, and (c) a bucket a source has no data for renders a visibly distinct "missing" segment
-      // instead of silently showing an incomplete stack as complete -- and that "Grootste verbruikers"
-      // ranks both sources descending by their current-period value.
-      await page.evaluate(() => {
+      // HD-219/HD-220/HD-223: multi-bucket, cumulative-sum statistics for the same period_fallback_mixed
+      // fixture. Plug A has three buckets at real calendar months (the oldest is the undisplayed delta
+      // baseline, 2 months ago -- sum 0 -> 3 -> 8, i.e. deltas of 3 and 5); plug B has only that same
+      // baseline bucket and nothing after it. Proves: (a) the combined chart converts cumulative sums into
+      // real per-bucket deltas rather than plotting the raw running total (HD-220 -- a live screenshot
+      // showed a ~565 kWh scale for a ~1 kWh/day room before this fix), (b) the chart aligns real bucket
+      // timestamps (never array index) and drops only the baseline column, (c) a bucket a source has no
+      // data for renders a visibly distinct "missing" segment instead of silently showing an incomplete
+      // stack as complete, (d) "Grootste verbruikers" ranks both sources descending by their current-period
+      // value, and (e) "month" pads to a full trailing 12-month window ending on THIS month (HD-223), with
+      // the two real months landing in their correct (last two) positions.
+      const thisMonthMs = (() => {
+        const now = new Date();
+        return new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+      })();
+      const lastMonthMs = new Date(new Date(thisMonthMs).getFullYear(), new Date(thisMonthMs).getMonth() - 1, 1).getTime();
+      const baselineMonthMs = new Date(new Date(thisMonthMs).getFullYear(), new Date(thisMonthMs).getMonth() - 2, 1).getTime();
+      await page.evaluate(({ baselineMonthMs, lastMonthMs, thisMonthMs }) => {
         const { hass } = window.roomFixture;
         hass.connection.sendMessagePromise = async (message) => {
           if (message.type === "recorder/statistics_during_period") {
             const result = {};
             for (const id of message.statistic_ids) {
-              if (id.includes("period_fallback_a_month")) result[id] = [{ start: 0, sum: 0 }, { start: 86_400_000, sum: 3 }, { start: 172_800_000, sum: 8 }];
-              if (id.includes("period_fallback_b_month")) result[id] = [{ start: 0, sum: 5 }];
+              if (id.includes("period_fallback_a_month")) result[id] = [{ start: baselineMonthMs, sum: 0 }, { start: lastMonthMs, sum: 3 }, { start: thisMonthMs, sum: 8 }];
+              if (id.includes("period_fallback_b_month")) result[id] = [{ start: baselineMonthMs, sum: 5 }];
             }
             return result;
           }
@@ -264,9 +272,12 @@ for (const variant of ["normal", "dark", "warning", "missing", "unknown", "unava
         };
         document.querySelector("home-dashboard-room-detail").hass = { ...hass };
         document.querySelector("home-dashboard-room-detail").shadowRoot.querySelector('[data-control-key="energy-period:month"]').click();
-      });
+      }, { baselineMonthMs, lastMonthMs, thisMonthMs });
       await page.waitForFunction(() => document.querySelector("home-dashboard-room-detail")?.shadowRoot?.querySelector(".stat-chart"));
-      assert.equal(await page.locator(".stat-chart-column").count(), 2, `${label}: the baseline bucket is dropped, leaving one column per real displayed delta`);
+      assert.equal(await page.locator(".stat-chart-column").count(), 12, `${label}: "month" always pads to a full trailing 12-month window, even when a source only has 2 real months of displayed history`);
+      const monthLabels = await page.locator(".stat-chart-label").allTextContents();
+      const thisMonthLabel = new Date(thisMonthMs).toLocaleDateString("nl-BE", { month: "short" });
+      assert.equal(monthLabels.at(-1), thisMonthLabel, `${label}: this month must always be the LAST column`);
       const chartAriaLabel = await page.locator(".stat-chart").getAttribute("aria-label");
       assert.match(chartAriaLabel, /3 kilowattuur/, `${label}: the first displayed bucket's total reflects a real delta (3), not the raw cumulative sum`);
       assert.match(chartAriaLabel, /5 kilowattuur/, `${label}: the second displayed bucket's total reflects a real delta (8-3=5), not the raw cumulative sum (8)`);
@@ -276,11 +287,12 @@ for (const variant of ["normal", "dark", "warning", "missing", "unknown", "unava
       // HD-220 follow-up: a live screenshot showed every bar collapsed to an invisible ~2px sliver despite
       // a correct underlying scale -- a percentage height on .stat-chart-segment resolved against an
       // ambiguous (non-definite) ancestor height and silently floored. Proves each stack now gets a real,
-      // proportional pixel height (bucket totals here are 3 and 5, so the second bar must render taller).
+      // proportional pixel height (the two real bucket totals here are 3 and 5 -- the last two columns --
+      // so the very last bar must render taller than the second-to-last).
       const stackHeights = await page.locator(".stat-chart-stack").evaluateAll((stacks) => stacks.map((stack) => stack.getBoundingClientRect().height));
-      assert.equal(stackHeights.length, 2, `${label}: two stacked columns are rendered`);
-      assert.ok(stackHeights.every((height) => height > 10), `${label}: no bar collapses to the old invisible ~2px floor (got ${JSON.stringify(stackHeights)})`);
-      assert.ok(stackHeights[1] > stackHeights[0], `${label}: the larger bucket total (5) renders visibly taller than the smaller one (3) (got ${JSON.stringify(stackHeights)})`);
+      assert.equal(stackHeights.length, 12, `${label}: all 12 trailing-window columns render a stack`);
+      assert.ok(stackHeights.slice(-2).every((height) => height > 10), `${label}: the two real columns never collapse to the old invisible ~2px floor (got ${JSON.stringify(stackHeights)})`);
+      assert.ok(stackHeights.at(-1) > stackHeights.at(-2), `${label}: the larger bucket total (5, this month) renders visibly taller than the smaller one (3, last month) (got ${JSON.stringify(stackHeights)})`);
       // Scoped to .stage: HD-220 also added a Grootste verbruikers instance to the legacy details-energy
       // panel (co-present in the DOM, just hidden), so an unscoped .energy-ranking locator would match both.
       assert.equal(await page.locator(".stage .energy-ranking .energy-bar-row").count(), 2, `${label}: Grootste verbruikers ranks both smart-plug sources for the active period`);
@@ -331,33 +343,31 @@ for (const variant of ["normal", "dark", "warning", "missing", "unknown", "unava
       const blankNameRankingText = await page.locator(".stage .energy-ranking").textContent();
       assert.match(blankNameRankingText, /Naamloze stekker/, `${label}: Grootste verbruikers falls back to the same friendly_name, never a blank ranking label`);
 
-      // HD-222: a live screenshot showed the "day" chart rendering only "ma"/"di" on a Tuesday -- the chart
-      // shrank to however many days had actually elapsed since Monday, instead of showing a stable
-      // Monday-Sunday week shape. Mocks real statistics for only the baseline (Sunday) + Monday + Tuesday of
-      // the current calendar week, exactly like HA's recorder would for a day that hasn't started yet, and
-      // proves the rendered chart still pads out to all 7 days, with the un-elapsed ones showing a visible
-      // "missing" marker rather than disappearing.
-      const mondayMs = (() => {
+      // HD-223: a live screenshot showed HD-222's calendar-week chart rendering empty "no data yet" columns
+      // for days that hadn't happened yet -- the owner explicitly rejected that shape and asked for a
+      // trailing 7-day window instead, with today always the LAST column. Mocks real statistics for only
+      // the baseline (today-2) + yesterday + today, exactly like a source with just 2 days of real history
+      // would report, and proves the rendered chart still pads out to 7 columns ending on today, with the
+      // older/no-history days showing a visible "missing" marker rather than disappearing or shifting today
+      // out of the last position.
+      const todayMs = (() => {
         const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const daysSinceMonday = (today.getDay() + 6) % 7;
-        today.setDate(today.getDate() - daysSinceMonday);
-        return today.getTime();
+        return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
       })();
-      const sundayMs = mondayMs - 86_400_000;
-      const tuesdayMs = mondayMs + 86_400_000;
-      await page.evaluate(({ sundayMs, mondayMs, tuesdayMs }) => {
+      const yesterdayMs = todayMs - 86_400_000;
+      const baselineMs = todayMs - 2 * 86_400_000;
+      await page.evaluate(({ baselineMs, yesterdayMs, todayMs }) => {
         const fixture = window.roomFixture;
         const { hass } = fixture;
         hass.connection.sendMessagePromise = async (message) => {
           if (message.type === "recorder/statistics_during_period") {
             const result = {};
             for (const id of message.statistic_ids) {
-              if (id.includes("blank_plug_day")) result[id] = [{ start: sundayMs, sum: 0 }, { start: mondayMs, sum: 1.2 }, { start: tuesdayMs, sum: 2 }];
+              if (id.includes("blank_plug_day")) result[id] = [{ start: baselineMs, sum: 0 }, { start: yesterdayMs, sum: 1.2 }, { start: todayMs, sum: 2 }];
             }
             return result;
           }
-          throw new Error("HD-222 test: unexpected ws call");
+          throw new Error("HD-223 test: unexpected ws call");
         };
         // setConfig()'s own synchronous first render already fetches "day" period statistics (its default
         // active period) and caches the response under statisticsCache, which is never invalidated on a later
@@ -368,19 +378,22 @@ for (const variant of ["normal", "dark", "warning", "missing", "unknown", "unava
         detail.setConfig({ type: "custom:home-dashboard-room-detail", room });
         detail.hass = hass;
         document.body.replaceChildren(detail);
-      }, { sundayMs, mondayMs, tuesdayMs });
+      }, { baselineMs, yesterdayMs, todayMs });
       await page.waitForFunction(() => document.querySelector("home-dashboard-room-detail")?.shadowRoot?.querySelector(".control-deck"));
       await selectCapability("Verbruik");
       await page.waitForFunction(() => document.querySelector("home-dashboard-room-detail")?.shadowRoot?.querySelector(".stat-chart"));
-      assert.equal(await page.locator(".stat-chart-column").count(), 7, `${label}: the "day" chart always shows the full calendar week (Monday through Sunday), never just the days that have already happened`);
+      assert.equal(await page.locator(".stat-chart-column").count(), 7, `${label}: the "day" chart always shows a trailing 7-day window, never just the days a source actually has history for`);
+      const weekLabels = await page.locator(".stat-chart-label").allTextContents();
+      const todayLabel = new Date(todayMs).toLocaleDateString("nl-BE", { weekday: "short" });
+      assert.equal(weekLabels.at(-1), todayLabel, `${label}: today must always be the LAST column, never pushed earlier by a calendar-aligned shape`);
       const weekAriaLabel = await page.locator(".stat-chart").getAttribute("aria-label");
-      assert.match(weekAriaLabel, /1[.,]2 kilowattuur/, `${label}: Monday's real delta (1.2) is used, not discarded`);
-      assert.match(weekAriaLabel, /0[.,]8 kilowattuur/, `${label}: Tuesday's real delta (2-1.2=0.8) is used, not discarded`);
+      assert.match(weekAriaLabel, /1[.,]2 kilowattuur/, `${label}: yesterday's real delta (1.2) is used, not discarded`);
+      assert.match(weekAriaLabel, /0[.,]8 kilowattuur/, `${label}: today's real delta (2-1.2=0.8) is used, not discarded`);
       const weekMissingCount = await page.locator(".stat-chart-segment-missing").count();
-      assert.ok(weekMissingCount >= 5, `${label}: the 5 un-elapsed days (Wednesday-Sunday) each show a visible missing segment, not an invisible or absent column (got ${weekMissingCount})`);
+      assert.ok(weekMissingCount >= 5, `${label}: the 5 days with no recorded history each show a visible missing segment, not an invisible or absent column (got ${weekMissingCount})`);
       const weekStackHeights = await page.locator(".stat-chart-stack").evaluateAll((stacks) => stacks.map((stack) => stack.getBoundingClientRect().height));
-      assert.equal(weekStackHeights.length, 7, `${label}: all 7 week columns render a stack`);
-      assert.ok(weekStackHeights.every((height) => height > 0), `${label}: a fully-empty future-day column still reserves real height for its missing marker, not the old invisible 0px collapse (got ${JSON.stringify(weekStackHeights)})`);
+      assert.equal(weekStackHeights.length, 7, `${label}: all 7 trailing-window columns render a stack`);
+      assert.ok(weekStackHeights.every((height) => height > 0), `${label}: a fully-empty no-history column still reserves real height for its missing marker, not the old invisible 0px collapse (got ${JSON.stringify(weekStackHeights)})`);
 
       // HD-212: mountCard()'s fallback catch-path (shared by the LINAK desk card and history-graph)
       // was never actually exercised by any test -- only the card_config pass-through was checked

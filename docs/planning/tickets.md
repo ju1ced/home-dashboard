@@ -1776,3 +1776,42 @@ Zie D-079 voor de volledige analyse. Samengevat: `combineStatisticBuckets()` maa
 `pnpm test`, `pnpm run test:browser`, `git diff --check`, bundlebudget-check.
 
 **Openstaand:** live Home Assistant-acceptatie blijft een afzonderlijke menselijke gate. De algemene "nog steeds niet makkelijk leesbaar"-opmerking (D-078) blijft openstaand; dit ticket loste alleen de volledige-week-vorm op.
+
+---
+
+### HD-223 — "Verbruik per dag"/"per maand" moeten een rollend venster tonen met vandaag/deze maand als laatste kolom
+
+- **Epic:** Kamers
+- **Status:** Klaar — zie [D-080](../design/decision-log.md#d-080--hd-223-verbruik-per-dagper-maand-tonen-nu-een-rollend-venster-met-vandaagdeze-maand-als-laatste-kolom) voor de volledige analyse en besluiten.
+- **Prioriteit:** P1
+- **Omvang:** S
+- **Eigenaar:** Rooms-agent
+- **Afhankelijkheden:** HD-222 (gemerged, `v0.8.6`) — verwerpt HD-222's kalenderweekvorm expliciet, zesde ronde directe live feedback op dezelfde Verbruik-tab
+
+**Doel**
+
+De eigenaar bekeek de `v0.8.6`-Verbruik-tab live en meldde: "de verbruiken onder vandaag geven nu geen data weer voor de dagen die nog moeten komen [...] de huidige dag [moet] altijd de laatste zijn [...] net zoals bij maand moeten we zorgen dat we daar ook alle 12 de maanden zien met de huidige maand als de laatste". HD-222's kalenderweek-vorm (maandag-zondag) werd hiermee expliciet verworpen ten gunste van een rollend venster.
+
+**Achtergrond**
+
+Zie D-080 voor de volledige analyse. Samengevat: HD-222 vulde "dag" aan tot een vaste maandag-zondag-vorm, met lege kolommen voor nog niet beleefde dagen — de eigenaar vond dat verwarrend, niet nuttig. "Maand" had hetzelfde onderliggende probleem (een jong project toont minder dan 12 echte maanden) maar zonder enige padding, dus zonder garantie dat alle 12 maanden zichtbaar zijn.
+
+**Scope**
+
+1. **`statisticsWindowStart()`:** "dag" is niet langer maandag-uitgelijnd; het venster begint nu altijd 7 dagen + 1 deltabasislijndag vóór vandaag.
+2. **Nieuwe `padToTrailingWindow(columns, sourceCount, anchorMs, count, granularity)`** vervangt `padToCalendarWeek()`: vult zowel "dag" (7) als "maand" (12) aan tot een vast aantal kolommen eindigend op vandaag/deze maand. Een kalenderdag/-maand zonder echte kolom krijgt een volledig lege kolom (nooit een gefabriceerde nul).
+3. **`energyStatisticsChart()`:** past de opvulling toe op zowel "dag" als "maand"; "jaar" blijft ongewijzigd.
+
+**Acceptatiecriteria**
+
+- "Verbruik per dag" toont altijd precies 7 kolommen, met vandaag altijd als laatste kolom, ongeacht hoeveel historische data een bron heeft.
+- "Verbruik per maand" toont altijd precies 12 kolommen, met deze maand altijd als laatste kolom.
+- Een dag/maand zonder historische data toont een zichtbare "geen data"-marker, nooit een verdwenen of 0px-hoge kolom.
+- Een bestaande echte kolom blijft ongewijzigd op zijn juiste kalenderpositie.
+- Normal/warning/missing/unavailable blijven afgedekt in fixtures/tests; bundelbudget-check (222 kB, D-075) — gemeten binnen budget zonder verhoging nodig.
+
+**Validatie**
+
+`pnpm test`, `pnpm run test:browser`, `git diff --check`, bundlebudget-check.
+
+**Openstaand:** live Home Assistant-acceptatie blijft een afzonderlijke menselijke gate. De algemene "nog steeds niet makkelijk leesbaar"-opmerking (D-078) blijft openstaand.
