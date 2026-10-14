@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { migrateConfig, favoriteRooms, roomControlSources, planRoomControl, planEntityControl, executeRoomControl, validateConfig, validateConfigSchema, getHomeStructureSignature, resolveLightGroupState, extractStatisticSeries, combineStatisticBuckets, deltaSeries, statisticsBucketLabel, statisticsWindowStart, padToCalendarWeek, rankEnergySources, filterRoomLogbookEvents, temperatureHumidityEntities } from '../dist/home-dashboard.js';
+import { migrateConfig, favoriteRooms, roomControlSources, planRoomControl, planEntityControl, executeRoomControl, validateConfig, validateConfigSchema, getHomeStructureSignature, resolveLightGroupState, extractStatisticSeries, combineStatisticBuckets, deltaSeries, statisticsBucketLabel, statisticsWindowStart, padToTrailingWindow, rankEnergySources, filterRoomLogbookEvents, temperatureHumidityEntities } from '../dist/home-dashboard.js';
 
 const ref = (domain, key) => [domain, key].join('.');
 function setup() {
@@ -265,18 +265,16 @@ test('HD-219: statisticsBucketLabel leidt het label af uit de echte buckettijdst
   assert.equal(statisticsBucketLabel('year', monday), new Date(monday).toLocaleDateString('nl-BE', { year: 'numeric' }));
 });
 
-test('HD-221: statisticsWindowStart lijnt "dag" uit op de meest recente lokale maandag, min één dag als deltabasislijn', () => {
-  // 12 oktober 2026 is een maandag (zelfde kalenderfeit als de statisticsBucketLabel-test hierboven). De
-  // eigenaar meldde dat "Verbruik per dag" dinsdag-tot-dinsdag toonde i.p.v. een echte kalenderweek -- dit
-  // bewijst dat het venster voor élke dag van de week naar dezelfde week-maandag terugrekent, niet naar een
-  // rollend "N dagen geleden vanaf nu"-venster dat elke dag opschuift.
+test('HD-223: statisticsWindowStart geeft voor "dag" een rollend venster van 7 dagen + 1 deltabasislijn, eindigend op vandaag', () => {
+  // De eigenaar verwierp HD-222's kalenderweek-uitlijning expliciet: "de huidige dag [moet] altijd de
+  // laatste zijn". Dit bewijst dat het venster voor élke dag van de week 8 dagen teruggaat vanaf vandaag
+  // (middernacht), ongeacht welke weekdag "vandaag" is -- nooit een vaste maandag.
   for (let offset = 0; offset < 7; offset++) {
     const now = new Date(2026, 9, 12 + offset, 15, 0); // middag, veilig weg van middernachtgrenzen
     const start = statisticsWindowStart('day', now);
-    assert.equal(start.getDay(), 0, `dag+${offset}: start moet een zondag zijn (de dag voor maandag, als deltabasislijn)`);
-    const monday = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1);
-    assert.equal(monday.getDay(), 1, `dag+${offset}: de dag na start moet een maandag zijn`);
-    assert.equal(monday.getDate(), 12, `dag+${offset}: moet steeds dezelfde week-maandag (12 oktober) teruggeven`);
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const expected = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 7);
+    assert.equal(start.getTime(), expected.getTime(), `dag+${offset}: venster moet exact 7 dagen voor vandaag (middernacht) beginnen, als dag vóór de deltabasislijndag`);
   }
 });
 
@@ -286,30 +284,40 @@ test('HD-221: statisticsWindowStart laat maand/jaar ongewijzigd (spangebaseerd, 
   assert.equal(statisticsWindowStart('year', now).getTime(), now.getTime() - 6 * 365 * 86_400_000);
 });
 
-test('HD-222: padToCalendarWeek vult altijd zeven kolommen (maandag t/m zondag), ook zonder enige echte dag', () => {
-  const monday = new Date(2026, 9, 12).getTime(); // 12 oktober 2026 is een maandag
-  const padded = padToCalendarWeek([], 2, monday);
+test('HD-223: padToTrailingWindow ("day") vult altijd zeven kolommen, eindigend op vandaag, ook zonder enige echte dag', () => {
+  const today = new Date(2026, 9, 18).getTime(); // willekeurige ankerdag
+  const padded = padToTrailingWindow([], 2, today, 7, 'day');
   assert.equal(padded.length, 7);
+  assert.equal(new Date(padded.at(-1).start).getTime(), today, 'de laatste kolom moet de ankerdag (vandaag) zijn');
   padded.forEach((column, index) => {
-    assert.equal(new Date(column.start).getDate(), 12 + index, `kolom ${index} moet de juiste kalenderdag hebben`);
+    assert.equal(new Date(column.start).getDate(), 12 + index, `kolom ${index} moet de juiste kalenderdag hebben (18-6=12 t/m 18)`);
     assert.deepEqual(column.values, [undefined, undefined], `kolom ${index} zonder echte data moet volledig leeg zijn, nooit een gefabriceerde 0`);
   });
 });
 
-test('HD-222: padToCalendarWeek behoudt bestaande echte kolommen ongewijzigd en vult enkel de ontbrekende dagen', () => {
-  const monday = new Date(2026, 9, 12).getTime();
-  const tuesday = new Date(2026, 9, 13).getTime();
+test('HD-223: padToTrailingWindow ("day") behoudt bestaande echte kolommen ongewijzigd en vult enkel de ontbrekende dagen', () => {
+  const today = new Date(2026, 9, 18).getTime();
+  const yesterday = new Date(2026, 9, 17).getTime();
   const real = [
-    { start: monday, values: [3, 5] },
-    { start: tuesday, values: [2, undefined] }
+    { start: new Date(2026, 9, 12).getTime(), values: [3, 5] },
+    { start: yesterday, values: [2, undefined] }
   ];
-  const padded = padToCalendarWeek(real, 2, monday);
+  const padded = padToTrailingWindow(real, 2, today, 7, 'day');
   assert.equal(padded.length, 7);
-  assert.deepEqual(padded[0], real[0], 'maandag blijft de echte, ongewijzigde kolom');
-  assert.deepEqual(padded[1], real[1], 'dinsdag blijft de echte, ongewijzigde kolom');
-  for (let day = 2; day < 7; day++) {
-    assert.deepEqual(padded[day].values, [undefined, undefined], `dag ${day} (nog niet beleefd) moet volledig leeg zijn, geen gefabriceerde waarde`);
-  }
+  assert.deepEqual(padded[0], real[0], '12 oktober blijft de echte, ongewijzigde kolom');
+  assert.deepEqual(padded[5], real[1], '17 oktober (gisteren) blijft de echte, ongewijzigde kolom');
+  assert.deepEqual(padded[6].values, [undefined, undefined], 'vandaag zonder echte data moet volledig leeg zijn, geen gefabriceerde waarde');
+  assert.equal(new Date(padded[6].start).getTime(), today, 'de laatste kolom moet nog steeds vandaag zijn, ook als die leeg is');
+});
+
+test('HD-223: padToTrailingWindow ("month") vult altijd twaalf kolommen, eindigend op deze maand', () => {
+  const thisMonth = new Date(2026, 9, 1).getTime(); // oktober 2026
+  const padded = padToTrailingWindow([], 1, thisMonth, 12, 'month');
+  assert.equal(padded.length, 12);
+  assert.equal(new Date(padded.at(-1).start).getTime(), thisMonth, 'de laatste kolom moet deze maand zijn');
+  assert.equal(new Date(padded[0].start).getMonth(), 10, 'de eerste kolom moet 11 maanden terug liggen (november vorig jaar)');
+  assert.equal(new Date(padded[0].start).getFullYear(), 2025, 'de eerste kolom moet in het vorige jaar vallen');
+  padded.forEach((column) => assert.deepEqual(column.values, [undefined], 'een maand zonder echte data moet volledig leeg zijn, nooit een gefabriceerde 0'));
 });
 
 test('HD-219: rankEnergySources rangschikt aflopend met een percentage t.o.v. de gerangschikte bronnen zelf', () => {

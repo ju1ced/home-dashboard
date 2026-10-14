@@ -197,17 +197,18 @@ export type StatisticsPeriod = "day" | "month" | "year";
 // span-based at all -- see statisticsWindowStart() -- so it has no entry here.
 const STATISTICS_PERIOD_SPAN: Record<Exclude<StatisticsPeriod, "day">, number> = { month: 396 * 86_400_000, year: 6 * 365 * 86_400_000 };
 
-/** The statistics window's start time for the active period. HD-221: "day" is calendar-week-aligned to the
- * most recent local Monday (the owner's own request: "Verbruik per dag" drifted day-to-day with a rolling
- * lookback, e.g. showing Tuesday-to-Tuesday instead of a real week) rather than a fixed N-day lookback from
- * "now" -- one extra leading day (the Sunday before) is included as deltaSeries()'s baseline bucket, same
- * role STATISTICS_PERIOD_SPAN's extra bucket plays for month/year. Non-"day" periods are unchanged. */
+/** The statistics window's start time for the active period. HD-223: "day" is a trailing 7-day window
+ * ending TODAY (today is always the last/most recent column) -- HD-222's calendar-week (Monday-Sunday)
+ * alignment showed empty "no data yet" columns for days that hadn't happened yet, which the owner found
+ * confusing rather than helpful: "de verbruiken onder vandaag geven nu geen data weer voor de dagen die nog
+ * moeten komen [...] de huidige dag [moet] altijd de laatste zijn". One extra leading day is included as
+ * deltaSeries()'s baseline bucket, same role STATISTICS_PERIOD_SPAN's extra bucket plays for month/year.
+ * Non-"day" periods are unchanged. */
 export function statisticsWindowStart(period: StatisticsPeriod, now: Date): Date {
   if (period !== "day") return new Date(now.getTime() - STATISTICS_PERIOD_SPAN[period]);
-  const daysSinceMonday = (now.getDay() + 6) % 7; // getDay(): 0=Sun..6=Sat
-  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysSinceMonday);
-  monday.setDate(monday.getDate() - 1);
-  return monday;
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  start.setDate(start.getDate() - 7); // 7 trailing displayed days + 1 baseline day for deltaSeries()
+  return start;
 }
 
 export type StatisticBucket = { start: number; value: number | undefined };
@@ -278,26 +279,33 @@ export function combineStatisticBuckets(series: ReadonlyArray<StatisticBucket[] 
   return { columns, missing };
 }
 
-/** HD-222: "Verbruik per dag" must always show the full calendar week (Monday through Sunday), not just the
- * days that have already happened -- the owner saw only "ma"/"di" on a Tuesday and asked for the whole
- * week. `combineStatisticBuckets()` only ever produces a column for a timestamp some source actually
- * reported, and HA's recorder never has a bucket for a day that hasn't started yet, so without this step
- * the chart would visibly grow day by day instead of showing a stable 7-day shape. Pads to exactly 7
- * columns, one per day starting at `mondayMs`; a day with no real column at all (typically a not-yet-lived
- * future day, but also a genuine gap before any source started reporting) gets an explicit, fully-empty
- * column -- every value `undefined`, rendered via the same "missing" marker as any other absent bucket,
- * never a fabricated zero. An existing real column for that calendar day is kept as-is, untouched. */
-export function padToCalendarWeek(columns: CombinedStatisticColumn[], sourceCount: number, mondayMs: number): CombinedStatisticColumn[] {
-  const byDay = new Map<string, CombinedStatisticColumn>();
-  for (const column of columns) {
-    const date = new Date(column.start);
-    byDay.set(`${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`, column);
-  }
-  return Array.from({ length: 7 }, (_, dayIndex) => {
-    const dayDate = new Date(mondayMs);
-    dayDate.setDate(dayDate.getDate() + dayIndex);
-    const key = `${dayDate.getFullYear()}-${dayDate.getMonth()}-${dayDate.getDate()}`;
-    return byDay.get(key) ?? { start: dayDate.getTime(), values: new Array<number | undefined>(sourceCount).fill(undefined) };
+/** HD-223: both "Verbruik per dag" and "Verbruik per maand" must always show a full, fixed-length TRAILING
+ * window ending at today/this month (today's day, or this month, is always the LAST column) -- never
+ * HD-222's calendar-week shape, which showed empty "no data yet" columns for not-yet-lived future days and
+ * which the owner explicitly rejected: "de huidige dag [moet] altijd de laatste zijn [...] net zoals bij
+ * maand moeten we zorgen dat we daar ook alle 12 de maanden zien met de huidige maand als de laatste".
+ * `combineStatisticBuckets()` only ever produces a column for a timestamp some source actually reported, so
+ * a room/source younger than the full window (7 days / 12 months) would otherwise show a chart that's
+ * visibly shorter than the others, or shifts as it gains history. Pads to exactly `count` columns ending at
+ * `anchorMs`'s calendar day/month; a day/month with no real column at all (typically simply older than this
+ * source's recorded history) gets an explicit, fully-empty column -- every value `undefined`, rendered via
+ * the same "missing" marker as any other absent bucket, never a fabricated zero. An existing real column for
+ * that calendar day/month is kept as-is, untouched. */
+export function padToTrailingWindow(columns: CombinedStatisticColumn[], sourceCount: number, anchorMs: number, count: number, granularity: "day" | "month"): CombinedStatisticColumn[] {
+  const keyOf = (ms: number) => {
+    const date = new Date(ms);
+    return granularity === "day" ? `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}` : `${date.getFullYear()}-${date.getMonth()}`;
+  };
+  const byKey = new Map<string, CombinedStatisticColumn>();
+  for (const column of columns) byKey.set(keyOf(column.start), column);
+  const anchor = new Date(anchorMs);
+  return Array.from({ length: count }, (_, index) => {
+    const offset = count - 1 - index;
+    const date = granularity === "day"
+      ? new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate() - offset)
+      : new Date(anchor.getFullYear(), anchor.getMonth() - offset, 1);
+    const key = keyOf(date.getTime());
+    return byKey.get(key) ?? { start: date.getTime(), values: new Array<number | undefined>(sourceCount).fill(undefined) };
   });
 }
 
@@ -903,11 +911,11 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
       const columnEl = element("div", "stat-chart-column");
       const stack = element("div", "stat-chart-stack");
       const total = totals[columnIndex]!;
-      // HD-222: a column with no real data anywhere (every source undefined -- typically a future day in
-      // a calendar-week-padded chart, see padToCalendarWeek()) must still reserve enough height for its
-      // "missing" markers to actually be visible, not just a bare total-based height that collapses to 0px
-      // and silently hides them again (the exact invisible-bar bug D-077 already fixed once, for a
-      // different reason).
+      // HD-222/HD-223: a column with no real data anywhere (every source undefined -- typically a day/month
+      // older than this source's history in a trailing-window-padded chart, see padToTrailingWindow()) must
+      // still reserve enough height for its "missing" markers to actually be visible, not just a bare
+      // total-based height that collapses to 0px and silently hides them again (the exact invisible-bar bug
+      // D-077 already fixed once, for a different reason).
       const floorPx = column.values.reduce<number>((sum, value) => sum + (value === undefined ? 6 : 2), 0);
       stack.style.height = `${Math.max(maximum > 0 ? (total / maximum) * chartHeightPx : 0, floorPx)}px`;
       sources.forEach((source, sourceIndex) => {
@@ -1006,12 +1014,14 @@ export class HomeDashboardRoomDetail extends RoomCardBase<RoomDetailConfig> {
         const perSourceSeries = chartSources.map(({ entity }) => deltaSeries(extractStatisticSeries(response, entity)));
         const combined = combineStatisticBuckets(perSourceSeries);
         const dropped = combined.columns.length > 1 ? combined.columns.slice(1) : combined.columns;
-        // HD-222: "day" always shows the full Monday-Sunday week, even for days that haven't happened yet
-        // (as empty/"missing" columns) -- the owner saw the chart showing only "ma"/"di" on a Tuesday and
-        // asked for the whole week, not one that visibly grows day by day.
-        const monday = new Date(statisticsWindowStart("day", new Date()));
-        monday.setDate(monday.getDate() + 1);
-        const columns = period === "day" ? padToCalendarWeek(dropped, chartSources.length, monday.getTime()) : dropped;
+        // HD-223: "day" and "month" always show a full trailing window (7 days / 12 months) ending at
+        // today/this month, even when a source has less history than that -- the owner wants today/this
+        // month to always be the LAST column, never a calendar-aligned shape with empty future columns
+        // (HD-222) or a chart that's simply shorter than the window while history is still young.
+        const now = Date.now();
+        const columns = period === "day" ? padToTrailingWindow(dropped, chartSources.length, now, 7, "day")
+          : period === "month" ? padToTrailingWindow(dropped, chartSources.length, now, 12, "month")
+          : dropped;
         wrapper.append(columns.length
           ? this.statisticsBarChart(chartSources, columns, combined.missing, period, periodLabel)
           : element("p", "info unavailable", perSourceSeries.every((series) => series === undefined) ? "Geen langetermijnstatistiek voor deze bronnen." : `Geen data voor deze ${periodLabel}periode.`));

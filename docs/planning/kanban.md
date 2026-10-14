@@ -69,7 +69,8 @@ De kolom **Volgorde** vertaalt afhankelijkheden naar de aanbevolen uitvoering: f
 | [HD-219 Verbruik-tab: gecombineerde dag-/maand-/jaargrafiek + Grootste verbruikers-ranglijst](tickets.md#hd-219--verbruik-tab-één-gecombineerde-dag-maand-jaargrafiek-en-een-grootste-verbruikers-ranglijst) | P1 | Kamers | PR #92 · `v0.8.2` (D-075) |
 | [HD-220 Live verbruikspagina-bevindingen: cumulatieve-som-bug, lege labels, dubbele vergelijking, nutteloze sectie](tickets.md#hd-220--live-verbruikspagina-bevindingen-cumulatieve-som-bug-lege-labels-dubbele-vergelijking-nutteloze-sectie) | P0 | Kamers | PR #94 · `v0.8.3` (D-076) · vervolg PR #96 · `v0.8.4` (D-077: staafdiagram echt zichtbaar, filler-tekst weg) |
 | [HD-221 Nog meer live verbruikspagina-bevindingen: enkele-bucket-jaar, rollend dagvenster, Kamerenergie-tegels](tickets.md#hd-221--nog-meer-live-verbruikspagina-bevindingen-enkele-bucket-jaar-rollend-dagvenster-kamerenergie-tegels) | P1 | Kamers | PR #98 · `v0.8.5` (D-078) |
-| [HD-222 "Verbruik per dag" moet altijd de volledige kalenderweek tonen](tickets.md#hd-222--verbruik-per-dag-moet-altijd-de-volledige-kalenderweek-tonen) | P1 | Kamers | D-079 (nog geen release-PR) |
+| [HD-222 "Verbruik per dag" moet altijd de volledige kalenderweek tonen](tickets.md#hd-222--verbruik-per-dag-moet-altijd-de-volledige-kalenderweek-tonen) | P1 | Kamers | PR #100 · `v0.8.6` (D-079) |
+| [HD-223 "Verbruik per dag"/"per maand" moeten een rollend venster tonen met vandaag/deze maand als laatste kolom](tickets.md#hd-223--verbruik-per-dagper-maand-moeten-een-rollend-venster-tonen-met-vandaagdeze-maand-als-laatste-kolom) | P1 | Kamers | D-080 (nog geen release-PR) |
 
 ## Geblokkeerd
 
