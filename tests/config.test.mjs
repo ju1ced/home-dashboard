@@ -21,6 +21,7 @@ import {
   getEditorSectionForKey,
   matchesRoomSearch,
   mergeEditorIssues,
+  __resetUtilityMeterCacheForTests,
   lookupPeriodSensors,
   promoteToSmartPlug,
   suggestSmartPlugPairs
@@ -587,59 +588,100 @@ test("HD-216: promoteToSmartPlug maakt een smart_plugs-item en haalt de bronnen 
   assert.deepEqual(config.rooms[0].power_entities, [otherEntity], "gepromoveerde entiteiten verdwijnen uit de platte lijst zodat niets dubbel telt");
 });
 
-test("HD-217: lookupPeriodSensors degradeert stil zonder hass.callWS", async () => {
+// HD-217 correction: `config_entries/get` never serializes a config entry's `options` for any
+// integration (confirmed against Home Assistant core's `ConfigEntry.as_json_fragment`), so the
+// first version of this lookup -- which read `entry.options.source`/`.cycle` straight off that
+// call -- could never have found a match against a real Home Assistant instance. The only real
+// path is an options-flow probe over REST (`hass.callApi`): POST to open the flow (its first
+// step's `data_schema` carries the entry's live values as `description.suggested_value`, exactly
+// how Home Assistant's own "edit helper" dialog reads them), then DELETE to abort it. These tests
+// mock that shape, keyed by the `entry_id` passed as the POST body's `handler`.
+function utilityMeterTestHass(entries, optionsByEntryId) {
+  const deletedFlowIds = [];
+  return {
+    callWS: async (message) => {
+      if (message.type === "config_entries/get") return entries.configEntries;
+      if (message.type === "config/entity_registry/list") return entries.registryEntries;
+      throw new Error(`onverwachte callWS: ${message.type}`);
+    },
+    callApi: async (method, path, data) => {
+      if (method === "POST" && path === "config/config_entries/options/flow") {
+        const options = optionsByEntryId[data.handler];
+        return {
+          flow_id: `${data.handler}_flow`,
+          data_schema: options
+            ? [{ name: "source", description: { suggested_value: options.source } }, { name: "cycle", description: { suggested_value: options.cycle } }]
+            : []
+        };
+      }
+      if (method === "DELETE" && path.startsWith("config/config_entries/options/flow/")) {
+        deletedFlowIds.push(path);
+        return undefined;
+      }
+      throw new Error(`onverwachte callApi: ${method} ${path}`);
+    },
+    deletedFlowIds
+  };
+}
+
+test("HD-217: lookupPeriodSensors degradeert stil zonder zowel hass.callWS als hass.callApi", async () => {
+  __resetUtilityMeterCacheForTests();
   assert.equal(await lookupPeriodSensors(undefined, ref("sensor", "example_energy")), null);
   assert.equal(await lookupPeriodSensors({}, ref("sensor", "example_energy")), null);
+  assert.equal(await lookupPeriodSensors({ callWS: async () => [] }, ref("sensor", "example_energy")), null, "callApi ontbreekt: geen manier om options te lezen, dus geen lookup");
+  assert.equal(await lookupPeriodSensors({ callApi: async () => ({}) }, ref("sensor", "example_energy")), null, "callWS ontbreekt: geen manier om kandidaat-entries/entity-registry te lezen, dus geen lookup");
 });
 
-test("HD-217: lookupPeriodSensors vindt dag/maand/jaar via de utility_meter-source, nooit op naam", async () => {
+test("HD-217: lookupPeriodSensors vindt dag/maand/jaar via een options-flow-probe van de utility_meter-source, nooit op naam", async () => {
+  __resetUtilityMeterCacheForTests();
   const energyEntity = ref("sensor", "example_device_energy");
   const dayEntity = ref("sensor", "totally_unrelated_name_daily");
   const monthEntity = ref("sensor", "totally_unrelated_name_monthly");
-  const hass = {
-    callWS: async (message) => {
-      if (message.type === "config_entries/get") {
-        return [
-          { entry_id: "entry_day", domain: "utility_meter", options: { source: energyEntity, cycle: "daily" } },
-          { entry_id: "entry_month", domain: "utility_meter", options: { source: energyEntity, cycle: "monthly" } },
-          { entry_id: "entry_other", domain: "utility_meter", options: { source: ref("sensor", "unrelated_energy"), cycle: "yearly" } }
-        ];
-      }
-      if (message.type === "config/entity_registry/list") {
-        return [
-          { entity_id: dayEntity, config_entry_id: "entry_day" },
-          { entity_id: monthEntity, config_entry_id: "entry_month" },
-          { entity_id: ref("sensor", "unrelated_yearly"), config_entry_id: "entry_other" }
-        ];
-      }
-      throw new Error(`onverwachte callWS: ${message.type}`);
+  const hass = utilityMeterTestHass(
+    {
+      configEntries: [
+        { entry_id: "entry_day", domain: "utility_meter" },
+        { entry_id: "entry_month", domain: "utility_meter" },
+        { entry_id: "entry_other", domain: "utility_meter" }
+      ],
+      registryEntries: [
+        { entity_id: dayEntity, config_entry_id: "entry_day" },
+        { entity_id: monthEntity, config_entry_id: "entry_month" },
+        { entity_id: ref("sensor", "unrelated_yearly"), config_entry_id: "entry_other" }
+      ]
+    },
+    {
+      entry_day: { source: energyEntity, cycle: "daily" },
+      entry_month: { source: energyEntity, cycle: "monthly" },
+      entry_other: { source: ref("sensor", "unrelated_energy"), cycle: "yearly" }
     }
-  };
+  );
   const result = await lookupPeriodSensors(hass, energyEntity);
   assert.deepEqual(result, { day: dayEntity, month: monthEntity });
+  assert.equal(hass.deletedFlowIds.length, 3, "elke geopende options-flow wordt ook weer afgebroken, nooit dangling gelaten");
 });
 
 test("HD-217: lookupPeriodSensors gokt nooit bij een dubbelzinnige match of geen match", async () => {
   const energyEntity = ref("sensor", "example_device_energy");
-  const ambiguousHass = {
-    callWS: async (message) => {
-      if (message.type === "config_entries/get") {
-        return [
-          { entry_id: "entry_a", domain: "utility_meter", options: { source: energyEntity, cycle: "yearly" } },
-          { entry_id: "entry_b", domain: "utility_meter", options: { source: energyEntity, cycle: "yearly" } }
-        ];
-      }
-      return [
+
+  __resetUtilityMeterCacheForTests();
+  const ambiguousHass = utilityMeterTestHass(
+    {
+      configEntries: [{ entry_id: "entry_a", domain: "utility_meter" }, { entry_id: "entry_b", domain: "utility_meter" }],
+      registryEntries: [
         { entity_id: ref("sensor", "candidate_a"), config_entry_id: "entry_a" },
         { entity_id: ref("sensor", "candidate_b"), config_entry_id: "entry_b" }
-      ];
-    }
-  };
+      ]
+    },
+    { entry_a: { source: energyEntity, cycle: "yearly" }, entry_b: { source: energyEntity, cycle: "yearly" } }
+  );
   assert.equal(await lookupPeriodSensors(ambiguousHass, energyEntity), null, "twee kandidaten voor dezelfde periode: geen van beide overnemen");
 
-  const noMatchHass = { callWS: async () => [] };
+  __resetUtilityMeterCacheForTests();
+  const noMatchHass = utilityMeterTestHass({ configEntries: [], registryEntries: [] }, {});
   assert.equal(await lookupPeriodSensors(noMatchHass, energyEntity), null);
 
-  const throwingHass = { callWS: async () => { throw new Error("websocket weg"); } };
-  assert.equal(await lookupPeriodSensors(throwingHass, energyEntity), null, "een falende callWS degradeert stil, geen fout");
+  __resetUtilityMeterCacheForTests();
+  const throwingHass = { callWS: async () => { throw new Error("websocket weg"); }, callApi: async () => { throw new Error("rest weg"); } };
+  assert.equal(await lookupPeriodSensors(throwingHass, energyEntity), null, "een falende callWS/callApi degradeert stil, geen fout");
 });

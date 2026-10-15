@@ -16,7 +16,7 @@ De kolom **Volgorde** vertaalt afhankelijkheden naar de aanbevolen uitvoering: f
 
 | Ticket | Prioriteit | Categorie | Volgorde | Toelichting |
 |---|---|---|---|---|
-| [HD-217 Kamereditor: dag/maand/jaar-periodesensoren automatisch opzoeken bij een smart plug](tickets.md#hd-217--kamereditor-dagmaandjaar-periodesensoren-automatisch-opzoeken-bij-een-smart-plug) | P1 | Quality engineering | 5c-vervolg | Gevonden tijdens de live HD-216-promotiepassage: 138 bestaande `utility_meter`-helpers volgen geen voorspelbare naamconventie; alleen hun `source`-config geeft het zekere antwoord |
+| [HD-217 Kamereditor: dag/maand/jaar-periodesensoren automatisch opzoeken bij een smart plug](tickets.md#hd-217--kamereditor-dagmaandjaar-periodesensoren-automatisch-opzoeken-bij-een-smart-plug) | P1 | Quality engineering | 5c-vervolg | PR #83 gemerged, maar liep op een verkeerde API-aanname (`options` bestaat niet op `config_entries/get`) — gecorrigeerd via REST-optionsflow, zie D-081. Live HA-acceptatie nog te doen vóór "Klaar" |
 
 ## Review/validatie
 

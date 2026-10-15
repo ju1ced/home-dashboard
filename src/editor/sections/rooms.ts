@@ -1,5 +1,5 @@
 import { ROOM_CAPABILITIES, type HomeDashboardConfigV1, type RoomConfig } from "../../config/types";
-import { lookupPeriodSensors, type HomeAssistantWithCallWS } from "../period-sensor-lookup";
+import { lookupPeriodSensors, type HomeAssistantWithLookup } from "../period-sensor-lookup";
 import { escapeHtml, getEditorItemToken, renderSelector } from "../shared";
 
 export type RoomNestedCollection = "light_groups" | "cover_controls" | "smart_plugs";
@@ -212,7 +212,7 @@ export function bindControlOrderEvents(scopeRoot: ParentNode, shadowRoot: Parent
  * every flat-collection section shares -- so unlike persons/cameras/actions, this section does need
  * its own event binder.
  */
-export function bindRoomEvents(shadowRoot: ShadowRoot, config: HomeDashboardConfigV1, handlers: { commit: () => void; moveItem: (items: unknown[], index: number, direction: "up" | "down") => void; hass?: HomeAssistantWithCallWS }): void {
+export function bindRoomEvents(shadowRoot: ShadowRoot, config: HomeDashboardConfigV1, handlers: { commit: () => void; moveItem: (items: unknown[], index: number, direction: "up" | "down") => void; hass?: HomeAssistantWithLookup }): void {
   shadowRoot.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-room-nested-collection]").forEach((element) => {
     if (element.tagName.toLowerCase() === "ha-selector") return;
     element.addEventListener("change", () => {

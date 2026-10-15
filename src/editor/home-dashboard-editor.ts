@@ -16,9 +16,13 @@ export { EDITOR_SECTION_KEYS, getEditorItemToken, getEditorSectionForKey, mergeE
 
 interface HomeAssistantLike {
   states: Record<string, unknown>;
-  // HD-217: optional -- absent in the existing test harness and any older embedding. Every caller
-  // degrades to "no lookup" rather than erroring when this is missing.
+  // HD-217: both optional -- absent in the existing test harness and any older embedding. Every
+  // caller degrades to "no lookup" rather than erroring when either is missing. `callWS` lists
+  // candidate config entries and resolves entity IDs; `callApi` is the REST transport the options
+  // flow actually uses to read a utility_meter helper's current source/cycle (`config_entries/get`
+  // never serializes a config entry's `options`, for any integration -- see period-sensor-lookup.ts).
   callWS?: (message: Record<string, unknown>) => Promise<unknown>;
+  callApi?: <T = unknown>(method: "GET" | "POST" | "DELETE", path: string, data?: Record<string, unknown>) => Promise<T>;
 }
 
 type MutableRecord = Record<string, unknown>;
