@@ -1578,7 +1578,7 @@ Tijdens het uitbrengen van v0.8.0-alpha.30 werd de exacte trigger live betrapt:
 ### HD-217 — Kamereditor: dag/maand/jaar-periodesensoren automatisch opzoeken bij een smart plug
 
 - **Epic:** Quality engineering
-- **Status:** Backlog
+- **Status:** In uitvoering — oorspronkelijke implementatie (PR #83) gecorrigeerd, zie D-081; live Home Assistant-acceptatie van de REST-optionsflow-opzoekfunctie staat nog open vóór "Klaar"
 - **Prioriteit:** P1
 - **Omvang:** M
 - **Eigenaar:** Lead / integrator
@@ -1608,7 +1608,15 @@ Tijdens een live MCP-sessie (niet via de editor, via de Home Assistant MCP-tool 
 
 **Validatie**
 
-`pnpm test`, `pnpm run test:browser`, `git diff --check`, bundle-sizecheck. Live Home Assistant-bevestiging van de exacte `callWS`-commandovorm blijft, zoals elke nieuwe HA-frontend-aanname in dit project, een afzonderlijke menselijke testsessie vóór release.
+`pnpm test`, `pnpm run test:browser`, `git diff --check`, bundle-sizecheck. Live Home Assistant-bevestiging van de exacte opzoekfunctie blijft, zoals elke nieuwe HA-frontend-aanname in dit project, een afzonderlijke menselijke testsessie vóór release.
+
+**Correctie (D-081, 15 oktober 2026)**
+
+De oorspronkelijke implementatie (hierboven, PR #83) ging ervan uit dat `hass.callWS({type: "config_entries/get", domain: "utility_meter"})` elke entry's `options` (dus `source`/`cycle`) zou teruggeven. Dat klopt niet — tegen Home Assistant core se eigen broncode geverifieerd (`ConfigEntry.as_json_fragment` in `homeassistant/config_entries.py`): `config_entries/get` en `config_entries/get_single` serialiseren nooit `options`, voor geen enkele integratie. De opzoekfunctie zou in een echte Home Assistant-omgeving dus altijd stil "geen match" hebben gemeld, ongeacht wat er echt geconfigureerd staat — gedekt door de (op een verkeerde aanname gebaseerde) mocks in de eigen tests, maar nooit door een echte HA-instantie.
+
+De enige echte weg: een browserclient kan een config entry's `options` alleen lezen door een **options-flow te starten** (en weer af te breken) — exact wat Home Assistant's eigen "helper bewerken"-dialoog doet (`showOptionsFlowDialog` in de frontend se `ha-config-helpers.ts`). Dit loopt over **REST** (`hass.callApi`), niet over de websocket (`hass.callWS`): `POST config/config_entries/options/flow` met `{handler: entry_id}` geeft een eerste stap terug wiens `data_schema`-velden de actuele waarden dragen als `description.suggested_value` (bevestigd tegen `homeassistant/helpers/schema_config_entry_flow.py`); nadien altijd `DELETE config/config_entries/options/flow/{flow_id}` om de flow nooit dangling te laten.
+
+Omdat dit één REST-rondrit per kandidaat-`utility_meter`-entry kost (dit huis telt er 138), en dat niet opnieuw bij elke "opzoeken"-klik per plug hoort te gebeuren, wordt de volledige source→periode-kaart nu precies éénmaal per editorsessie opgebouwd en in-memory hergebruikt voor de rest van die sessie. `HomeAssistantLike` kreeg een tweede, eveneens optionele `callApi`-methode naast de al bestaande `callWS`; beide ontbreken in de bestaande testharness, dus de feature blijft stil gedegradeerd zoals voorheen. Tests herschreven om de echte REST-vorm te mocken (POST/DELETE op `config/config_entries/options/flow`) i.p.v. de nooit-bestaande `options`-velden op `config_entries/get`.
 
 ---
 
