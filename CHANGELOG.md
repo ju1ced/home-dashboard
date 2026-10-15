@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.8 — 2026-10-15
+
+Eén correctieticket sinds `v0.8.7` (HD-217), gevonden bij het hervatten van de openstaande kanban-tickets.
+
+- **Fix: de editor se automatische dag-/maand-/jaarsensor-opzoekfunctie (HD-217, voorheen al gemerged maar nooit live getest) ging uit van een Home Assistant-API die niet bestaat.** `config_entries/get` geeft nooit de `options` (bron/periode) van een `utility_meter`-helper terug, voor geen enkele integratie — tegen Home Assistant se eigen broncode bevestigd. Tegen een echte installatie zou de opzoekfunctie dus altijd stil "geen match" hebben gemeld. Herschreven naar de enige echte weg: een options-flow starten en weer afbreken over REST, exact zoals Home Assistant's eigen "helper bewerken"-dialoog dat doet. Resultaat wordt nu, zoals voorheen bedoeld, éénmaal per editorsessie opgebouwd en herbruikt, niet opnieuw bij elke klik.
+- Deze functie blijft "In uitvoering" (niet "Klaar") tot een menselijke testsessie tegen een echte Home Assistant-instantie bevestigt dat de opzoekfunctie daadwerkelijk matches vindt.
+- Hoofdbundel ongewijzigd (editor-only wijziging); editorbundel gemeten 100.352 bytes, binnen budget (160 kB, D-055).
+- Zie [D-081](docs/design/decision-log.md) voor de volledige analyse. [Testchecklist en rollback](docs/releases/testing-v0.8.8.md).
+
 ## 0.8.7 — 2026-10-14
 
 Eén ticket sinds `v0.8.6` (HD-223), opgelost na live eigenaarsfeedback op de `v0.8.6`-Verbruik-tab.
