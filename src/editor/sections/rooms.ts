@@ -104,7 +104,7 @@ function renderRoomBody(config: HomeDashboardConfigV1, roomConfig: RoomConfig, i
     <label>Area${renderSelector("rooms", index, "area_id", roomConfig.area_id, { area: {} })}</label>
     <label>Extra devices${renderSelector("rooms", index, "device_ids", roomConfig.device_ids, { device: { multiple: true } })}</label>
     <label>Functies<select multiple data-collection="rooms" data-index="${index}" data-field="capabilities">${ROOM_CAPABILITIES.map((value) => `<option value="${value}" ${roomConfig.capabilities.includes(value) ? "selected" : ""}>${value}</option>`).join("")}</select></label>
-    <label><input type="checkbox" data-collection="rooms" data-index="${index}" data-field="home_favorite" ${roomConfig.home_favorite ? "checked" : ""}>Favoriet op Home (maximaal vier, volgorde via pijlen)</label>
+    <label><input type="checkbox" data-collection="rooms" data-index="${index}" data-field="home_favorite" ${roomConfig.home_favorite ? "checked" : ""}>Favoriet op Home (volgorde via pijlen)</label>
     <h4>Quick actions</h4>
     <label>Knoppen op Home${renderSelector("rooms", index, "control_entities", controls, { entity: { domain: ["light", "switch", "cover", "media_player", "climate"], multiple: true } })}</label>
     <small>Kies nul tot zestien; orden zonder telkens het dashboard opnieuw te laden.</small>

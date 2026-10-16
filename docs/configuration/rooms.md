@@ -13,7 +13,7 @@ Home en het volledige verdiepingenoverzicht delen dezelfde compacte kamerkaart. 
 
 Onder Dashboard bewerken → Kamers:
 
-- **Favoriet op Home** kiest maximaal vier kamers; de bestaande pijlen bepalen de volgorde. Niet-favorieten blijven op Kamers bereikbaar.
+- **Favoriet op Home** kiest een willekeurig aantal kamers; de bestaande pijlen bepalen de volgorde. Niet-favorieten blijven op Kamers bereikbaar.
 - **Directe bediening toestaan** is standaard uit. Zonder opt-in openen de knoppen alleen HA-details.
 - **Knoppen op Home** kiest nul tot zestien afzonderlijke entiteiten. Kies bij een item direct de gewenste positie; het item wordt in één wijziging verplaatst. Types mogen worden herhaald. Een lege lijst toont geen quick actions.
 - Bestaande configuraties gebruiken de vier oude actiedoelen en bronmappings als beginweergave totdat de nieuwe lijst wordt opgeslagen. Daarna is de gekozen lijst leidend. Er is geen impliciete area-/devicegroepering.

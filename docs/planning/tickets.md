@@ -1934,3 +1934,36 @@ De eigenaar na HD-225: "Kan je wel het aandachtpunt stuk een popup van de warnin
 `pnpm test`, `pnpm run test:browser`, `git diff --check`, bundlebudget-check.
 
 **Openstaand:** live Home Assistant-acceptatie blijft een afzonderlijke menselijke gate.
+
+---
+
+### HD-227 — Geen harde limiet meer op het aantal favoriete kamers op Home
+
+- **Epic:** Kamers
+- **Status:** Klaar — zie [D-085](../design/decision-log.md#d-085--hd-227-geen-harde-limiet-meer-op-het-aantal-favoriete-kamers-op-home) voor de volledige analyse en besluiten.
+- **Prioriteit:** P1
+- **Omvang:** S
+- **Eigenaar:** Rooms-agent
+- **Afhankelijkheden:** geen harde afhankelijkheid; onafhankelijk van HD-226
+
+**Doel**
+
+De eigenaar wil alle kamers zichtbaar maken op het Home-dashboard. `favoriteRooms()` kapte het resultaat hard af op vier kamers en `validate.ts` wierp een fout zodra meer dan vier kamers favoriet stonden — beide beperkingen zijn verwijderd.
+
+**Scope**
+
+1. **`favoriteRooms()`** geeft voortaan alle kamers terug waarvoor `home_favorite === true`, zonder `.slice()`-afkap, in dezelfde expliciete volgorde als voorheen.
+2. **`favorite_limit`-validatieregel verwijderd** uit `validate.ts`.
+3. **Editor-copy en forward-facing configuratiedocs bijgewerkt** (`docs/configuration/rooms.md`, `docs/configuration/home.md`, `docs/reference/config-schema.md`) om de oude limiet van vier niet meer te vermelden.
+
+**Acceptatiecriteria**
+
+- `favoriteRooms()` geeft alle favoriete kamers terug, ongeacht aantal.
+- `validateConfig()` werpt geen `favorite_limit`-issue meer op.
+- Bundelbudget-check (222 kB, D-075) — gemeten binnen budget zonder verhoging nodig.
+
+**Validatie**
+
+`pnpm test`, `pnpm run test:browser`, `git diff --check`, bundlebudget-check.
+
+**Openstaand:** live Home Assistant-acceptatie blijft een afzonderlijke menselijke gate; het daadwerkelijk markeren van de overige kamers als `home_favorite: true` in de live config is een apart, nog te plannen vervolg na goedkeuring van deze code-wijziging.

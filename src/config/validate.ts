@@ -90,7 +90,6 @@ export function validateConfig(config: HomeDashboardConfigV1): ValidationIssue[]
 
   issues.push(...validateKeys(config.rooms, "rooms"));
   const actionKeys = new Set(config.actions.map((action) => action.key));
-  if (config.rooms.filter(room => room.home_favorite).length > 4) issues.push(issue("rooms", "favorite_limit", "Kies maximaal vier favoriete kamers."));
   config.rooms.forEach((room, index) => {
     issues.push(...validateNestedKeys(room.light_groups, `rooms[${index}].light_groups`));
     issues.push(...validateNestedKeys(room.cover_controls, `rooms[${index}].cover_controls`));
