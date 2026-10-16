@@ -169,7 +169,7 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
       const room: RoomConfig = {
         key: `room_${this._config.rooms.length + 1}`, name: "", icon: "mdi:sofa", floor_id: "", area_id: "", device_ids: [], capabilities: [], quick_actions: [],
         control_entities: [],
-        light_entities: [], light_switch_entities: [], light_groups: [], cover_entities: [], cover_controls: [], media_entities: [], safety_entities: [], camera_entities: [], power_entities: [], history_entities: [],
+        light_entities: [], light_switch_entities: [], light_groups: [], cover_entities: [], cover_controls: [], media_entities: [], safety_entities: [], camera_entities: [], motion_entities: [], power_entities: [], history_entities: [],
         image_entity: "", temperature_history_entity: "", smart_plugs: [], room_energy: { power_entity: "", day_entity: "", month_entity: "", year_entity: "" },
         hvac: { entity: "", comfort_entities: [], history_entities: [], modes: [], presets: [], fan_modes: [], swing_modes: [] }
       };

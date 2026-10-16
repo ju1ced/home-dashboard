@@ -605,7 +605,6 @@ export class HomeDashboardHomeOverview extends HTMLElementBase {
 
   private async render(): Promise<void> {
     if (!this.shadowRoot || !this.config) return;
-    const expandedKeys = new Set(Array.from(this.shadowRoot.querySelectorAll<HomeDashboardRoomControls>("home-dashboard-room-controls")).filter(card => card.isExpanded).map(card => card.roomKey));
     this.childCards = [];
     const config = this.config;
     const hass = this.currentHass;
@@ -895,7 +894,7 @@ export class HomeDashboardHomeOverview extends HTMLElementBase {
     const roomGrid = document.createElement("div"); roomGrid.className = "favorite-grid";
     favorites.forEach(room => {
       const card = document.createElement("home-dashboard-room-controls") as HomeDashboardRoomControls;
-      card.setConfig({ room, show_controls: config.show_quick_actions !== false, expanded: expandedKeys.has(room.key) });
+      card.setConfig({ room, show_controls: config.show_quick_actions !== false });
       if (hass) card.hass = hass;
       roomGrid.append(card); this.childCards.push(card as unknown as LovelaceCardElement);
     });

@@ -70,7 +70,8 @@ De kolom **Volgorde** vertaalt afhankelijkheden naar de aanbevolen uitvoering: f
 | [HD-220 Live verbruikspagina-bevindingen: cumulatieve-som-bug, lege labels, dubbele vergelijking, nutteloze sectie](tickets.md#hd-220--live-verbruikspagina-bevindingen-cumulatieve-som-bug-lege-labels-dubbele-vergelijking-nutteloze-sectie) | P0 | Kamers | PR #94 · `v0.8.3` (D-076) · vervolg PR #96 · `v0.8.4` (D-077: staafdiagram echt zichtbaar, filler-tekst weg) |
 | [HD-221 Nog meer live verbruikspagina-bevindingen: enkele-bucket-jaar, rollend dagvenster, Kamerenergie-tegels](tickets.md#hd-221--nog-meer-live-verbruikspagina-bevindingen-enkele-bucket-jaar-rollend-dagvenster-kamerenergie-tegels) | P1 | Kamers | PR #98 · `v0.8.5` (D-078) |
 | [HD-222 "Verbruik per dag" moet altijd de volledige kalenderweek tonen](tickets.md#hd-222--verbruik-per-dag-moet-altijd-de-volledige-kalenderweek-tonen) | P1 | Kamers | PR #100 · `v0.8.6` (D-079) |
-| [HD-223 "Verbruik per dag"/"per maand" moeten een rollend venster tonen met vandaag/deze maand als laatste kolom](tickets.md#hd-223--verbruik-per-dagper-maand-moeten-een-rollend-venster-tonen-met-vandaagdeze-maand-als-laatste-kolom) | P1 | Kamers | D-080 (nog geen release-PR) |
+| [HD-223 "Verbruik per dag"/"per maand" moeten een rollend venster tonen met vandaag/deze maand als laatste kolom](tickets.md#hd-223--verbruik-per-dagper-maand-moeten-een-rollend-venster-tonen-met-vandaagdeze-maand-als-laatste-kolom) | P1 | Kamers | PR #102 · `v0.8.7` (D-080) |
+| [HD-224 Home: kamerchips vervangen het uitklappen van grote actieknoppen](tickets.md#hd-224--home-kamerchips-vervangen-het-uitklappen-van-grote-actieknoppen) | P1 | Kamers | D-082 (nog geen release-PR) |
 
 ## Geblokkeerd
 

@@ -132,7 +132,7 @@ test("editorbundle registreert het editor-element afzonderlijk", () => {
 function room(key) {
   return {
     key, name: key, icon: "mdi:sofa", floor_id: "", area_id: "living_area", device_ids: [], capabilities: [], quick_actions: [],
-    light_entities: [], cover_entities: [], media_entities: [], safety_entities: [], camera_entities: [], power_entities: [], history_entities: [],
+    light_entities: [], cover_entities: [], media_entities: [], safety_entities: [], camera_entities: [], motion_entities: [], power_entities: [], history_entities: [],
     hvac: { entity: "", comfort_entities: [], history_entities: [], modes: [], presets: [], fan_modes: [], swing_modes: [] }
   };
 }

@@ -90,7 +90,7 @@
           { "type": "object", "required": ["area_id"], "properties": { "area_id": { "type": "string", "minLength": 1 } } },
           { "type": "object", "required": ["device_ids"], "properties": { "device_ids": { "type": "array", "minItems": 1 } } }
         ],
-        "required": ["key", "name", "icon", "floor_id", "area_id", "device_ids", "capabilities", "quick_actions", "light_entities", "cover_entities", "media_entities", "safety_entities", "camera_entities", "power_entities", "history_entities", "hvac"],
+        "required": ["key", "name", "icon", "floor_id", "area_id", "device_ids", "capabilities", "quick_actions", "light_entities", "cover_entities", "media_entities", "safety_entities", "camera_entities", "motion_entities", "power_entities", "history_entities", "hvac"],
         "properties": {
           "key": { "$ref": "#/$defs/logicalKey", "x-editor": "rooms" },
           "name": { "type": "string", "minLength": 1, "x-editor": "rooms" },
@@ -140,6 +140,7 @@
           "media_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "rooms" },
           "safety_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "rooms" },
           "camera_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "rooms" },
+          "motion_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "rooms" },
           "power_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "rooms" },
           "history_entities": { "$ref": "#/$defs/entityReferences", "x-editor": "rooms" },
           "image_entity": { "$ref": "#/$defs/entityReference", "x-editor": "rooms" },

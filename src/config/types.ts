@@ -96,6 +96,11 @@ export interface RoomConfig {
   media_entities: EntityReference[];
   safety_entities: EntityReference[];
   camera_entities: EntityReference[];
+  /** HD-224: a dedicated, explicitly configured list -- a room's motion-sensor chip on Home only
+   * ever appears when this is non-empty, never inferred from the broader `safety_entities` list
+   * (which also covers door/smoke/flood sensors with a different purpose: the room-wide "Aandacht
+   * nodig" warning). */
+  motion_entities: EntityReference[];
   power_entities: EntityReference[];
   history_entities: EntityReference[];
   /** Optional Home Assistant image entity used only as the room's visual header. */

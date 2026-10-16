@@ -12,8 +12,9 @@ await page.addInitScript(()=>{const RealDate=Date;window.Date=class extends Real
 const errors=[];let currentCase='home/startup';page.on('pageerror',error=>errors.push(error.message));
 async function open(query='') {
   await page.goto(`${prototypeUrl}/room-controls.html${query}`);
+  // HD-224: chips are always visible now -- no more expand-to-reveal toggle to click before
+  // the room's quick actions become interactive.
   await page.waitForFunction(()=>window.roomFixture && document.querySelector('home-dashboard-home-overview').shadowRoot.querySelector('home-dashboard-room-controls'));
-  await page.getByRole('button',{name:'Bediening Woonkamer',exact:true}).click();
 }
 async function assertHomeHeader() {
   const header=page.locator('home-dashboard-home-overview .top');
@@ -70,17 +71,13 @@ try {
   await page.setViewportSize({width:1440,height:1100});await open();
   await open('?navigation=native');await assertHomeHeader();await open();
   currentCase='home/interactions/normal/1440x1100';
-  const roomToggle=page.getByRole('button',{name:'Bediening Woonkamer',exact:true});
-  assert.equal(await roomToggle.getAttribute('aria-expanded'),'true');
+  // HD-224: chips are always visible, so there's no more expand/collapse state to assert on --
+  // the room name header is now a plain, non-interactive label.
   await page.evaluate(()=>{window.lastDetails='';roomFixture.home.addEventListener('hass-more-info',event=>window.lastDetails=event.detail.entityId);});
   const climate=page.getByRole('button',{name:/Woonkamer · Airco \/ verwarming/});
   await climate.click();
   assert.equal(await page.evaluate(()=>lastDetails===roomFixture.config.rooms[0].hvac.entity),true);
   assert.equal(await page.evaluate(()=>roomFixture.calls.length),0);
-  await climate.press('Escape');
-  assert.equal(await roomToggle.getAttribute('aria-expanded'),'false');
-  assert.equal(await roomToggle.evaluate(el=>el.getRootNode().activeElement===el),true);
-  await roomToggle.press('Enter');
   assert.equal(await page.getByRole('link',{name:'Volledige kamer Woonkamer',exact:true}).getAttribute('href'),'room-room-0');
   assert.equal(await page.evaluate(()=>location.pathname),'/room-controls.html');
   const homeWidth=await page.locator('home-dashboard-home-overview').evaluate(el=>el.shadowRoot.querySelector('.home').getBoundingClientRect().width);
@@ -102,6 +99,35 @@ try {
   assert.equal(await stop.isEnabled(),true);await stop.click();
   assert.equal(await page.evaluate(()=>roomFixture.calls.at(-1).service),'stop_cover');
   await page.evaluate(()=>window.finishMovement());
+  // HD-224: Escape now closes just the one open strip (there's no more whole-panel expand state
+  // to collapse) and returns focus to the chip that opened it.
+  currentCase='home/strip-escape/normal/1440x1100';
+  await open();
+  const coverChip=page.getByRole('button',{name:/Woonkamer · Rolluiken.*Toon bediening/});
+  await coverChip.click();
+  const openCommand=page.getByRole('button',{name:'Woonkamer · Rolluiken Open',exact:true});
+  await openCommand.focus();
+  await openCommand.press('Escape');
+  assert.equal(await coverChip.getAttribute('aria-expanded'),'false');
+  assert.equal(await openCommand.isVisible(),false);
+  assert.equal(await coverChip.evaluate(el=>el.getRootNode().activeElement===el),true);
+  // HD-224: a motion-sensor chip only ever appears when `motion_entities` is explicitly
+  // configured for that room -- Woonkamer has one, Bureau deliberately has none.
+  currentCase='home/motion-chip/normal/1440x1100';
+  await open();
+  const cards=page.locator('home-dashboard-room-controls');
+  const woonkamerMotion=cards.nth(0).locator('.control.status-motion');
+  const bureauMotion=cards.nth(1).locator('.control.status-motion');
+  assert.equal(await woonkamerMotion.count(),1,'Woonkamer heeft motion_entities geconfigureerd: precies één chip');
+  assert.equal(await bureauMotion.count(),0,'Bureau heeft geen motion_entities: geen chip, ook niet afgeleid van safety_entities');
+  assert.equal(await woonkamerMotion.evaluate(el=>el.classList.contains('tone-critical')),false,'rust (uit) is geen kritieke toestand');
+  await page.evaluate(()=>{window.lastDetails='';roomFixture.home.addEventListener('hass-more-info',event=>window.lastDetails=event.detail.entityId);});
+  await woonkamerMotion.click();
+  assert.equal(await page.evaluate(()=>roomFixture.calls.length),0,'een statuschip roept nooit een service aan');
+  const motionEntity=await page.evaluate(()=>roomFixture.config.rooms[0].motion_entities[0]);
+  assert.equal(await page.evaluate(()=>window.lastDetails),motionEntity);
+  await page.evaluate(()=>{const f=roomFixture;f.hass.states[f.config.rooms[0].motion_entities[0]].state='on';f.home.hass={...f.hass};});
+  assert.equal(await woonkamerMotion.evaluate(el=>el.classList.contains('tone-critical')),true,'gedetecteerde beweging kleurt de chip kritiek');
   currentCase='home/service-error/normal/1440x1100';
   await open();
   await page.evaluate(()=>window.fixtureReject=true);
@@ -135,7 +161,6 @@ try {
   assert.equal(await page.evaluate(()=>roomFixture.calls.length),0);
   // Explicit opt-out exposes details only, even with all target mappings present.
   await page.evaluate(()=>{const f=roomFixture;f.config.rooms.forEach(r=>r.controls_enabled=false);f.home.setConfig({...f.config,type:'custom:home-dashboard-home-overview'});f.home.hass=f.hass;});
-  assert.equal(await page.getByRole('button',{name:'Bediening Woonkamer',exact:true}).getAttribute('aria-expanded'),'true');
   await page.getByRole('button',{name:/Woonkamer · Lichten.*Open details/}).click();
   assert.equal(await page.evaluate(()=>roomFixture.calls.length),0);
   currentCase='home/performance-and-touch/normal/1440x1100';
@@ -173,7 +198,9 @@ try {
   currentCase='home/ordered-actions/normal/1440x1100';
   await open();
   await page.evaluate(()=>{const f=roomFixture;const room=f.config.rooms[0];const secondLight=['light','second_fixture'].join('.');const secondCover=['cover','second_fixture'].join('.');f.hass.states[secondLight]={state:'on',attributes:{friendly_name:'Leeslamp',icon:'mdi:floor-lamp'}};f.hass.states[secondCover]={state:'closed',attributes:{friendly_name:'Rolluik terras',supported_features:11,device_class:'shutter',icon:'mdi:blinds-horizontal'}};room.control_entities=[room.control_cover_entity,secondLight,room.control_light_entity,secondCover,room.control_awning_entity,room.control_media_entity,room.hvac.entity];f.home.setConfig({...f.config,type:'custom:home-dashboard-home-overview'});f.home.hass=f.hass;});
-  const orderedNames=await page.locator('home-dashboard-room-controls').first().locator('.controls .control strong').allTextContents();
+  // HD-224: chips carry their full name/state only in aria-label/title now, not in visible text.
+  const orderedLabels=await page.locator('home-dashboard-room-controls').first().locator('.controls .control').evaluateAll(buttons=>buttons.map(button=>button.getAttribute('aria-label')));
+  const orderedNames=orderedLabels.map(label=>label.match(/Woonkamer · ([^:]+):/)?.[1]);
   assert.deepEqual(orderedNames.slice(0,4),['Rolluik','Leeslamp','Lichten','Rolluik terras']);
   assert.equal(await page.evaluate(()=>roomFixture.calls.length),0);
   const orderedCover=page.getByRole('button',{name:/Woonkamer · Rolluik terras:.*Toon bediening/});
@@ -194,10 +221,8 @@ try {
   const detailWidth=await page.locator('home-dashboard-room-detail').evaluate(el=>el.shadowRoot.querySelector('.detail').getBoundingClientRect().width);
   assert.ok(detailWidth>1300);
   await page.screenshot({path:`${directory}/room-detail.png`,fullPage:true});
-  currentCase='home/reduced-motion/normal/390x844';
-  await page.emulateMedia({reducedMotion:'reduce'});await page.setViewportSize({width:390,height:844});await open();
-  const transition=await page.locator('home-dashboard-room-controls').first().locator('.expand-icon').evaluate(element=>getComputedStyle(element).transitionDuration);
-  assert.equal(transition,'0s');
+  // HD-224: the expand chevron (and its reduced-motion rule) is gone along with the
+  // expand/collapse interaction it animated -- chips have no transition left to gate.
   await page.emulateMedia({reducedMotion:'no-preference'});
   // Real editor events, including selector change bubbling, preserve the new fields.
   currentCase='editor/rooms/normal/1440x1100';

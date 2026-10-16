@@ -467,7 +467,7 @@ test("area-loze room met expliciet device is in schema en semantiek geldig", () 
   const config = createDefaultConfig();
   config.rooms.push({
     key: "utility_room", name: "Techniek", icon: "mdi:server", floor_id: "", area_id: "", device_ids: ["device_primary"],
-    capabilities: ["power"], quick_actions: [], light_entities: [], cover_entities: [], media_entities: [], safety_entities: [], camera_entities: [],
+    capabilities: ["power"], quick_actions: [], light_entities: [], cover_entities: [], media_entities: [], safety_entities: [], camera_entities: [], motion_entities: [],
     power_entities: [], history_entities: [], hvac: { entity: "", comfort_entities: [], history_entities: [], modes: [], presets: [], fan_modes: [], swing_modes: [] }
   });
   assert.deepEqual(validateConfigSchema(config), []);
@@ -574,7 +574,7 @@ test("HD-216: promoteToSmartPlug maakt een smart_plugs-item en haalt de bronnen 
   const config = createDefaultConfig();
   config.rooms.push({
     key: "keuken", name: "Keuken", icon: "mdi:sofa", floor_id: "", area_id: "", device_ids: [], capabilities: [], quick_actions: [],
-    light_entities: [], light_switch_entities: [], light_groups: [], cover_entities: [], cover_controls: [], media_entities: [], safety_entities: [], camera_entities: [],
+    light_entities: [], light_switch_entities: [], light_groups: [], cover_entities: [], cover_controls: [], media_entities: [], safety_entities: [], camera_entities: [], motion_entities: [],
     power_entities: [switchEntity, powerEntity, otherEntity], history_entities: [],
     image_entity: "", temperature_history_entity: "", smart_plugs: [], room_energy: { power_entity: "", day_entity: "", month_entity: "", year_entity: "" },
     hvac: { entity: "", comfort_entities: [], history_entities: [], modes: [], presets: [], fan_modes: [], swing_modes: [] }

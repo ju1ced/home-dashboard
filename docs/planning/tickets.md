@@ -1823,3 +1823,45 @@ Zie D-080 voor de volledige analyse. Samengevat: HD-222 vulde "dag" aan tot een 
 `pnpm test`, `pnpm run test:browser`, `git diff --check`, bundlebudget-check.
 
 **Openstaand:** live Home Assistant-acceptatie blijft een afzonderlijke menselijke gate. De algemene "nog steeds niet makkelijk leesbaar"-opmerking (D-078) blijft openstaand.
+
+---
+
+### HD-224 — Home: kamerchips vervangen het uitklappen van grote actieknoppen
+
+- **Epic:** Kamers
+- **Status:** Klaar — zie [D-082](../design/decision-log.md#d-082--hd-224-kamerchips-vervangen-het-uitklappen-van-grote-actieknoppen-op-home) voor de volledige analyse en besluiten.
+- **Prioriteit:** P1
+- **Omvang:** M
+- **Eigenaar:** Rooms-agent
+- **Afhankelijkheden:** geen (herontwerp van de bestaande "Kamers & bediening"-kaart op Home)
+
+**Doel**
+
+De eigenaar vindt de "Kamers & bediening"-kaarten op Home niet toegankelijk genoeg: de quick actions zitten achter een expand-klik op de kamernaam. Vroeg om compacte, direct bedienbare chips naast de kamernaam, zoals op zijn eigen andere dashboard — expliciet niet 1-op-1 na te bouwen, wel "in de huidige stijl" passend. Bewegingssensoren/camera's met statuskleuren werden als "ook wel nice" genoemd.
+
+**Achtergrond**
+
+Zie D-082 voor de volledige analyse, inclusief het lokale (`jq`, geen entity-ID's overgenomen) onderzoek naar het klikgedrag van de referentie-chips, dat bevestigde dat dit project's bestaande `planEntityControl()`-kliklogica (direct togglen met een geldig plan, anders meer-info) al exact hetzelfde patroon volgt.
+
+**Scope**
+
+1. **Geen expand/collapse meer:** `HomeDashboardRoomControls` verliest zijn hele expand-status (chevron, `aria-expanded`, `isExpanded`/`roomKey`). De kamernaam-kop wordt een gewone, niet-klikbare rij; de chiprij staat daar altijd zichtbaar onder.
+2. **Compacte pil-chip i.p.v. kaart:** elke bestaande licht-/cover-/luifel-/climate-/media-knop behoudt exact dezelfde klik-/strip-/togglelogica, wordt visueel een 44×44 px-pil met enkel icoon + optionele korte waarde (coverpositie, klimaatdoel, "×N"-telling) — nooit de volledige naam/status als vaste tekst (die blijft in `aria-label`/`title`). Bestaande kind-accentkleuren blijven ongewijzigd.
+3. **Nieuwe read-only statuschips:** `camera_entities` (al bestaand veld) en het nieuwe, toegewijde `motion_entities`-veld krijgen elk een chip, semantisch gekleurd (actief/kritiek/onbeschikbaar), altijd alleen meer-info bij een klik, nooit een service-aanroep. Een bewegingschip verschijnt uitsluitend wanneer `motion_entities` expliciet is ingevuld — nooit afgeleid van de bredere `safety_entities`-lijst.
+4. **Escape sluit voortaan enkel de open strip** (niet langer een heel paneel) en zet de focus terug op zijn eigen chip.
+
+**Acceptatiecriteria**
+
+- Alle kamerquickacties zijn zonder enige expand-klik zichtbaar en direct bedienbaar op Home.
+- Elke chip blijft minimaal 44×44 px; volledige naam/status blijft beschikbaar via `aria-label`/`title`.
+- Bestaande veiligheidscontracten blijven ongewijzigd: luifelbevestiging, Stop blijft beschikbaar tijdens een lopende beweging, geen optimistische staat, `controls_enabled=false` geeft enkel details, onbeschikbare staat geeft nooit een call.
+- Statuschips voor sensoren/camera's roepen nooit een service aan.
+- Bundelbudget-check (222 kB, D-075) — gemeten binnen budget zonder verhoging nodig.
+
+**Validatie**
+
+`pnpm test`, `pnpm run test:browser`, `git diff --check`, bundlebudget-check.
+
+**Openstaand:** live Home Assistant-acceptatie blijft een afzonderlijke menselijke gate.
+
+**Correctie (16 oktober 2026):** de eigenaar bevestigde dat de bewegingschip enkel mag verschijnen bij een expliciet geconfigureerde bewegingssensor, niet afgeleid van `safety_entities`. `RoomConfig` kreeg daarom alsnog een toegewijd `motion_entities`-veld (schema, editor-selector, migratie-default), zie D-082's correctie voor de volledige analyse.
