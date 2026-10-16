@@ -9,7 +9,7 @@ Vanaf v0.8.0-alpha.1 combineert Home rustige context met vaste favoriete kamerbe
 1. **Aandacht nodig** behoudt operationele uitval en expliciet gemapte safety, ook buiten favoriete kamers. Kritieke states krijgen voorrang; de knoppen openen details.
 2. **Vandaag** behoudt één samengestelde kaart met weer, maximaal drie voorspeldagen, zes benoemde energievelden en **Afvalophaling**. Afval toont fractie, datum en relatieve termijn, maximaal vier naast elkaar en twee op mobiel. Security blijft zelfstandig rechts of stapelt op smallere schermen.
 3. **Gezin** toont aanwezigheid en relevante batterijwaarschuwingen, zonder generieke dataversheidstekst. Toegestane zones blijven privacybewust; geen adres of coördinaten.
-4. **Kamers & bediening** toont maximaal vier expliciet gekozen favorieten in configuratievolgorde, ook wanneer alles uitstaat. Actieve verlichting, media, covers en klimaat zijn direct in de contrastrijke kamerknoppen zichtbaar. Zonder favorieten verschijnt een instelhint. Alle kamers blijft altijd bereikbaar.
+4. **Kamers & bediening** toont alle expliciet gekozen favorieten in configuratievolgorde (geen limiet meer, HD-227), ook wanneer alles uitstaat. Actieve verlichting, media, covers en klimaat zijn direct in de contrastrijke kamerknoppen zichtbaar. Zonder favorieten verschijnt een instelhint. Alle kamers blijft altijd bereikbaar.
 5. **Snel naar** bevat ingeschakelde specialistische ingangen onder de afvalophaling, zonder dubbele kamerlinks.
 
 Kies favorieten en actiedoelen via Dashboard bewerken → Kamers. [Kamerbediening](rooms.md) beschrijft de afzonderlijke doelen en opt-in voor directe acties. De native kamerdetails blijven behouden.

@@ -19,7 +19,7 @@ const statusIcons: Record<StatusKind, string> = { motion: "mdi:motion-sensor", c
 const ATTENTION_STATES = ["on", "open", "problem", "unsafe", "unlocked"];
 
 export function favoriteRooms(rooms: readonly RoomConfig[]): RoomConfig[] {
-  return rooms.filter(room => room.home_favorite === true).slice(0, 4);
+  return rooms.filter(room => room.home_favorite === true);
 }
 
 function target(room: RoomConfig, kind: Kind): string { return kind === "climate" ? room.hvac.entity : room[`control_${kind}_entity`] ?? ""; }

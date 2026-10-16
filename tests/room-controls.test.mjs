@@ -25,8 +25,13 @@ test('legacy migratie activeert geen doelen of bediening', () => {
 test('favorieten blijven in expliciete volgorde onafhankelijk van activiteit', () => {
   const {room}=setup(); const rooms = [{...room,key:'second'}, {...room,key:'hidden',home_favorite:false},{...room,key:'first'}];
   assert.deepEqual(favoriteRooms(rooms).map(x=>x.key), ['second','first']);
-  const config=migrateConfig({rooms:Array.from({length:5},(_,i)=>({...room,key:`room_${i}`}))}).config;
-  assert.ok(validateConfig(config).some(x=>x.code==='favorite_limit'));
+});
+test('HD-227: geen limiet meer op het aantal favoriete kamers', () => {
+  const {room}=setup();
+  const rooms = Array.from({length:19},(_,i)=>({...room,key:`room_${i}`}));
+  const config=migrateConfig({rooms}).config;
+  assert.equal(favoriteRooms(config.rooms).length, 19);
+  assert.ok(!validateConfig(config).some(x=>x.code==='favorite_limit'));
 });
 test('licht stuurt uitsluitend het expliciet gekozen doel en gebruikt actuele toestand', async () => {
   const {room,hass,calls}=setup();
