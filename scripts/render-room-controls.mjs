@@ -63,7 +63,18 @@ try {
       assert.equal(await page.locator('home-dashboard-navigation nav a').count(),5);
       assert.equal(await page.getByRole('link',{name:'Home',exact:true}).getAttribute('aria-current'),'page');
     }
-    if(name==='warning') assert.equal(await page.getByText('Aandacht nodig',{exact:true}).count(),1);
+    if(name==='warning') {
+      // HD-230: the attention banner is on-demand now -- hidden until the header's attention
+      // pill is clicked, never shown unconditionally just because something needs attention.
+      assert.equal(await page.getByText('Aandacht nodig',{exact:true}).count(),0,'banner stays hidden until the pill is clicked');
+      const attentionPill=page.locator('home-dashboard-home-overview .pill.attention');
+      assert.equal(await attentionPill.getAttribute('aria-expanded'),'false');
+      await attentionPill.click();
+      assert.equal(await page.getByText('Aandacht nodig',{exact:true}).count(),1,'banner appears once the pill is clicked');
+      assert.equal(await attentionPill.getAttribute('aria-expanded'),'true');
+      await attentionPill.click();
+      assert.equal(await page.getByText('Aandacht nodig',{exact:true}).count(),0,'banner hides again on a second click');
+    }
     if(name==='desktop') await page.getByRole('button',{name:/Woonkamer · Rolluik.*Toon bediening/}).click();
     await page.screenshot({path:`${directory}/${name}.png`,fullPage:true});
   }
