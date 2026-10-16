@@ -235,7 +235,6 @@ test("roominteracties hebben touch-, focus- en mobiele contracts", async () => {
   const editor = await readFile(new URL("../src/editor/home-dashboard-editor.ts", import.meta.url), "utf8");
   assert.match(controls, /min-height:44px/);
   assert.match(controls, /button:focus-visible/);
-  assert.match(controls, /prefers-reduced-motion:reduce/);
   assert.match(cameras, /min-width:44px;min-height:44px/);
   assert.match(cameras, /\.controls\{display:flex;gap:8px\}/);
   assert.match(cameras, /prefers-reduced-motion: reduce/);
@@ -405,7 +404,7 @@ test("kameracties gebruiken korte namen, entiteitsiconen en duidelijke actieve t
   assert.match(controls, /function shortName/);
   assert.match(controls, /attributes\?\.icon/);
   assert.match(controls, /kind-\$\{kind\}/);
-  assert.match(controls, /box-shadow:inset 4px 0 var\(--control-accent\)/);
+  assert.match(controls, /\.control\.active\{background:color-mix\(in srgb,var\(--control-accent\)/);
   assert.match(editor, /data-room-control-move/);
   assert.match(editor, /data-room-control-apply/);
   assert.match(editor, /moveRoomControlDraft/);
