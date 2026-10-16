@@ -23,7 +23,7 @@ De kolom **Volgorde** vertaalt afhankelijkheden naar de aanbevolen uitvoering: f
 | Ticket | Prioriteit | Categorie | Volgorde | Toelichting |
 |---|---|---|---|---|
 | [HD-170 Volledige responsive, accessibility en visual QA](tickets.md#hd-170--volledige-responsive-accessibility-en-visual-qa) | P1 | Quality engineering | 1a en 4b | Nu de menselijke alpha.20-QA uitvoeren; definitief sluiten na validatie van de gekozen specialistset |
-| [HD-111 Live acceptatie van de actuele alpha](tickets.md#hd-111--live-acceptatie-van-de-actuele-alpha) | P0 | Runtimeacceptatie | 1b | Gedeeltelijk geslaagd 7 okt 2026 (zie [resultaatdocument](../releases/results-hd111-live-acceptance.md)); visuele/interactieve punten vereisen nog een menselijke browsersessie |
+| [HD-111 Live acceptatie van de actuele alpha](tickets.md#hd-111--live-acceptatie-van-de-actuele-alpha) | P0 | Runtimeacceptatie | 1b | Gedeeltelijk geslaagd 7 okt 2026, herbevestigd tegen `v0.8.8` op 15 okt 2026 (zie [resultaatdocument](../releases/results-hd111-live-acceptance.md)); vier punten vereisen nog een menselijke browsersessie (3 bestaand + HD-217's opzoekfunctie) |
 
 ## Klaar
 

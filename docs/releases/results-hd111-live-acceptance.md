@@ -29,8 +29,23 @@ Bij de start van deze ronde bleek HACS de `home-dashboard`-repository weer op `r
 - Visuele weergave van alle vijf routes en kamer-subviews in een echte browser (geen screenshot-/browserautomatisering beschikbaar in deze MCP-sessie).
 - De dashboardeditor's interactieve gedrag in de echte, ingebedde Home Assistant-context (wel gedekt door de bestaande CI-browsermatrix, niet live herbevestigd).
 - Kiosk-navigatieherstel na een echte app-/sessieherstart.
-- HD-217's `hass.callWS`-gebaseerde periodesensor-opzoekfunctie tegen de echte native HA-websocket-API — expliciet al vastgelegd als open vraag in HD-217 zelf.
+- HD-217's periodesensor-opzoekfunctie tegen een echte Home Assistant-instantie — ondertussen gecorrigeerd naar een REST-optionsflow-aanpak (D-081, `v0.8.8`) nadat bleek dat de oorspronkelijke `hass.callWS`-aanname niet klopte; nog steeds niet live bevestigd, expliciet al vastgelegd als open vraag in HD-217 zelf.
 
 ## Gate
 
 Dit resultaat sluit HD-111 **niet volledig af** — de hierboven genoemde visuele/interactieve punten blijven open voor een menselijke browsersessie, en de HACS-driftoorzaak blijft een open onderzoeksvraag onder het nieuwe HD-112-subticket. Alle overige checklistitems zijn met concreet bewijs afgerond: geen regressie op het default dashboard, een echte geslaagde apparaatbediening, en een foutloze validatie van de volledige live configuratie.
+
+## Vervolgronde — 15 oktober 2026, tegen `v0.8.8`
+
+Uitgevoerd als onderdeel van het hervatten van de openstaande kanban-tickets, na een reeks releases (`v0.8.2` t/m `v0.8.8`) sinds de vorige ronde. Uitsluitend read-only MCP-verificatie (geen HA-write, geen snapshot nodig) — geen browser-/screenshotautomatisering beschikbaar in deze sessie, dus dezelfde drie visuele/interactieve punten blijven om dezelfde reden open.
+
+| Checklistitem | Resultaat |
+|---|---|
+| **HACS-pin, geen drift (vervolg op HD-112-bevinding)** | **Bevestigd stabiel.** `home-dashboard` staat gepind op `v0.8.8` (`installed_version`/`available_version` identiek, `pending_update: false`) — geen terugval naar `main` deze ronde, bij geen van de zes tussentijdse releases deze sessie (`v0.8.2`–`v0.8.8`). De drie externe specialist-HACS-afhankelijkheden (Kia Connect Dashboard, Robot Vacuum Dashboard, Garden Dashboard Card) staan alle drie nog correct gepind, geen pending updates. (De 3D-printer- en zwembadspecialisten zijn eigen, interne `custom:home-dashboard-*-summary`-kaarten — geen externe HACS-afhankelijkheid, dus niet afzonderlijk te pinnen.) |
+| **Live configuratievalidatie, herhaald tegen de huidige codebase** | De volledige, echte 19-kamer-configuratie (ongewijzigd t.o.v. de vorige ronde) opnieuw door `migrateConfig()`/`compileConfig()`/`validateConfig()`/`validateConfigSchema()` gehaald — nu tegen `v0.8.8`'s schema/validator, die sinds de vorige ronde substantieel is uitgebreid (HD-216 t/m HD-223). **Nul migratieproblemen, nul schemafouten, nul semantische fouten.** Dezelfde tien niet-blokkerende waarschuwingen als de vorige ronde (vijf kamers zonder power-apparaten, vijf specialisten zonder gepinde minimumversie) — geen nieuwe waarschuwingen, geen regressie in achterwaartse compatibiliteit ondanks de vele schemawijzigingen sinds 7 oktober. |
+| **Default `lovelace` dashboard** | Config-hash en -grootte zijn **niet meer identiek** aan de 7 oktober-baseline (`6fb98f13455f14a9`/453.201 bytes → nu anders, nieuwe baseline vastgelegd hieronder). Dit is **geen regressie van dit project**: er is deze sessie geen enkele `ha_config_set_dashboard`-aanroep (of andere write) tegen het default dashboard uitgevoerd — alleen read-only HACS-herpinning en configuratielezingen. De drift komt van elders (de eigenaar se eigen, aan dit project ongerelateerde dashboardgebruik tussen 7 en 15 oktober). Vastgelegd als nieuwe baseline voor een volgende vergelijking, niet als bevinding om op te lossen. |
+| **HD-217's opzoekfunctie (correctie, D-081)** | Nog niet live tegen een echte Home Assistant-instantie bevestigd — dit blijft het eerstvolgende concrete testpunt zodra er een menselijke sessie met een echte browser/editor beschikbaar is (zie testchecklist `v0.8.8`). |
+
+**Nieuwe baseline voor default `lovelace`:** config-hash `d06672da79509e12`, 453.172 bytes, vastgesteld 15 oktober 2026 — te gebruiken als vergelijkingspunt bij de volgende live-acceptatieronde, in plaats van de verouderde 7 oktober-waarde.
+
+**Nog steeds open, ongewijzigd:** de drie punten die een echte menselijke browser-/app-sessie vereisen (visuele weergave van de vijf routes/subviews, de dashboardeditor se interactieve gedrag in de echte HA-context, en kiosk-navigatieherstel na een echte herstart) — geen van deze is via een MCP-only sessie te bewijzen. HD-217's opzoekfunctie komt daar nu als vierde, nieuw punt bij (zie hierboven).
