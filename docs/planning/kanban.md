@@ -71,7 +71,8 @@ De kolom **Volgorde** vertaalt afhankelijkheden naar de aanbevolen uitvoering: f
 | [HD-221 Nog meer live verbruikspagina-bevindingen: enkele-bucket-jaar, rollend dagvenster, Kamerenergie-tegels](tickets.md#hd-221--nog-meer-live-verbruikspagina-bevindingen-enkele-bucket-jaar-rollend-dagvenster-kamerenergie-tegels) | P1 | Kamers | PR #98 · `v0.8.5` (D-078) |
 | [HD-222 "Verbruik per dag" moet altijd de volledige kalenderweek tonen](tickets.md#hd-222--verbruik-per-dag-moet-altijd-de-volledige-kalenderweek-tonen) | P1 | Kamers | PR #100 · `v0.8.6` (D-079) |
 | [HD-223 "Verbruik per dag"/"per maand" moeten een rollend venster tonen met vandaag/deze maand als laatste kolom](tickets.md#hd-223--verbruik-per-dagper-maand-moeten-een-rollend-venster-tonen-met-vandaagdeze-maand-als-laatste-kolom) | P1 | Kamers | PR #102 · `v0.8.7` (D-080) |
-| [HD-224 Home: kamerchips vervangen het uitklappen van grote actieknoppen](tickets.md#hd-224--home-kamerchips-vervangen-het-uitklappen-van-grote-actieknoppen) | P1 | Kamers | D-082 (nog geen release-PR) |
+| [HD-224 Home: kamerchips vervangen het uitklappen van grote actieknoppen](tickets.md#hd-224--home-kamerchips-vervangen-het-uitklappen-van-grote-actieknoppen) | P1 | Kamers | PR #107 · `v0.8.9` (D-082) |
+| [HD-225 Geen gecombineerde chips meer; chiprij naast de kamernaam, zo compact mogelijk](tickets.md#hd-225--geen-gecombineerde-chips-meer-chiprij-naast-de-kamernaam-zo-compact-mogelijk) | P1 | Kamers | D-083 (nog geen release-PR) |
 
 ## Geblokkeerd
 
