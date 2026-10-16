@@ -14,8 +14,8 @@ const icons: Record<Kind, string> = { light: "mdi:lightbulb-outline", cover: "md
 const statusLabels: Record<StatusKind, string> = { motion: "Bewegingssensor", camera: "Camera" };
 const statusIcons: Record<StatusKind, string> = { motion: "mdi:motion-sensor", camera: "mdi:cctv" };
 // HD-224: states that mean "needs attention" for a safety/motion sensor -- the same list
-// used elsewhere for the room-wide "Aandacht nodig" meta text, kept as the single source of
-// truth for which states count as attention-worthy.
+// used for the on-demand attention chip (HD-226), kept as the single source of truth for
+// which states count as attention-worthy.
 const ATTENTION_STATES = ["on", "open", "problem", "unsafe", "unlocked"];
 
 export function favoriteRooms(rooms: readonly RoomConfig[]): RoomConfig[] {
@@ -148,6 +148,11 @@ export class HomeDashboardRoomControls extends Base {
   private orderedControls: OrderedControl[] = [];
   private statusControls: StatusControl[] = [];
   private meta?: HTMLElement;
+  /** HD-226: the "needs attention" indicator is an on-demand chip, not a continuously-visible
+   * meta line -- it only ever appears in the row when a safety entity actually needs attention,
+   * and opens that entity's own more-info on tap rather than a fixed, always-present warning. */
+  private attentionButton: HTMLButtonElement | undefined = undefined;
+  private attentionEntity: string | undefined = undefined;
   private signature = "";
   private generation = 0;
   /** The one strip currently open (if any) -- used so Escape closes just that strip and returns
@@ -219,11 +224,18 @@ export class HomeDashboardRoomControls extends Base {
     const room = this.config?.room;
     if (!room) return;
     if (this.meta) {
-      const safety = room.safety_entities.some(entity => ATTENTION_STATES.includes(this.currentHass?.states?.[entity]?.state ?? ""));
       const context = room.hvac.comfort_entities.map(entity => this.currentHass?.states?.[entity]).filter(known).slice(0, 2)
         .map(state => `${state!.state} ${state!.attributes?.unit_of_measurement ?? ""}`.trim());
-      this.meta.textContent = safety ? "Aandacht nodig · Open kamerdetails" : context.join(" · ") || "Kamerstatus en bediening";
-      this.meta.classList.toggle("warning", safety);
+      this.meta.textContent = context.join(" · ") || "Kamerstatus en bediening";
+    }
+    if (this.attentionButton) {
+      // HD-226: pick whichever safety entity currently needs attention -- re-evaluated on every
+      // update so the chip (and its tap target) tracks the live state, not a stale snapshot.
+      this.attentionEntity = room.safety_entities.find(entity => ATTENTION_STATES.includes(this.currentHass?.states?.[entity]?.state ?? ""));
+      this.attentionButton.hidden = !this.attentionEntity;
+      const name = this.attentionEntity ? String(this.currentHass?.states?.[this.attentionEntity]?.attributes?.friendly_name ?? "Sensor") : "";
+      this.attentionButton.title = `${room.name} · Aandacht nodig`;
+      this.attentionButton.setAttribute("aria-label", `${room.name} · Aandacht nodig: ${name}. Open details.`);
     }
     this.orderedControls.forEach(control => {
       const state = this.currentHass?.states?.[control.entity];
@@ -273,12 +285,13 @@ export class HomeDashboardRoomControls extends Base {
       article{height:100%;padding:10px 12px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:16px;background:var(--hd-surface,var(--ha-card-background,var(--card-background-color,#fff)));box-shadow:var(--hd-shadow,0 2px 5px #00000009)}
       .room-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}
       .room-row>ha-icon:first-child{width:30px;height:30px;padding:6px;border-radius:10px;background:color-mix(in srgb,var(--primary-color,#0784c1) 11%,transparent);color:var(--primary-color,#0784c1);flex-shrink:0}
-      .copy{display:grid;gap:1px;flex:0 1 auto;min-width:0}strong{font-size:14px}small{font-size:11px;color:var(--hd-muted,var(--secondary-text-color,#596777));overflow-wrap:anywhere}.warning{color:var(--error-color,#c53b32)}
+      .copy{display:grid;gap:1px;flex:0 1 auto;min-width:0}strong{font-size:14px}small{font-size:11px;color:var(--hd-muted,var(--secondary-text-color,#596777));overflow-wrap:anywhere}
       [hidden]{display:none!important}.extra:empty{display:none}.full-room{display:inline-flex;align-items:center;width:max-content;min-height:44px;padding:6px 4px;color:var(--primary-color,#0784c1);font-size:12px;font-weight:650;text-decoration:none}
       .controls{display:flex;flex-wrap:wrap;gap:6px;flex:1 1 auto}
       .control{--control-accent:var(--primary-color,#0784c1);display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:44px;min-height:44px;padding:0 10px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:999px;background:var(--hd-surface-raised,var(--secondary-background-color,#f5f7f9));color:inherit;cursor:pointer}
       .control.kind-light{--control-accent:var(--state-light-active-color,#b66b00)}.control.kind-climate{--control-accent:var(--state-climate-heat-color,#c95832)}.control.kind-media{--control-accent:var(--state-media-player-active-color,#7155a8)}.control.kind-cover,.control.kind-awning{--control-accent:var(--state-cover-active-color,#087da8)}
       .control.status-motion,.control.status-camera{--control-accent:var(--hd-active,#087da8)}.control.status-motion.tone-critical,.control.status-camera.tone-critical{--control-accent:var(--hd-critical,#c53b32)}.control.status-motion.tone-unavailable,.control.status-camera.tone-unavailable{--control-accent:var(--hd-unavailable,#686d78)}
+      .control.status-attention{--control-accent:var(--hd-critical,#c53b32);background:color-mix(in srgb,var(--control-accent) 16%,var(--hd-surface,var(--card-background-color,#fff)));border-color:var(--control-accent)}.control.status-attention>ha-icon{background:var(--control-accent);color:#fff}
       .control .mini{font-size:11px;font-weight:700;color:var(--control-accent)}.control .mini:empty{display:none}
       .control:hover{border-color:var(--control-accent)}.control>ha-icon{width:24px;height:24px;padding:3px;border-radius:50%;background:color-mix(in srgb,var(--control-accent) 13%,transparent);color:var(--control-accent);flex-shrink:0}
       .control.active{background:color-mix(in srgb,var(--control-accent) 22%,var(--hd-surface,var(--card-background-color,#fff)));border:2px solid var(--control-accent)}.control.active>ha-icon{background:var(--control-accent);color:#fff}
@@ -292,6 +305,15 @@ export class HomeDashboardRoomControls extends Base {
     this.meta = document.createElement("small"); copy.append(title, this.meta);
     const controls = document.createElement("div"); controls.className = "controls";
     row.append(icon(room.icon || "mdi:sofa-outline"), copy, controls); article.append(row);
+    this.attentionButton = undefined; this.attentionEntity = undefined;
+    if (this.config.show_controls !== false && room.safety_entities.length) {
+      // HD-226: hidden by default, toggled on/off per update() -- only ever visible while a
+      // safety entity genuinely needs attention, never a continuously-shown warning line.
+      const attentionButton = document.createElement("button"); attentionButton.type = "button"; attentionButton.className = "control status-attention"; attentionButton.hidden = true;
+      attentionButton.append(icon("mdi:alert")); controls.append(attentionButton);
+      attentionButton.addEventListener("click", () => { if (this.attentionEntity) this.moreInfo(this.attentionEntity); });
+      this.attentionButton = attentionButton;
+    }
     const extra = document.createElement("div"); extra.className = "extra";
     extra.addEventListener("keydown", event => { if (event.key === "Escape" && this.openStrip) { event.stopPropagation(); this.closeOpenStrip(); } });
     if (this.config.show_controls !== false) resolveQuickEntities(room, this.currentHass).forEach(({ entity, kind }, index) => {
