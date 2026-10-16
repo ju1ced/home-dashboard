@@ -131,6 +131,24 @@ try {
   assert.equal(await page.evaluate(()=>window.lastDetails),motionEntity);
   await page.evaluate(()=>{const f=roomFixture;f.hass.states[f.config.rooms[0].motion_entities[0]].state='on';f.home.hass={...f.hass};});
   assert.equal(await woonkamerMotion.evaluate(el=>el.classList.contains('tone-critical')),true,'gedetecteerde beweging kleurt de chip kritiek');
+  // HD-226: the "needs attention" indicator is an on-demand chip now, never a continuously
+  // visible meta line -- hidden while nothing needs attention, shown (and clickable to that
+  // specific sensor's details) only while a safety entity actually does.
+  currentCase='home/attention-chip/normal/1440x1100';
+  await open();
+  await page.evaluate(()=>{const f=roomFixture;const room=f.config.rooms[0];const safetyEntity=['binary_sensor','attention_fixture'].join('.');room.safety_entities=[safetyEntity];f.hass.states[safetyEntity]={state:'off',attributes:{friendly_name:'Rookmelder'}};f.home.setConfig({...f.config,type:'custom:home-dashboard-home-overview'});f.home.hass=f.hass;});
+  const woonkamerCardForAttention=page.locator('home-dashboard-room-controls').first();
+  const attentionChip=woonkamerCardForAttention.locator('.control.status-attention');
+  assert.equal(await attentionChip.count(),1,'de chip bestaat altijd in de DOM zodra er safety_entities zijn, maar...');
+  assert.equal(await attentionChip.isVisible(),false,'...blijft verborgen zolang niets aandacht vraagt -- geen permanente waarschuwingstekst meer');
+  await page.evaluate(()=>{const f=roomFixture;f.hass.states[f.config.rooms[0].safety_entities[0]].state='problem';f.home.hass={...f.hass};});
+  assert.equal(await attentionChip.isVisible(),true,'wordt zichtbaar zodra de sensor een aandacht-waardige staat heeft');
+  await page.evaluate(()=>{window.lastDetails='';roomFixture.home.addEventListener('hass-more-info',event=>window.lastDetails=event.detail.entityId);});
+  await attentionChip.click();
+  assert.equal(await page.evaluate(()=>roomFixture.calls.length),0,'de aandachtchip roept nooit een service aan, enkel meer-info');
+  assert.equal(await page.evaluate(()=>window.lastDetails),await page.evaluate(()=>roomFixture.config.rooms[0].safety_entities[0]),'opent de details van precies de sensor die aandacht vraagt');
+  await page.evaluate(()=>{const f=roomFixture;f.hass.states[f.config.rooms[0].safety_entities[0]].state='off';f.home.hass={...f.hass};});
+  assert.equal(await attentionChip.isVisible(),false,'verdwijnt weer zodra de sensor niet langer aandacht vraagt');
   currentCase='home/service-error/normal/1440x1100';
   await open();
   await page.evaluate(()=>window.fixtureReject=true);

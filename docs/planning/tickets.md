@@ -1901,3 +1901,36 @@ Twee losse correcties van de eigenaar op `v0.8.9`'s kamerchips: (1) chips mogen 
 `pnpm test`, `pnpm run test:browser`, `git diff --check`, bundlebudget-check.
 
 **Openstaand:** live Home Assistant-acceptatie blijft een afzonderlijke menselijke gate.
+
+---
+
+### HD-226 — "Aandacht nodig" wordt een oproepbare chip, geen permanente waarschuwingstekst
+
+- **Epic:** Kamers
+- **Status:** Klaar — zie [D-084](../design/decision-log.md#d-084--hd-226-aandacht-nodig-wordt-een-oproepbare-chip-geen-permanente-waarschuwingstekst) voor de volledige analyse en besluiten.
+- **Prioriteit:** P1
+- **Omvang:** S
+- **Eigenaar:** Rooms-agent
+- **Afhankelijkheden:** HD-225 (gemerged, `v0.8.10`) — directe correctie op dezelfde kamerkop
+
+**Doel**
+
+De eigenaar na HD-225: "Kan je wel het aandachtpunt stuk een popup van de warning maken, dit moet niet continue zichtbaar zijn." De kamerkop toonde voorheen onvoorwaardelijk "Aandacht nodig · Open kamerdetails" zodra een veiligheidssensor aandacht vroeg — permanent zichtbaar in de metatekst.
+
+**Scope**
+
+1. **Metatekst toont nooit meer de waarschuwing zelf** — enkel comfort-context of een neutrale standaardtekst.
+2. **Nieuwe chip (`status-attention`)** volgt hetzelfde "enkel oproepbaar"-patroon als de motion-/camerachips: altijd in de DOM zodra een kamer `safety_entities` heeft, maar `hidden` zolang niets aandacht vraagt. Een klik opent meer-info voor precies de sensor die op dat moment aandacht vraagt.
+
+**Acceptatiecriteria**
+
+- Geen enkele kamer toont ooit nog continu een "Aandacht nodig"-tekst.
+- De aandachtchip is enkel zichtbaar wanneer minstens één `safety_entities`-sensor een aandacht-waardige staat heeft, en verdwijnt weer zodra dat niet meer zo is.
+- Een klik opent altijd meer-info voor de sensor die daadwerkelijk aandacht vraagt, nooit een service-aanroep.
+- Bundelbudget-check (222 kB, D-075) — gemeten binnen budget zonder verhoging nodig.
+
+**Validatie**
+
+`pnpm test`, `pnpm run test:browser`, `git diff --check`, bundlebudget-check.
+
+**Openstaand:** live Home Assistant-acceptatie blijft een afzonderlijke menselijke gate.
