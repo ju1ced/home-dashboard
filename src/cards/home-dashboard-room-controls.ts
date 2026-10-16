@@ -47,18 +47,36 @@ function kindForEntity(room: RoomConfig, hass: Hass | undefined, entity: string)
   if (domain === "cover") return entity === room.control_awning_entity || hass?.states?.[entity]?.attributes?.device_class === "awning" ? "awning" : "cover";
   return undefined;
 }
-function roomQuickControlEntities(room: RoomConfig): string[] | undefined {
-  return room.control_entities === undefined ? undefined : [...new Set(room.control_entities.filter(Boolean))];
+/** HD-225: one chip per real entity, always -- never a combined "N apparaten" chip standing in
+ * for several lights/covers/media players at once. When `control_entities` is explicitly
+ * configured that ordering is used as-is (each entry already names one entity); otherwise every
+ * matching entity across all kinds is listed individually, in kind order, exactly as if it had
+ * been named explicitly. A room with several ungrouped lights simply gets several light chips --
+ * the fix for "too many loose chips" is configuring `control_entities`/`light_groups` for that
+ * room, not silently merging them back into one. */
+function resolveQuickEntities(room: RoomConfig, hass: Hass | undefined): Array<{ entity: string; kind: Kind }> {
+  if (room.control_entities !== undefined) {
+    const seen = new Set<string>();
+    const result: Array<{ entity: string; kind: Kind }> = [];
+    for (const entity of room.control_entities) {
+      if (!entity || seen.has(entity)) continue;
+      const kind = kindForEntity(room, hass, entity);
+      if (!kind) continue;
+      seen.add(entity);
+      result.push({ entity, kind });
+    }
+    return result;
+  }
+  return kinds.flatMap(kind => roomControlSources(room, kind).map(entity => ({ entity, kind })));
 }
 function isActive(kind: Kind, state?: State): boolean {
   return kind === "light" ? state?.state === "on" : kind === "media" ? state?.state === "playing" : kind === "climate" ? !["off", "idle", "unknown", "unavailable", undefined].includes(state?.state) || ["heating", "cooling"].includes(String(state?.attributes?.hvac_action)) : ["open", "opening", "closing"].includes(state?.state ?? "");
 }
 /** HD-224: a short, OPTIONAL value shown inside a chip alongside its icon -- never the full name
  * or state (that stays in `aria-label`/`title` only, as it always has). Only kinds where one
- * extra token genuinely helps at a glance get one: a cover's live position, a climate's target
- * temperature, or how many devices a multi-source chip actually represents. */
-function miniValue(kind: Kind, state: State | undefined, sourceCount: number): string {
-  if (sourceCount > 1) return `×${sourceCount}`;
+ * extra token genuinely helps at a glance get one: a cover's live position or a climate's target
+ * temperature. */
+function miniValue(kind: Kind, state: State | undefined): string {
   if ((kind === "cover" || kind === "awning") && typeof state?.attributes?.current_position === "number") return `${state.attributes.current_position}%`;
   if (kind === "climate" && typeof state?.attributes?.temperature === "number") return `${state.attributes.temperature}°`;
   return "";
@@ -126,8 +144,6 @@ const Base = (typeof HTMLElement === "undefined" ? class {} : HTMLElement) as ty
 export class HomeDashboardRoomControls extends Base {
   private config?: { room: RoomConfig; show_controls?: boolean };
   private currentHass?: Hass;
-  private buttons = new Map<Kind, HTMLButtonElement>();
-  private strips = new Map<Kind, HTMLElement>();
   private pending = new Set<string>();
   private orderedControls: OrderedControl[] = [];
   private statusControls: StatusControl[] = [];
@@ -209,47 +225,33 @@ export class HomeDashboardRoomControls extends Base {
       this.meta.textContent = safety ? "Aandacht nodig · Open kamerdetails" : context.join(" · ") || "Kamerstatus en bediening";
       this.meta.classList.toggle("warning", safety);
     }
-    this.buttons.forEach((button, kind) => {
-      const sources = roomControlSources(room, kind);
-      const entity = target(room, kind) || sources[0] || ""; const state = this.currentHass?.states?.[entity];
-      const explicitSwitchFallback = kind === "light" && sources.length === 1 && room.light_switch_entities?.includes(entity) === true;
-      const states = sources.map(source => this.currentHass?.states?.[source]);
-      const activeCount = states.filter(source => isActive(kind, source)).length;
-      const missingCount = states.filter(source => !known(source)).length;
-      const summary = sources.length > 1 ? [`${sources.length} apparaten`, activeCount ? `${activeCount} ${kind === "light" ? "aan" : kind === "media" ? "speelt" : "in beweging"}` : "", missingCount ? `${missingCount} onbekend` : ""].filter(Boolean).join(" · ") : "";
-      const mini = button.querySelector(".mini");
-      if (mini) mini.textContent = miniValue(kind, state, sources.length);
-      const stripLabel = this.strips.get(kind)?.querySelector(".strip-label");
-      if (stripLabel) stripLabel.textContent = `${room.name} · ${state?.attributes?.friendly_name ?? labels[kind]}`;
-      button.classList.toggle("active", activeCount > 0);
-      button.disabled = this.pending.has(kind);
-      const detailOnly = kind === "climate" || (!target(room, kind) && !explicitSwitchFallback) || !room.controls_enabled || !this.currentHass?.callService || !known(state) || (kind === "light" || kind === "media") && !planEntityControl(room, this.currentHass, entity, kind);
-      const name = String(state?.attributes?.friendly_name ?? labels[kind]);
-      button.title = `${room.name} · ${name}`;
-      button.setAttribute("aria-label", `${room.name} · ${labels[kind]} · ${summary || `${name}: ${stateLabel(state)}`}. ${sources.length > 1 ? "Toon apparaten" : detailOnly ? "Open details" : kind === "light" ? state?.state === "on" ? "Uitschakelen" : "Inschakelen" : kind === "media" ? state?.state === "playing" ? "Pauzeren" : "Hervatten" : "Toon bediening"}`);
-      this.strips.get(kind)?.querySelectorAll<HTMLButtonElement>("button[data-source]").forEach(control => {
-        const source = this.currentHass?.states?.[control.dataset.source ?? ""];
-        control.textContent = `${source?.attributes?.friendly_name ?? labels[kind]} · ${stateLabel(source)}`;
-      });
-      this.strips.get(kind)?.querySelectorAll<HTMLButtonElement>("button[data-command]").forEach(control => {
-        control.disabled = (control.dataset.command === "stop" ? this.pending.has(`${kind}:stop`) : this.pending.has(kind)) || !this.currentHass?.callService || !planRoomControl(room, this.currentHass, kind, control.dataset.command as Command);
-      });
-    });
     this.orderedControls.forEach(control => {
       const state = this.currentHass?.states?.[control.entity];
       const name = shortName(room, state, control.kind);
       const mini = control.button.querySelector(".mini");
-      if (mini) mini.textContent = miniValue(control.kind, state, 1);
+      if (mini) mini.textContent = miniValue(control.kind, state);
       control.button.classList.toggle("active", isActive(control.kind, state));
       control.button.setAttribute("aria-pressed", String(isActive(control.kind, state)));
       control.button.disabled = this.pending.has(control.key);
-      const detailOnly = control.kind === "climate" || !this.config?.room.controls_enabled || !this.currentHass?.callService || !known(state) || (control.kind === "light" || control.kind === "media") && !planEntityControl(room, this.currentHass, control.entity, control.kind);
+      // HD-225: media always opens details (its states/sources are too varied for a plain
+      // toggle), exactly like climate already does -- never attempts a direct play/pause call.
+      const detailOnly = control.kind === "climate" || control.kind === "media" || !this.config?.room.controls_enabled || !this.currentHass?.callService || !known(state) || control.kind === "light" && !planEntityControl(room, this.currentHass, control.entity, control.kind);
       control.button.title = `${room.name} · ${name}`;
-      control.button.setAttribute("aria-label", `${room.name} · ${name}: ${stateLabel(state)}. ${detailOnly ? "Open details" : control.kind === "light" ? state?.state === "on" ? "Uitschakelen" : "Inschakelen" : control.kind === "media" ? state?.state === "playing" ? "Pauzeren" : "Hervatten" : "Toon bediening"}`);
-      control.strip?.querySelectorAll<HTMLButtonElement>("button[data-command]").forEach(button => {
-        const command = button.dataset.command as Command;
-        button.disabled = (command === "stop" ? this.pending.has(`${control.key}:stop`) : this.pending.has(control.key)) || !this.currentHass?.callService || !planEntityControl(room, this.currentHass, control.entity, control.kind, command);
-      });
+      control.button.setAttribute("aria-label", `${room.name} · ${name}: ${stateLabel(state)}. ${detailOnly ? "Open details" : control.kind === "light" ? state?.state === "on" ? "Uitschakelen" : "Inschakelen" : "Toon bediening"}`);
+      if (control.strip) {
+        // HD-225 fix: a fallback-derived (auto-ordered) room never gets a forced second render()
+        // once `hass` arrives -- unlike an explicitly configured one -- so the strip's own label
+        // and command aria-labels must be refreshed here too, not just set once at render() time
+        // (when `hass`/friendly_name may not exist yet and `shortName()` falls back to the
+        // generic kind label, e.g. "Rolluiken" instead of this specific cover's own name).
+        const stripLabel = control.strip.querySelector(".strip-label");
+        if (stripLabel) stripLabel.textContent = `${room.name} · ${name}`;
+        control.strip.querySelectorAll<HTMLButtonElement>("button[data-command]").forEach(button => {
+          const command = button.dataset.command as Command;
+          button.setAttribute("aria-label", `${room.name} · ${name} ${button.dataset.label}`);
+          button.disabled = (command === "stop" ? this.pending.has(`${control.key}:stop`) : this.pending.has(control.key)) || !this.currentHass?.callService || !planEntityControl(room, this.currentHass, control.entity, control.kind, command);
+        });
+      }
     });
     this.statusControls.forEach(control => {
       const state = this.currentHass?.states?.[control.entity];
@@ -263,37 +265,36 @@ export class HomeDashboardRoomControls extends Base {
   }
   private render(): void {
     if (!this.shadowRoot || !this.config) return;
-    this.buttons.clear(); this.strips.clear(); this.orderedControls = []; this.statusControls = []; this.openStrip = undefined;
+    this.orderedControls = []; this.statusControls = []; this.openStrip = undefined;
     const room = this.config.room;
     const style = document.createElement("style");
     style.textContent = `
       :host{display:block;min-width:0;color:var(--hd-text,var(--primary-text-color,#17212b))}*{box-sizing:border-box}
-      article{height:100%;padding:14px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:18px;background:var(--hd-surface,var(--ha-card-background,var(--card-background-color,#fff)));box-shadow:var(--hd-shadow,0 2px 5px #00000009)}
-      .room-header{display:flex;gap:12px;align-items:center;min-height:38px;padding:2px}.room-header>ha-icon:first-child{width:38px;height:38px;padding:8px;border-radius:12px;background:color-mix(in srgb,var(--primary-color,#0784c1) 11%,transparent);color:var(--primary-color,#0784c1)}.copy{display:grid;gap:4px;flex:1;min-width:0}strong{font-size:14px}small{font-size:12px;color:var(--hd-muted,var(--secondary-text-color,#596777));overflow-wrap:anywhere}.warning{color:var(--error-color,#c53b32)}
-      [hidden]{display:none!important}.panel{margin-top:10px;padding-top:12px;border-top:1px solid var(--hd-border,var(--divider-color,#dce2e8))}.full-room{display:inline-flex;align-items:center;width:max-content;min-height:44px;margin-top:8px;padding:8px 4px;color:var(--primary-color,#0784c1);font-size:12px;font-weight:650;text-decoration:none}
-      .controls{display:flex;flex-wrap:wrap;gap:8px}
-      .control{--control-accent:var(--primary-color,#0784c1);display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:44px;min-height:44px;padding:0 12px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:999px;background:var(--hd-surface-raised,var(--secondary-background-color,#f5f7f9));color:inherit;cursor:pointer}
+      article{height:100%;padding:10px 12px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:16px;background:var(--hd-surface,var(--ha-card-background,var(--card-background-color,#fff)));box-shadow:var(--hd-shadow,0 2px 5px #00000009)}
+      .room-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}
+      .room-row>ha-icon:first-child{width:30px;height:30px;padding:6px;border-radius:10px;background:color-mix(in srgb,var(--primary-color,#0784c1) 11%,transparent);color:var(--primary-color,#0784c1);flex-shrink:0}
+      .copy{display:grid;gap:1px;flex:0 1 auto;min-width:0}strong{font-size:14px}small{font-size:11px;color:var(--hd-muted,var(--secondary-text-color,#596777));overflow-wrap:anywhere}.warning{color:var(--error-color,#c53b32)}
+      [hidden]{display:none!important}.extra:empty{display:none}.full-room{display:inline-flex;align-items:center;width:max-content;min-height:44px;padding:6px 4px;color:var(--primary-color,#0784c1);font-size:12px;font-weight:650;text-decoration:none}
+      .controls{display:flex;flex-wrap:wrap;gap:6px;flex:1 1 auto}
+      .control{--control-accent:var(--primary-color,#0784c1);display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:44px;min-height:44px;padding:0 10px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:999px;background:var(--hd-surface-raised,var(--secondary-background-color,#f5f7f9));color:inherit;cursor:pointer}
       .control.kind-light{--control-accent:var(--state-light-active-color,#b66b00)}.control.kind-climate{--control-accent:var(--state-climate-heat-color,#c95832)}.control.kind-media{--control-accent:var(--state-media-player-active-color,#7155a8)}.control.kind-cover,.control.kind-awning{--control-accent:var(--state-cover-active-color,#087da8)}
       .control.status-motion,.control.status-camera{--control-accent:var(--hd-active,#087da8)}.control.status-motion.tone-critical,.control.status-camera.tone-critical{--control-accent:var(--hd-critical,#c53b32)}.control.status-motion.tone-unavailable,.control.status-camera.tone-unavailable{--control-accent:var(--hd-unavailable,#686d78)}
       .control .mini{font-size:11px;font-weight:700;color:var(--control-accent)}.control .mini:empty{display:none}
-      .control:hover{border-color:var(--control-accent)}.control>ha-icon{width:26px;height:26px;padding:3px;border-radius:50%;background:color-mix(in srgb,var(--control-accent) 13%,transparent);color:var(--control-accent);flex-shrink:0}
+      .control:hover{border-color:var(--control-accent)}.control>ha-icon{width:24px;height:24px;padding:3px;border-radius:50%;background:color-mix(in srgb,var(--control-accent) 13%,transparent);color:var(--control-accent);flex-shrink:0}
       .control.active{background:color-mix(in srgb,var(--control-accent) 22%,var(--hd-surface,var(--card-background-color,#fff)));border:2px solid var(--control-accent)}.control.active>ha-icon{background:var(--control-accent);color:#fff}
       ha-icon{width:23px;height:23px;flex-shrink:0}
-      button{font:inherit}button:disabled{opacity:.5;cursor:default}button:focus-visible,a:focus-visible{outline:2px solid var(--primary-color,#0088cc);outline-offset:2px}.strip{margin-top:10px;padding:11px;border:1px solid color-mix(in srgb,var(--primary-color,#0088cc) 25%,var(--hd-border,var(--divider-color,#dce2e8)));border-radius:14px;background:color-mix(in srgb,var(--primary-color,#0088cc) 5%,var(--hd-surface,var(--card-background-color,#fff)))}.strip-label{font-size:12px;display:block;margin-bottom:8px}.commands{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px}.commands button{min-height:44px;min-width:0;padding:8px 10px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:10px;background:var(--hd-surface,var(--card-background-color,#fff));color:inherit;cursor:pointer;font-size:12px}.commands button:hover{border-color:var(--primary-color,#0088cc)}.notice{display:block;font-size:12px;line-height:1.4;margin-top:6px}.notice:empty{display:none}@media(max-width:450px){article{padding:12px}.commands{grid-template-columns:1fr}}
+      button{font:inherit}button:disabled{opacity:.5;cursor:default}button:focus-visible,a:focus-visible{outline:2px solid var(--primary-color,#0088cc);outline-offset:2px}.strip{margin-top:8px;padding:11px;border:1px solid color-mix(in srgb,var(--primary-color,#0088cc) 25%,var(--hd-border,var(--divider-color,#dce2e8)));border-radius:14px;background:color-mix(in srgb,var(--primary-color,#0088cc) 5%,var(--hd-surface,var(--card-background-color,#fff)))}.strip-label{font-size:12px;display:block;margin-bottom:8px}.commands{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px}.commands button{min-height:44px;min-width:0;padding:8px 10px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:10px;background:var(--hd-surface,var(--card-background-color,#fff));color:inherit;cursor:pointer;font-size:12px}.commands button:hover{border-color:var(--primary-color,#0088cc)}.notice{display:block;font-size:12px;line-height:1.4;margin-top:6px}.notice:empty{display:none}@media(max-width:450px){.commands{grid-template-columns:1fr}}
     `;
     const article = document.createElement("article");
-    const header = document.createElement("div"); header.className = "room-header";
+    const row = document.createElement("div"); row.className = "room-row";
     const copy = document.createElement("span"); copy.className = "copy";
     const title = document.createElement("strong"); title.textContent = room.name;
     this.meta = document.createElement("small"); copy.append(title, this.meta);
-    header.append(icon(room.icon || "mdi:sofa-outline"), copy); article.append(header);
-    const panel = document.createElement("div"); panel.className = "panel";
-    panel.addEventListener("keydown", event => { if (event.key === "Escape" && this.openStrip) { event.stopPropagation(); this.closeOpenStrip(); } });
     const controls = document.createElement("div"); controls.className = "controls";
-    const orderedEntities = roomQuickControlEntities(room);
-    if (this.config.show_controls !== false && orderedEntities !== undefined) orderedEntities.forEach((entity, index) => {
-      const kind = kindForEntity(room, this.currentHass, entity);
-      if (!kind) return;
+    row.append(icon(room.icon || "mdi:sofa-outline"), copy, controls); article.append(row);
+    const extra = document.createElement("div"); extra.className = "extra";
+    extra.addEventListener("keydown", event => { if (event.key === "Escape" && this.openStrip) { event.stopPropagation(); this.closeOpenStrip(); } });
+    if (this.config.show_controls !== false) resolveQuickEntities(room, this.currentHass).forEach(({ entity, kind }, index) => {
       const key = `${index}:${entity}`;
       const button = document.createElement("button"); button.type = "button"; button.className = `control kind-${kind}`;
       const mini = document.createElement("span"); mini.className = "mini";
@@ -309,7 +310,7 @@ export class HomeDashboardRoomControls extends Base {
         label.textContent = `${room.name} · ${controlName}`; strip.append(label);
         const commands = document.createElement("div"); commands.className = "commands";
         for (const [command, commandLabel] of [["open",kind === "awning" ? "Uit" : "Open"],["stop","Stop"],["close",kind === "awning" ? "In" : "Dicht"]] as const) {
-          const commandButton = document.createElement("button"); commandButton.type = "button"; commandButton.textContent = commandLabel; commandButton.dataset.command = command;
+          const commandButton = document.createElement("button"); commandButton.type = "button"; commandButton.textContent = commandLabel; commandButton.dataset.command = command; commandButton.dataset.label = commandLabel;
           commandButton.setAttribute("aria-label", `${room.name} · ${controlName} ${commandLabel}`);
           commandButton.addEventListener("click", () => { void this.perform(kind, entity, key, notice, command); }); commands.append(commandButton);
         }
@@ -318,56 +319,14 @@ export class HomeDashboardRoomControls extends Base {
       }
       button.addEventListener("click", () => {
         const state = this.currentHass?.states?.[entity];
-        if (kind === "climate" || !room.controls_enabled || !this.currentHass?.callService || !known(state)) { this.moreInfo(entity); return; }
+        // HD-225: climate and media always open details -- never a combined chip, never a
+        // best-guess toggle for states/sources too varied to collapse into one tap.
+        if (kind === "climate" || kind === "media" || !room.controls_enabled || !this.currentHass?.callService || !known(state)) { this.moreInfo(entity); return; }
         if (kind === "cover" || kind === "awning") { this.toggleStrip(strip, button); return; }
         if (planEntityControl(room, this.currentHass, entity, kind)) void this.perform(kind, entity, key, notice, "toggle");
         else this.moreInfo(entity);
       });
-      this.orderedControls.push(control); panel.append(strip, notice);
-    });
-    else if (this.config.show_controls !== false) kinds.filter(kind => roomControlSources(room, kind).length).forEach(kind => {
-      const button = document.createElement("button"); button.type = "button"; button.className = `control kind-${kind}`;
-      const mini = document.createElement("span"); mini.className = "mini";
-      button.append(icon(icons[kind]), mini);
-      this.buttons.set(kind, button); controls.append(button);
-      const strip = document.createElement("div"); strip.className = "strip"; strip.hidden = true; strip.id = `controls-${kind}`;
-      const sources = roomControlSources(room, kind);
-      if (sources.length > 1) {
-        button.setAttribute("aria-expanded", "false"); button.setAttribute("aria-controls", strip.id);
-        const label = document.createElement("strong"); label.className = "strip-label";
-        label.textContent = `${room.name} · ${labels[kind]}`; strip.append(label);
-        const commands = document.createElement("div"); commands.className = "commands";
-        sources.forEach(entity => { const control = document.createElement("button"); control.type = "button"; control.dataset.source = entity;
-          control.addEventListener("click", () => this.moreInfo(entity)); commands.append(control); });
-        strip.append(commands); this.strips.set(kind, strip);
-      } else if ((kind === "cover" || kind === "awning") && target(room, kind)) {
-        button.setAttribute("aria-expanded", "false"); button.setAttribute("aria-controls", strip.id);
-        const label = document.createElement("strong"); label.className = "strip-label";
-        label.textContent = `${room.name} · ${labels[kind]}`; strip.append(label);
-        const commands = document.createElement("div"); commands.className = "commands";
-        for (const [command, label] of [["open",kind === "awning" ? "Uit" : "Open"],["stop","Stop"],["close",kind === "awning" ? "In" : "Dicht"]] as const) {
-          const control = document.createElement("button"); control.type = "button"; control.textContent = label; control.dataset.command = command;
-          control.setAttribute("aria-label", `${room.name} · ${labels[kind]} ${label}`);
-          control.addEventListener("click", () => { void this.perform(kind, target(room, kind), kind, notice, command); }); commands.append(control);
-        }
-        const details = document.createElement("button"); details.type = "button"; details.textContent = "Details";
-        details.addEventListener("click", () => this.moreInfo(target(room, kind))); commands.append(details); strip.append(commands);
-        this.strips.set(kind, strip);
-      }
-      button.addEventListener("click", () => {
-        if (sources.length > 1) { this.toggleStrip(strip, button); return; }
-        const entity = target(room, kind) || sources[0] || "";
-        const explicitSwitchFallback = kind === "light" && room.light_switch_entities?.includes(entity) === true;
-        if (kind === "climate" || (!target(room, kind) && !explicitSwitchFallback)) { this.moreInfo(entity); return; }
-        const state = this.currentHass?.states?.[entity];
-        if (!room.controls_enabled || !this.currentHass?.callService || !known(state)) { this.moreInfo(entity); return; }
-        if (kind === "cover" || kind === "awning") {
-          this.toggleStrip(strip, button);
-        } else if (planEntityControl(room, this.currentHass, entity, kind)) { void this.perform(kind, entity, kind, notice, "toggle"); }
-        else this.moreInfo(entity);
-      });
-      const notice = document.createElement("span"); notice.className = "notice"; notice.setAttribute("role", "status");
-      panel.append(strip, notice);
+      this.orderedControls.push(control); extra.append(strip, notice);
     });
     // HD-224: read-only status chips (motion sensors, cameras) -- never a service call, always
     // more-info. Own semantic colouring (ok/critical/unavailable), not a kind accent, since these
@@ -388,10 +347,9 @@ export class HomeDashboardRoomControls extends Base {
         this.statusControls.push({ entity, kind: "camera", button });
       });
     }
-    panel.prepend(controls);
-    if (!controls.childElementCount) { const empty = document.createElement("small"); empty.textContent = "Nog geen functies ingesteld voor deze kamer."; panel.append(empty); }
-    const fullRoom = document.createElement("a"); fullRoom.className = "full-room"; fullRoom.href = `room-${room.key.replaceAll("_", "-")}`; fullRoom.textContent = "Volledige kamer"; fullRoom.setAttribute("aria-label", `Volledige kamer ${room.name}`); panel.append(fullRoom);
-    article.append(panel);
+    if (!controls.childElementCount) { const empty = document.createElement("small"); empty.textContent = "Nog geen functies ingesteld voor deze kamer."; extra.append(empty); }
+    const fullRoom = document.createElement("a"); fullRoom.className = "full-room"; fullRoom.href = `room-${room.key.replaceAll("_", "-")}`; fullRoom.textContent = "Volledige kamer"; fullRoom.setAttribute("aria-label", `Volledige kamer ${room.name}`); extra.append(fullRoom);
+    article.append(extra);
     this.shadowRoot.replaceChildren(style, article); this.update();
   }
 }

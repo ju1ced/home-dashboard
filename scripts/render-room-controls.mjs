@@ -64,7 +64,7 @@ try {
       assert.equal(await page.getByRole('link',{name:'Home',exact:true}).getAttribute('aria-current'),'page');
     }
     if(name==='warning') assert.equal(await page.getByText('Aandacht nodig',{exact:true}).count(),1);
-    if(name==='desktop') await page.getByRole('button',{name:/Woonkamer · Rolluiken.*Toon bediening/}).click();
+    if(name==='desktop') await page.getByRole('button',{name:/Woonkamer · Rolluik.*Toon bediening/}).click();
     await page.screenshot({path:`${directory}/${name}.png`,fullPage:true});
   }
   currentCase='home/native/system/1440x1100';
@@ -74,7 +74,10 @@ try {
   // HD-224: chips are always visible, so there's no more expand/collapse state to assert on --
   // the room name header is now a plain, non-interactive label.
   await page.evaluate(()=>{window.lastDetails='';roomFixture.home.addEventListener('hass-more-info',event=>window.lastDetails=event.detail.entityId);});
-  const climate=page.getByRole('button',{name:/Woonkamer · Airco \/ verwarming/});
+  // HD-225: climate's chip label comes from the device's own (room-stripped) friendly_name now,
+  // like every other chip -- never the generic kind label, which only ever applied to the old
+  // combined-chip path this ticket removed.
+  const climate=page.getByRole('button',{name:/Woonkamer · Klimaat/});
   await climate.click();
   assert.equal(await page.evaluate(()=>lastDetails===roomFixture.config.rooms[0].hvac.entity),true);
   assert.equal(await page.evaluate(()=>roomFixture.calls.length),0);
@@ -88,14 +91,14 @@ try {
   assert.equal(await page.evaluate(()=>roomFixture.calls[0].service),'turn_off');
   // No optimistic fake state; source remains on until a state update arrives.
   assert.equal(await light.count(),1);
-  await page.getByRole('button',{name:/Woonkamer · Rolluiken.*Toon bediening/}).click();
-  const stop=page.getByRole('button',{name:'Woonkamer · Rolluiken Stop',exact:true});await stop.focus();
+  await page.getByRole('button',{name:/Woonkamer · Rolluik.*Toon bediening/}).click();
+  const stop=page.getByRole('button',{name:'Woonkamer · Rolluik Stop',exact:true});await stop.focus();
   await page.evaluate(()=>{const f=roomFixture;f.hass.states[f.config.today.solar_power_entity].state='700';f.home.hass={...f.hass};});
   assert.equal(await stop.evaluate(el=>el.getRootNode().activeElement===el),true);
   await stop.click();assert.equal(await page.evaluate(()=>roomFixture.calls.at(-1).service),'stop_cover');
   // Stop must stay available while a movement request is still awaiting a reply.
   await page.evaluate(()=>{roomFixture.hass.callService=async(domain,service,data)=>{roomFixture.calls.push({domain,service,data});if(service==='open_cover')await new Promise(resolve=>window.finishMovement=resolve);};roomFixture.home.hass=roomFixture.hass;});
-  await page.getByRole('button',{name:'Woonkamer · Rolluiken Open',exact:true}).click();
+  await page.getByRole('button',{name:'Woonkamer · Rolluik Open',exact:true}).click();
   assert.equal(await stop.isEnabled(),true);await stop.click();
   assert.equal(await page.evaluate(()=>roomFixture.calls.at(-1).service),'stop_cover');
   await page.evaluate(()=>window.finishMovement());
@@ -103,9 +106,9 @@ try {
   // to collapse) and returns focus to the chip that opened it.
   currentCase='home/strip-escape/normal/1440x1100';
   await open();
-  const coverChip=page.getByRole('button',{name:/Woonkamer · Rolluiken.*Toon bediening/});
+  const coverChip=page.getByRole('button',{name:/Woonkamer · Rolluik.*Toon bediening/});
   await coverChip.click();
-  const openCommand=page.getByRole('button',{name:'Woonkamer · Rolluiken Open',exact:true});
+  const openCommand=page.getByRole('button',{name:'Woonkamer · Rolluik Open',exact:true});
   await openCommand.focus();
   await openCommand.press('Escape');
   assert.equal(await coverChip.getAttribute('aria-expanded'),'false');
@@ -157,7 +160,7 @@ try {
   assert.deepEqual(await page.evaluate(()=>roomFixture.calls.at(-1)),{domain:'input_boolean',service:'turn_off',data:{entity_id:insidePrivacyEntity}});
   currentCase='home/unavailable/1440x1100';
   await open('?fixture=unavailable');
-  await page.getByRole('button',{name:/Woonkamer · Rolluiken.*Open details/}).click();
+  await page.getByRole('button',{name:/Woonkamer · Rolluik.*Open details/}).click();
   assert.equal(await page.evaluate(()=>roomFixture.calls.length),0);
   // Explicit opt-out exposes details only, even with all target mappings present.
   await page.evaluate(()=>{const f=roomFixture;f.config.rooms.forEach(r=>r.controls_enabled=false);f.home.setConfig({...f.config,type:'custom:home-dashboard-home-overview'});f.home.hass=f.hass;});
@@ -177,23 +180,18 @@ try {
     return {ms:window.performance.now()-start,same:card===f.home.shadowRoot.querySelector('home-dashboard-room-controls'),html:before===card.shadowRoot.innerHTML};
   });
   assert.equal(performance.same,true);assert.equal(performance.html,true);
-  currentCase='home/source-tray/normal/1440x1100';
-  await page.evaluate(()=>{const f=roomFixture;const room=f.config.rooms[0];room.light_entities=[room.control_light_entity,'second_light_fixture'];room.light_switch_entities=[];room.control_light_entity='';f.hass.states.second_light_fixture={state:'off',attributes:{friendly_name:'Tweede lamp'}};f.home.setConfig({...f.config,type:'custom:home-dashboard-home-overview'});f.home.hass=f.hass;f.home.addEventListener('hass-more-info',event=>window.lastDetails=event.detail.entityId);});
-  await page.getByRole('button',{name:/Woonkamer · Lichten.*Toon apparaten/}).click();
-  await page.getByRole('button',{name:/Woonkamer · Rolluiken.*Toon bediening/}).click();
-  assert.equal(await page.getByRole('button',{name:'Tweede lamp · Uit',exact:true}).isVisible(),false);
-  await page.getByRole('button',{name:/Woonkamer · Lichten.*Toon apparaten/}).click();
-  await page.screenshot({path:`${directory}/source-tray.png`,fullPage:true});
-  await page.getByRole('button',{name:'Tweede lamp · Uit',exact:true}).click();
-  assert.equal(await page.evaluate(()=>lastDetails),'second_light_fixture');
-  assert.equal(await page.evaluate(()=>roomFixture.calls.length),0);
-  const multipleLights=page.getByRole('button',{name:/Woonkamer · Lichten.*Toon apparaten/});
-  assert.match(await multipleLights.getAttribute('aria-label'),/2 apparaten · 1 aan/);
-  await page.evaluate(()=>{const f=roomFixture;f.hass.states[f.config.rooms[0].light_entities[0]].state='off';f.hass.states.second_light_fixture.state='on';f.home.hass={...f.hass};});
-  assert.equal(await multipleLights.evaluate(el=>el.classList.contains('active')),true);
-  await page.evaluate(()=>{const f=roomFixture;f.hass.states.second_light_fixture.state='unavailable';f.home.hass={...f.hass};});
-  assert.match(await multipleLights.getAttribute('aria-label'),/2 apparaten · 1 onbekend/);
-  assert.equal(await multipleLights.evaluate(el=>el.classList.contains('active')),false);
+  // HD-225: multiple entities of the same kind each get their OWN chip -- never combined into one
+  // aggregate chip with a device-picker popup. Each one toggles its own entity directly, exactly
+  // like a single light chip already does.
+  currentCase='home/no-combined-chips/normal/1440x1100';
+  await page.evaluate(()=>{const f=roomFixture;const room=f.config.rooms[0];const secondLight=['light','second_light_fixture'].join('.');room.light_entities=[room.control_light_entity,secondLight];room.light_switch_entities=[];room.control_light_entity='';f.hass.states[secondLight]={state:'off',attributes:{friendly_name:'Tweede lamp'}};f.home.setConfig({...f.config,type:'custom:home-dashboard-home-overview'});f.home.hass=f.hass;f.home.addEventListener('hass-more-info',event=>window.lastDetails=event.detail.entityId);});
+  const woonkamerCard=page.locator('home-dashboard-room-controls').first();
+  assert.equal(await woonkamerCard.locator('.control.kind-light').count(),2,'twee afzonderlijke lichten geven twee afzonderlijke chips, nooit één gecombineerde chip met apparatenlijst');
+  const secondLight=page.getByRole('button',{name:'Woonkamer · Tweede lamp: Uit. Inschakelen',exact:true});
+  await secondLight.click();
+  assert.equal(await page.evaluate(()=>roomFixture.calls.length),1,'een losse chip bedient uitsluitend zijn eigen entiteit, geen apparaten-popup nodig');
+  assert.deepEqual(await page.evaluate(()=>roomFixture.calls[0]),{domain:'light',service:'turn_on',data:{entity_id:['light','second_light_fixture'].join('.')}});
+  await page.screenshot({path:`${directory}/no-combined-chips.png`,fullPage:true});
   // An explicit list renders one chip per entity and preserves mixed, repeated types in the chosen order.
   currentCase='home/ordered-actions/normal/1440x1100';
   await open();

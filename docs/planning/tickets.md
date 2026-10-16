@@ -1865,3 +1865,39 @@ Zie D-082 voor de volledige analyse, inclusief het lokale (`jq`, geen entity-ID'
 **Openstaand:** live Home Assistant-acceptatie blijft een afzonderlijke menselijke gate.
 
 **Correctie (16 oktober 2026):** de eigenaar bevestigde dat de bewegingschip enkel mag verschijnen bij een expliciet geconfigureerde bewegingssensor, niet afgeleid van `safety_entities`. `RoomConfig` kreeg daarom alsnog een toegewijd `motion_entities`-veld (schema, editor-selector, migratie-default), zie D-082's correctie voor de volledige analyse.
+
+---
+
+### HD-225 — Geen gecombineerde chips meer; chiprij naast de kamernaam, zo compact mogelijk
+
+- **Epic:** Kamers
+- **Status:** Klaar — zie [D-083](../design/decision-log.md#d-083--hd-225-geen-gecombineerde-chips-meer-en-de-chiprij-staat-naast-de-kamernaam) voor de volledige analyse en besluiten.
+- **Prioriteit:** P1
+- **Omvang:** M
+- **Eigenaar:** Rooms-agent
+- **Afhankelijkheden:** HD-224 (gemerged, `v0.8.9`) — twee directe correcties op dezelfde kamerchips
+
+**Doel**
+
+Twee losse correcties van de eigenaar op `v0.8.9`'s kamerchips: (1) chips mogen nooit meerdere entiteiten van hetzelfde type combineren tot één chip — media moet bij meerdere mogelijke acties een details-popup openen zoals climate al deed, lichten moeten gewoon rechtstreeks schakelen zoals covers al rechtstreeks hun strip openen; (2) de chiprij moet naast de kamernaam staan, niet eronder, en de hele kaart moet zo compact mogelijk zijn.
+
+**Scope**
+
+1. **`resolveQuickEntities()`** vervangt de oude "kind-fallback"-groepering: zonder expliciete `control_entities` wordt automatisch één entry per matchende entiteit opgebouwd (nooit meer gecombineerd), exact dezelfde vorm als een expliciete lijst.
+2. **Media opent altijd details** (nooit meer een gegokte play/pause-toggle), consistent met climate. Licht en cover/luifel blijven rechtstreeks bedienbaar, zonder tussenliggende keuzepopup.
+3. **Kop en chiprij in één horizontale flexrij** (`.room-row`), chips naast de naam i.p.v. eronder met een scheidingslijn; padding/gaps verkleind voor een compactere kaart.
+4. **Bijvangst:** cover-/luifel-strip se labels en commandoknop-aria-labels worden nu ook ververst bij elke hass-wijziging (niet enkel bij de allereerste render), wat een latent "verkeerde meervoudsvorm"-probleem oploste dat de unificatie blootlegde.
+
+**Acceptatiecriteria**
+
+- Geen enkele chip toont ooit een "N apparaten"-teller of opent een apparatenlijst-popup; elke chip bedient precies één entiteit.
+- Media-chips openen altijd meer-informatie; licht-chips togglen altijd rechtstreeks; cover/luifel-chips openen altijd rechtstreeks hun eigen strip.
+- De chiprij staat zichtbaar naast de kamernaam op voldoende brede schermen, en wrapt pas wanneer de rij te smal wordt.
+- Bestaande veiligheidscontracten blijven ongewijzigd (zie D-083).
+- Bundelbudget-check (222 kB, D-075) — gemeten binnen budget zonder verhoging nodig.
+
+**Validatie**
+
+`pnpm test`, `pnpm run test:browser`, `git diff --check`, bundlebudget-check.
+
+**Openstaand:** live Home Assistant-acceptatie blijft een afzonderlijke menselijke gate.
