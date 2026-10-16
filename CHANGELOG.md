@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.9 — 2026-10-16
+
+Eén ticket sinds `v0.8.8` (HD-224), opgelost na live eigenaarsfeedback over toegankelijkheid van de "Kamers & bediening"-kaarten op Home.
+
+- **Herontwerp: kamerquickacties tonen nu altijd zichtbare chips naast de kamernaam, geen uitklap-expand meer nodig.** Voorheen zaten licht-/cover-/luifel-/climate-/media-bediening achter een expand-klik op de kamernaam, met daarna een raster van grote actieknoppen. Elke bestaande klik-/strip-/togglelogica blijft exact hetzelfde — enkel de vorm is compacter (een 44×44 px pil met icoon en een optionele korte waarde, zoals coverpositie of klimaatdoel).
+- **Nieuw: read-only statuschips voor camera's en (voortaan expliciet via een nieuw, toegewijd veld te configureren) bewegingssensoren.** Een bewegingschip verschijnt alleen wanneer die in de kamereditor effectief is ingevuld — nooit automatisch afgeleid van de bredere, voor iets anders bedoelde Safety-lijst. Een tik opent altijd enkel meer-informatie, nooit een service-aanroep.
+- Hoofdbundel ongewijzigd t.o.v. budget (222 kB), gemeten 218.597 bytes.
+- Zie [D-082](docs/design/decision-log.md) voor de volledige analyse. [Testchecklist en rollback](docs/releases/testing-v0.8.9.md).
+
 ## 0.8.8 — 2026-10-15
 
 Eén correctieticket sinds `v0.8.7` (HD-217), gevonden bij het hervatten van de openstaande kanban-tickets.
