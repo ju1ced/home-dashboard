@@ -18,6 +18,18 @@ class FixtureIcon extends HTMLElement {
   }
 }
 customElements.define('ha-icon',FixtureIcon);
+// HD-228: a minimal stand-in for Home Assistant's own ha-state-icon (not available outside a
+// real HA frontend) -- respects an explicit attributes.icon override like the real element
+// would, otherwise falls back to the same generic glyph FixtureIcon uses. The real
+// domain/group/registry icon computation only exists inside an actual Home Assistant instance.
+class FixtureStateIcon extends HTMLElement {
+  set stateObj(state){
+    const el=document.createElement('ha-icon');
+    el.icon=state?.attributes?.icon ?? 'mdi:help-circle-outline';
+    this.replaceChildren(el);
+  }
+}
+customElements.define('ha-state-icon',FixtureStateIcon);
 window.loadCardHelpers=async()=>({createCardElement:()=>{
   const element=document.createElement('div');element.style.cssText='min-height:245px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(#d9eaf2 60%,#aec5a2 60%);color:#284154;text-align:center';
   element.textContent='Fictieve tuinpreview';return element;

@@ -402,7 +402,9 @@ test("kameracties gebruiken korte namen, entiteitsiconen en duidelijke actieve t
   const controls = await readFile(new URL("../src/cards/home-dashboard-room-controls.ts", import.meta.url), "utf8");
   const editor = await readFile(new URL("../src/editor/sections/rooms.ts", import.meta.url), "utf8");
   assert.match(controls, /function shortName/);
-  assert.match(controls, /attributes\?\.icon/);
+  // HD-228: entity icons delegate to Home Assistant's own ha-state-icon (its group/platform/
+  // registry icon logic) instead of this component reading attributes.icon itself.
+  assert.match(controls, /ha-state-icon/);
   assert.match(controls, /kind-\$\{kind\}/);
   assert.match(controls, /\.control\.active\{background:color-mix\(in srgb,var\(--control-accent\)/);
   assert.match(editor, /data-room-control-move/);
