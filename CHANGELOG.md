@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.11 — 2026-10-16
+
+Twee tickets sinds `v0.8.10` (HD-226, HD-227), beide directe vervolgcorrecties van de eigenaar op de kamerkaarten.
+
+- **Fix: "Aandacht nodig" wordt een oproepbare chip, geen permanente waarschuwingstekst.** De kamerkop toonde voorheen onvoorwaardelijk "Aandacht nodig · Open kamerdetails" zodra een veiligheidssensor aandacht vroeg. De metatekst toont nu uitsluitend comfort-context of een neutrale standaardtekst; een nieuwe chip (rood, `mdi:alert`) volgt hetzelfde "enkel oproepbaar"-patroon als de bestaande motion-/camerachips en verschijnt alleen zolang een sensor daadwerkelijk aandacht vraagt. Een klik opent meer-info voor precies die sensor, nooit een service-aanroep.
+- **Fix: geen harde limiet meer op het aantal favoriete kamers op Home.** `favoriteRooms()` kapte voorheen hard af op vier kamers; dat is volledig verwijderd (niet opgetrokken naar een hoger vast getal) zodat alle door de eigenaar gekozen favoriete kamers zichtbaar zijn. Het daadwerkelijk markeren van extra kamers als favoriet in de live Home Assistant-configuratie blijft een apart, nog te plannen vervolg na deze code-wijziging.
+- Hoofdbundel ongewijzigd t.o.v. budget (222 kB), gemeten 215.694 bytes.
+- Zie [D-084](docs/design/decision-log.md) en [D-085](docs/design/decision-log.md) voor de volledige analyse. [Testchecklist en rollback](docs/releases/testing-v0.8.11.md).
+
 ## 0.8.10 — 2026-10-16
 
 Eén ticket sinds `v0.8.9` (HD-225), twee directe correcties van de eigenaar op dezelfde kamerchips.
