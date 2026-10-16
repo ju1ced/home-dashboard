@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.10 — 2026-10-16
+
+Eén ticket sinds `v0.8.9` (HD-225), twee directe correcties van de eigenaar op dezelfde kamerchips.
+
+- **Fix: chips worden niet langer gecombineerd.** Meerdere entiteiten van hetzelfde type (bv. drie losse lichten zonder gekozen hoofdlicht) toonden voorheen één samengevoegde chip met een "N apparaten"-teller en een apparatenlijst-popup. Elke entiteit krijgt nu gewoon zijn eigen chip. Media-chips openen voortaan altijd meer-informatie (net als climate al deed) in plaats van een gegokte play/pause-toggle; licht en cover/luifel blijven rechtstreeks bedienbaar.
+- **Fix: de chiprij staat nu naast de kamernaam, niet eronder — en de kaart is merkbaar compacter.** Kop en chips delen voortaan één rij die enkel wrapt wanneer ze niet meer naast elkaar passen.
+- Hoofdbundel ongewijzigd t.o.v. budget (222 kB), gemeten 214.848 bytes — kleiner dan `v0.8.9`.
+- Zie [D-083](docs/design/decision-log.md) voor de volledige analyse. [Testchecklist en rollback](docs/releases/testing-v0.8.10.md).
+
 ## 0.8.9 — 2026-10-16
 
 Eén ticket sinds `v0.8.8` (HD-224), opgelost na live eigenaarsfeedback over toegankelijkheid van de "Kamers & bediening"-kaarten op Home.
