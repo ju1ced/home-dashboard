@@ -66,6 +66,10 @@ rooms[0].smart_plugs.push({
   energy_year_period:'completed',
   protected:true,protection_reason:'Beheer via de netwerkautomatisering.'
 });
+// HD-224: a motion-sensor chip only ever appears when `motion_entities` is explicitly configured
+// -- Woonkamer gets one so the browser matrix can prove the chip renders and colours correctly;
+// Bureau (rooms[1]) deliberately has none, proving the chip stays absent without configuration.
+rooms[0].motion_entities=[put('binary_sensor','living_motion','off',{friendly_name:'Woonkamer beweging',device_class:'motion'})];
 rooms[0].room_energy={
   power_entity:put('sensor','living_power','420',{unit_of_measurement:'W'}),
   day_entity:put('sensor','living_energy_day','0.6',{unit_of_measurement:'kWh'}),

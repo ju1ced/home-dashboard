@@ -3,7 +3,7 @@ import type { RoomConfig } from "../config/types";
 type State = { state?: string; attributes?: Record<string, unknown> };
 type Hass = { states?: Record<string, State>; callService?: (domain: string, service: string, data: Record<string, unknown>) => Promise<unknown> };
 type Kind = "light" | "cover" | "awning" | "media" | "climate";
-type StatusKind = "safety" | "camera";
+type StatusKind = "motion" | "camera";
 type Command = "toggle" | "open" | "stop" | "close";
 type Plan = { entity: string; domain: string; service: string; confirmation: boolean };
 type OrderedControl = { key: string; entity: string; kind: Kind; button: HTMLButtonElement; strip?: HTMLElement; notice: HTMLElement };
@@ -11,9 +11,9 @@ type StatusControl = { entity: string; kind: StatusKind; button: HTMLButtonEleme
 const kinds: Kind[] = ["light", "media", "cover", "awning", "climate"];
 const labels: Record<Kind, string> = { light: "Lichten", cover: "Rolluiken", awning: "Luifel", media: "Radio", climate: "Airco / verwarming" };
 const icons: Record<Kind, string> = { light: "mdi:lightbulb-outline", cover: "mdi:window-shutter", awning: "mdi:awning-outline", media: "mdi:radio", climate: "mdi:thermostat" };
-const statusLabels: Record<StatusKind, string> = { safety: "Sensor", camera: "Camera" };
-const statusIcons: Record<StatusKind, string> = { safety: "mdi:motion-sensor", camera: "mdi:cctv" };
-// HD-224: states that mean "needs attention" for a safety_entities sensor -- the same list
+const statusLabels: Record<StatusKind, string> = { motion: "Bewegingssensor", camera: "Camera" };
+const statusIcons: Record<StatusKind, string> = { motion: "mdi:motion-sensor", camera: "mdi:cctv" };
+// HD-224: states that mean "needs attention" for a safety/motion sensor -- the same list
 // used elsewhere for the room-wide "Aandacht nodig" meta text, kept as the single source of
 // truth for which states count as attention-worthy.
 const ATTENTION_STATES = ["on", "open", "problem", "unsafe", "unlocked"];
@@ -147,7 +147,7 @@ export class HomeDashboardRoomControls extends Base {
     this.currentHass = value;
     const room = this.config?.room;
     if (firstHass && room?.control_entities !== undefined) { this.render(); return; }
-    const entities = room ? [...(room.control_entities ?? []), ...kinds.flatMap(kind => roomControlSources(room, kind)), ...room.hvac.comfort_entities, ...room.safety_entities, ...room.camera_entities] : [];
+    const entities = room ? [...(room.control_entities ?? []), ...kinds.flatMap(kind => roomControlSources(room, kind)), ...room.hvac.comfort_entities, ...room.safety_entities, ...room.camera_entities, ...room.motion_entities] : [];
     const signature = JSON.stringify(entities.map(entity => value.states?.[entity]));
     if (signature !== this.signature) { this.signature = signature; this.update(); }
   }
@@ -254,7 +254,7 @@ export class HomeDashboardRoomControls extends Base {
     this.statusControls.forEach(control => {
       const state = this.currentHass?.states?.[control.entity];
       const name = String(state?.attributes?.friendly_name ?? statusLabels[control.kind]);
-      const attention = control.kind === "safety" && ATTENTION_STATES.includes(state?.state ?? "");
+      const attention = control.kind === "motion" && ATTENTION_STATES.includes(state?.state ?? "");
       control.button.classList.toggle("tone-critical", attention);
       control.button.classList.toggle("tone-unavailable", !known(state));
       control.button.title = `${room.name} · ${name}`;
@@ -274,7 +274,7 @@ export class HomeDashboardRoomControls extends Base {
       .controls{display:flex;flex-wrap:wrap;gap:8px}
       .control{--control-accent:var(--primary-color,#0784c1);display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:44px;min-height:44px;padding:0 12px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:999px;background:var(--hd-surface-raised,var(--secondary-background-color,#f5f7f9));color:inherit;cursor:pointer}
       .control.kind-light{--control-accent:var(--state-light-active-color,#b66b00)}.control.kind-climate{--control-accent:var(--state-climate-heat-color,#c95832)}.control.kind-media{--control-accent:var(--state-media-player-active-color,#7155a8)}.control.kind-cover,.control.kind-awning{--control-accent:var(--state-cover-active-color,#087da8)}
-      .control.status-safety,.control.status-camera{--control-accent:var(--hd-active,#087da8)}.control.status-safety.tone-critical,.control.status-camera.tone-critical{--control-accent:var(--hd-critical,#c53b32)}.control.status-safety.tone-unavailable,.control.status-camera.tone-unavailable{--control-accent:var(--hd-unavailable,#686d78)}
+      .control.status-motion,.control.status-camera{--control-accent:var(--hd-active,#087da8)}.control.status-motion.tone-critical,.control.status-camera.tone-critical{--control-accent:var(--hd-critical,#c53b32)}.control.status-motion.tone-unavailable,.control.status-camera.tone-unavailable{--control-accent:var(--hd-unavailable,#686d78)}
       .control .mini{font-size:11px;font-weight:700;color:var(--control-accent)}.control .mini:empty{display:none}
       .control:hover{border-color:var(--control-accent)}.control>ha-icon{width:26px;height:26px;padding:3px;border-radius:50%;background:color-mix(in srgb,var(--control-accent) 13%,transparent);color:var(--control-accent);flex-shrink:0}
       .control.active{background:color-mix(in srgb,var(--control-accent) 22%,var(--hd-surface,var(--card-background-color,#fff)));border:2px solid var(--control-accent)}.control.active>ha-icon{background:var(--control-accent);color:#fff}
@@ -369,15 +369,17 @@ export class HomeDashboardRoomControls extends Base {
       const notice = document.createElement("span"); notice.className = "notice"; notice.setAttribute("role", "status");
       panel.append(strip, notice);
     });
-    // HD-224: read-only status chips (safety sensors, cameras) -- never a service call, always
+    // HD-224: read-only status chips (motion sensors, cameras) -- never a service call, always
     // more-info. Own semantic colouring (ok/critical/unavailable), not a kind accent, since these
-    // aren't "on/off" controls the way lights/covers/climate/media are.
+    // aren't "on/off" controls the way lights/covers/climate/media are. Motion only ever shows up
+    // here when `motion_entities` is explicitly configured for this room -- never inferred from
+    // the broader `safety_entities` list (door/smoke/flood sensors with a different purpose).
     if (this.config.show_controls !== false) {
-      room.safety_entities.forEach(entity => {
-        const button = document.createElement("button"); button.type = "button"; button.className = "control status-safety";
-        button.append(icon(statusIcons.safety)); controls.append(button);
+      room.motion_entities.forEach(entity => {
+        const button = document.createElement("button"); button.type = "button"; button.className = "control status-motion";
+        button.append(icon(statusIcons.motion)); controls.append(button);
         button.addEventListener("click", () => this.moreInfo(entity));
-        this.statusControls.push({ entity, kind: "safety", button });
+        this.statusControls.push({ entity, kind: "motion", button });
       });
       room.camera_entities.forEach(entity => {
         const button = document.createElement("button"); button.type = "button"; button.className = "control status-camera";

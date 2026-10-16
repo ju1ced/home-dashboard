@@ -125,6 +125,7 @@ export function migrateConfig(input: unknown): MigrationResult {
     media_entities: [],
     safety_entities: [],
     camera_entities: [],
+    motion_entities: [],
     power_entities: [],
     history_entities: [],
     image_entity: "",

@@ -1847,7 +1847,7 @@ Zie D-082 voor de volledige analyse, inclusief het lokale (`jq`, geen entity-ID'
 
 1. **Geen expand/collapse meer:** `HomeDashboardRoomControls` verliest zijn hele expand-status (chevron, `aria-expanded`, `isExpanded`/`roomKey`). De kamernaam-kop wordt een gewone, niet-klikbare rij; de chiprij staat daar altijd zichtbaar onder.
 2. **Compacte pil-chip i.p.v. kaart:** elke bestaande licht-/cover-/luifel-/climate-/media-knop behoudt exact dezelfde klik-/strip-/togglelogica, wordt visueel een 44×44 px-pil met enkel icoon + optionele korte waarde (coverpositie, klimaatdoel, "×N"-telling) — nooit de volledige naam/status als vaste tekst (die blijft in `aria-label`/`title`). Bestaande kind-accentkleuren blijven ongewijzigd.
-3. **Nieuwe read-only statuschips:** `safety_entities`/`camera_entities` (al bestaande, verplichte velden — geen schemawijziging) krijgen elk een chip, semantisch gekleurd (actief/kritiek/onbeschikbaar), altijd alleen meer-info bij een klik, nooit een service-aanroep.
+3. **Nieuwe read-only statuschips:** `camera_entities` (al bestaand veld) en het nieuwe, toegewijde `motion_entities`-veld krijgen elk een chip, semantisch gekleurd (actief/kritiek/onbeschikbaar), altijd alleen meer-info bij een klik, nooit een service-aanroep. Een bewegingschip verschijnt uitsluitend wanneer `motion_entities` expliciet is ingevuld — nooit afgeleid van de bredere `safety_entities`-lijst.
 4. **Escape sluit voortaan enkel de open strip** (niet langer een heel paneel) en zet de focus terug op zijn eigen chip.
 
 **Acceptatiecriteria**
@@ -1862,4 +1862,6 @@ Zie D-082 voor de volledige analyse, inclusief het lokale (`jq`, geen entity-ID'
 
 `pnpm test`, `pnpm run test:browser`, `git diff --check`, bundlebudget-check.
 
-**Openstaand:** live Home Assistant-acceptatie blijft een afzonderlijke menselijke gate. Een motion-specifiek schemaveld (los van het generieke `safety_entities`) is bewust niet toegevoegd — een scope-beslissing, geen bug, die open blijft voor een eventueel vervolgticket.
+**Openstaand:** live Home Assistant-acceptatie blijft een afzonderlijke menselijke gate.
+
+**Correctie (16 oktober 2026):** de eigenaar bevestigde dat de bewegingschip enkel mag verschijnen bij een expliciet geconfigureerde bewegingssensor, niet afgeleid van `safety_entities`. `RoomConfig` kreeg daarom alsnog een toegewijd `motion_entities`-veld (schema, editor-selector, migratie-default), zie D-082's correctie voor de volledige analyse.

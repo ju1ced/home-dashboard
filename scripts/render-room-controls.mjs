@@ -111,6 +111,23 @@ try {
   assert.equal(await coverChip.getAttribute('aria-expanded'),'false');
   assert.equal(await openCommand.isVisible(),false);
   assert.equal(await coverChip.evaluate(el=>el.getRootNode().activeElement===el),true);
+  // HD-224: a motion-sensor chip only ever appears when `motion_entities` is explicitly
+  // configured for that room -- Woonkamer has one, Bureau deliberately has none.
+  currentCase='home/motion-chip/normal/1440x1100';
+  await open();
+  const cards=page.locator('home-dashboard-room-controls');
+  const woonkamerMotion=cards.nth(0).locator('.control.status-motion');
+  const bureauMotion=cards.nth(1).locator('.control.status-motion');
+  assert.equal(await woonkamerMotion.count(),1,'Woonkamer heeft motion_entities geconfigureerd: precies één chip');
+  assert.equal(await bureauMotion.count(),0,'Bureau heeft geen motion_entities: geen chip, ook niet afgeleid van safety_entities');
+  assert.equal(await woonkamerMotion.evaluate(el=>el.classList.contains('tone-critical')),false,'rust (uit) is geen kritieke toestand');
+  await page.evaluate(()=>{window.lastDetails='';roomFixture.home.addEventListener('hass-more-info',event=>window.lastDetails=event.detail.entityId);});
+  await woonkamerMotion.click();
+  assert.equal(await page.evaluate(()=>roomFixture.calls.length),0,'een statuschip roept nooit een service aan');
+  const motionEntity=await page.evaluate(()=>roomFixture.config.rooms[0].motion_entities[0]);
+  assert.equal(await page.evaluate(()=>window.lastDetails),motionEntity);
+  await page.evaluate(()=>{const f=roomFixture;f.hass.states[f.config.rooms[0].motion_entities[0]].state='on';f.home.hass={...f.hass};});
+  assert.equal(await woonkamerMotion.evaluate(el=>el.classList.contains('tone-critical')),true,'gedetecteerde beweging kleurt de chip kritiek');
   currentCase='home/service-error/normal/1440x1100';
   await open();
   await page.evaluate(()=>window.fixtureReject=true);

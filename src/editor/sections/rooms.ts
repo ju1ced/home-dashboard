@@ -119,6 +119,7 @@ function renderRoomBody(config: HomeDashboardConfigV1, roomConfig: RoomConfig, i
     <label>Media${renderSelector("rooms", index, "media_entities", roomConfig.media_entities, { entity: { domain: "media_player", multiple: true } })}</label>
     <label>Safety${renderSelector("rooms", index, "safety_entities", roomConfig.safety_entities, { entity: { multiple: true } })}</label>
     <label>Camera's${renderSelector("rooms", index, "camera_entities", roomConfig.camera_entities, { entity: { domain: "camera", multiple: true } })}</label>
+    <label>Bewegingssensoren<small>Alleen deze toont een losse bewegingschip op Home -- de algemene Safety-lijst hierboven blijft voor de kamerbrede "Aandacht nodig"-waarschuwing.</small>${renderSelector("rooms", index, "motion_entities", roomConfig.motion_entities, { entity: { domain: "binary_sensor", multiple: true } })}</label>
     <label>Apparaten en power<small>Telt mee in het huidige vermogen van de kamer. Geen dag/maand/jaartotalen tenzij hetzelfde apparaat ook als Smart plug is ingesteld.</small>${renderSelector("rooms", index, "power_entities", roomConfig.power_entities, { entity: { multiple: true } })}</label>
     <label>Overige historie${renderSelector("rooms", index, "history_entities", roomConfig.history_entities, { entity: { multiple: true } })}</label>
     ${renderRoomControlDeck(roomConfig, index)}
