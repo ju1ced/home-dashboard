@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.14 — 2026-10-19
+
+Eén ticket sinds `v0.8.13` (HD-234), een opfrisbeurt van de instellingen-editor se algemene structuur.
+
+- **Fix: de editor toont niet langer dubbele of concurrerende chrome.** De editor rendert binnen Home Assistant se eigen dialoogvenster, dat al een titelbalk, een "⋮"-menu en een eigen Opslaan/Annuleren-voettekst levert. De editor se eigen dubbele titel, permanente Export/Import/Herstel-werkbalk en eigen "← Vorige / Volgende →"-paginavoettekst zijn verwijderd; Export/Import/Herstel staan voortaan in een "Back-up & herstel"-blok in de Diagnostiek-sectie.
+- **Verbetering: één statuspil i.p.v. twee losse statuszinnen**, en een icoontegel per navigatie-item.
+- Editorbundel ongewijzigd t.o.v. budget (160 kB), gemeten 101.274 bytes.
+- Zie [D-088](docs/design/decision-log.md) voor de volledige analyse. [Testchecklist en rollback](docs/releases/testing-v0.8.14.md).
+
 ## 0.8.13 — 2026-10-19
 
 Drie tickets sinds `v0.8.12` (HD-231, HD-232, HD-233), waaronder een echte regressiefix voor `v0.8.12`.
