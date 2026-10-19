@@ -54,3 +54,22 @@ pnpm run serve # statisch prototype op http://127.0.0.1:4173/
 - Review actionscope, confirmation, autorisatie, responsive gedrag, toegankelijkheid, performance en fallback expliciet.
 - `pnpm test` en `git diff --check` moeten slagen.
 - Geen deployment, push, PR of release zonder expliciete toestemming.
+
+## WhatsApp notification target
+
+For project completion, blockers, or critical failures, send the notification to:
+
+whatsapp:120363431785464486@g.us
+
+Use:
+
+hermes send --to "whatsapp:120363431785464486@g.us" "<message>"
+
+Do not use the global WhatsApp home channel for this project.
+
+Only send notifications when:
+- the requested task is fully completed
+- explicit user input is required
+- a critical failure prevents further progress
+
+Do not send progress messages or tool activity.
