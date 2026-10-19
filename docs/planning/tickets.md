@@ -2063,3 +2063,102 @@ De aandacht-pil in de kopbalk (toonde al het aantal aandachtspunten) wordt een e
 `pnpm test`, `pnpm run test:browser`, `git diff --check`, bundlebudget-check.
 
 **Openstaand:** live Home Assistant-acceptatie blijft een afzonderlijke menselijke gate.
+
+---
+
+### HD-231 — Cover-/luifelchips volgen de live staat zoals het oude dashboard
+
+- **Epic:** Kamers
+- **Status:** Klaar — zie [D-087](../design/decision-log.md#d-087--hd-231232233-v0812-regressie--het-icoon-badge-was-stilletjes-kapot-sinds-hd-229-plus-cover--en-aandachtchip-iconpariteit) voor de volledige analyse en besluiten.
+- **Prioriteit:** P1
+- **Omvang:** S
+- **Eigenaar:** Rooms-agent
+- **Afhankelijkheden:** HD-233 (zelfde badge-mechanisme)
+
+**Doel**
+
+Het oude dashboard toonde per rolluik-/luifelchip een ander icoon afhankelijk van de live staat (open/gesloten/bewegend). Vergeleken met Home Assistant se eigen `cover`-standaardiconen matchen gesloten/open al exact zonder ingreep; enkel het bewegend-icoon en het luifel-icoon (dat HA niet standaard heeft) wijken af en zijn nu expliciet behouden.
+
+**Scope**
+
+1. Nieuwe `coverIcon()`-functie: voor `device_class: shutter` tijdens opening/closing het oude dashboard se `mdi:window-shutter-alert`-icoon i.p.v. Home Assistant se eigen pijl-iconen.
+2. Voor luifels (`kind: awning`): `mdi:awning`/`mdi:awning-outline` behouden (Home Assistant heeft geen ingebouwd luifel-icoon als entity-icoon).
+3. Gewone open/gesloten rolluikstaten blijven via `ha-state-icon` lopen (matcht HA se eigen standaard al exact).
+
+**Acceptatiecriteria**
+
+- Een rolluikchip toont een ander icoon in open/gesloten/bewegende staat, consistent met het oude dashboard.
+- Een luifelchip toont `mdi:awning` (gesloten) of `mdi:awning-outline` (open/bewegend).
+- Bundelbudget-check (222 kB, D-075) — gemeten binnen budget zonder verhoging nodig.
+
+**Validatie**
+
+`pnpm test`, `pnpm run test:browser`, `git diff --check`, bundlebudget-check.
+
+**Openstaand:** live Home Assistant-acceptatie blijft een afzonderlijke menselijke gate.
+
+---
+
+### HD-232 — Aandachtchip toont het icoon van de sensor zelf, niet langer een generiek uitroepteken
+
+- **Epic:** Kamers
+- **Status:** Klaar — zie [D-087](../design/decision-log.md#d-087--hd-231232233-v0812-regressie--het-icoon-badge-was-stilletjes-kapot-sinds-hd-229-plus-cover--en-aandachtchip-iconpariteit) voor de volledige analyse en besluiten.
+- **Prioriteit:** P1
+- **Omvang:** S
+- **Eigenaar:** Rooms-agent
+- **Afhankelijkheden:** HD-226 (de aandachtchip zelf), HD-233 (zelfde badge-mechanisme)
+
+**Doel**
+
+De eigenaar: "ik zie ook dat bvb de chip voor een raam dat open is nu een rood icoon met een uitroepteken geeft, dat moet gewoon een open raam icoon zijn in het rood."
+
+**Scope**
+
+De aandachtchip gebruikt voortaan de live state van de sensor die daadwerkelijk aandacht vraagt om zijn icoon te laten berekenen door Home Assistant se eigen `ha-state-icon` (open raam toont een open-raam-icoon, een rookmelder zijn eigen icoon, enz.), i.p.v. altijd `mdi:alert`. De rode kleur blijft ongewijzigd via de badge se eigen CSS, onafhankelijk van welk icoon er binnenin rendert.
+
+**Acceptatiecriteria**
+
+- Een open raamsensor (`device_class: window`) toont een open-raam-icoon op de aandachtchip, geen generiek uitroepteken.
+- De chip blijft rood gekleurd, ongeacht welk icoon er getoond wordt.
+- Twee rookmelder-sensoren zonder enige `device_class` tonen voorlopig nog een generiek icoon — dat vereist een losse live `device_class`-override, niet meegenomen in dit ticket.
+- Bundelbudget-check (222 kB, D-075) — gemeten binnen budget zonder verhoging nodig.
+
+**Validatie**
+
+`pnpm test`, `pnpm run test:browser`, `git diff --check`, bundlebudget-check.
+
+**Openstaand:** live Home Assistant-acceptatie blijft een afzonderlijke menselijke gate; de twee rookmelders zonder `device_class` blijven generiek tot een losse live-configgoedkeuring.
+
+---
+
+### HD-233 — v0.8.12-regressie: icoon-badge-styling kapot sinds HD-229, plus stale-icoon-bug gefixt
+
+- **Epic:** Kamers
+- **Status:** Klaar — zie [D-087](../design/decision-log.md#d-087--hd-231232233-v0812-regressie--het-icoon-badge-was-stilletjes-kapot-sinds-hd-229-plus-cover--en-aandachtchip-iconpariteit) voor de volledige analyse en besluiten.
+- **Prioriteit:** P0
+- **Omvang:** M
+- **Eigenaar:** Rooms-agent
+- **Afhankelijkheden:** HD-229 (introduceerde de regressie), v0.8.12 (al live)
+
+**Doel**
+
+Tijdens onderzoek naar HD-231/232 ontdekt: sinds HD-229 (`v0.8.12`) is de ronde, gekleurde icoon-badge-styling van elke chip stilletjes kapot, omdat `.control>ha-icon`/`.active>ha-icon`/`.status-attention>ha-icon` tag-naam-selectors zijn die een `ha-state-icon`-element (dat sindsdien in de plaats van `ha-icon` rendert voor elke entiteit met een live state) nooit kunnen matchen.
+
+**Scope**
+
+1. Elke chip krijgt een eigen `<span class="icon-badge">` die de styling draagt, onafhankelijk van wat erbinnen rendert.
+2. Nieuwe `setChipIcon()`-functie vervangt `stateIcon()`: bepaalt bij elke render() én update() welke van drie modi van toepassing is (expliciete override, live state via `ha-state-icon`, of generieke fallback) en wisselt het badge-kind enkel bij een moduswijziging.
+3. Lost daarmee ook een tweede, onafhankelijk ontdekte bug op: een chip wiens state pas ná de allereerste render() beschikbaar komt (de normale volgorde voor elke kamer zonder expliciete `control_entities`) bleef voorheen voorgoed op het fallback-icoon hangen.
+4. Sandboxprototype-stub voor `ha-state-icon` rendeert voortaan in een eigen shadow-root, zodat een CSS-regressie van dit type in de toekomst wel degelijk een test laat falen.
+
+**Acceptatiecriteria**
+
+- Elke chip (quick-action en aandachtchip) toont zijn ronde, gekleurde icoon-badge, ongeacht of het icoon van `ha-icon` of `ha-state-icon` komt.
+- Een chip wiens entiteit-state pas na de eerste render beschikbaar komt, toont na de volgende update toch het juiste, actuele icoon — niet het generieke fallback-icoon.
+- Bundelbudget-check (222 kB, D-075) — gemeten binnen budget zonder verhoging nodig.
+
+**Validatie**
+
+`pnpm test`, `pnpm run test:browser`, `git diff --check`, bundlebudget-check.
+
+**Openstaand:** live Home Assistant-acceptatie blijft een afzonderlijke menselijke gate — met name het werkelijke `ha-state-icon`-gedrag (groepsicoon, device_class-afgeleide iconen) en de badge-styling kunnen enkel tegen een echte Home Assistant-instantie definitief visueel bevestigd worden.

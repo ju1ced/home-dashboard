@@ -78,6 +78,9 @@ De kolom **Volgorde** vertaalt afhankelijkheden naar de aanbevolen uitvoering: f
 | [HD-228 Home: kamerraster toont 3 kolommen i.p.v. 2](tickets.md#hd-228--home-kamerraster-toont-3-kolommen-ipv-2) | P2 | Kamers | D-086 (nog geen release-PR) |
 | [HD-229 Kamerchips gebruiken Home Assistant se eigen entiteitsicoon i.p.v. één vast icoon per type](tickets.md#hd-229--kamerchips-gebruiken-home-assistant-se-eigen-entiteitsicoon-ipv-één-vast-icoon-per-type) | P1 | Kamers | D-086 (nog geen release-PR) |
 | [HD-230 Aandachtbanner op Home wordt oproepbaar via de kopbalk-pil, geen permanente gele balk meer](tickets.md#hd-230--aandachtbanner-op-home-wordt-oproepbaar-via-de-kopbalk-pil-geen-permanente-gele-balk-meer) | P1 | Kamers | D-086 (nog geen release-PR) |
+| [HD-231 Cover-/luifelchips volgen de live staat zoals het oude dashboard](tickets.md#hd-231--cover-luifelchips-volgen-de-live-staat-zoals-het-oude-dashboard) | P1 | Kamers | D-087 (nog geen release-PR) |
+| [HD-232 Aandachtchip toont het icoon van de sensor zelf, niet langer een generiek uitroepteken](tickets.md#hd-232--aandachtchip-toont-het-icoon-van-de-sensor-zelf-niet-langer-een-generiek-uitroepteken) | P1 | Kamers | D-087 (nog geen release-PR) |
+| [HD-233 v0.8.12-regressie: icoon-badge-styling kapot sinds HD-229, plus stale-icoon-bug gefixt](tickets.md#hd-233--v0812-regressie-icoon-badge-styling-kapot-sinds-hd-229-plus-stale-icoon-bug-gefixt) | P0 | Kamers | D-087 (nog geen release-PR) |
 
 ## Geblokkeerd
 
