@@ -1967,3 +1967,99 @@ De eigenaar wil alle kamers zichtbaar maken op het Home-dashboard. `favoriteRoom
 `pnpm test`, `pnpm run test:browser`, `git diff --check`, bundlebudget-check.
 
 **Openstaand:** live Home Assistant-acceptatie blijft een afzonderlijke menselijke gate; het daadwerkelijk markeren van de overige kamers als `home_favorite: true` in de live config is een apart, nog te plannen vervolg na goedkeuring van deze code-wijziging.
+
+---
+
+### HD-228 — Home: kamerraster toont 3 kolommen i.p.v. 2
+
+- **Epic:** Kamers
+- **Status:** Klaar — zie [D-086](../design/decision-log.md#d-086--hd-228229230-home-paginapolish-na-de-live-kamerchip-vergelijking-3-kolommen-entiteitsiconen-oproepbare-aandachtbanner) voor de volledige analyse en besluiten.
+- **Prioriteit:** P2
+- **Omvang:** XS
+- **Eigenaar:** Rooms-agent
+- **Afhankelijkheden:** geen
+
+**Doel**
+
+De eigenaar: "Nu zou ik dit nog in 3 kolommen willen ipv 2."
+
+**Scope**
+
+`.favorite-grid` gaat van `repeat(2,minmax(0,1fr))` naar `repeat(3,minmax(0,1fr))`, met een nieuw tussenliggend 2-koloms-breakpoint onder 1180px vóór het bestaande 1-koloms-breakpoint onder 700px.
+
+**Acceptatiecriteria**
+
+- Het favorietenraster toont 3 kolommen op voldoende brede schermen, 2 op middelgrote schermen, 1 op mobiel.
+- Bundelbudget-check (222 kB, D-075) — gemeten binnen budget zonder verhoging nodig.
+
+**Validatie**
+
+`pnpm test`, `pnpm run test:browser`, `git diff --check`, bundlebudget-check.
+
+**Openstaand:** live Home Assistant-acceptatie blijft een afzonderlijke menselijke gate.
+
+---
+
+### HD-229 — Kamerchips gebruiken Home Assistant se eigen entiteitsicoon i.p.v. één vast icoon per type
+
+- **Epic:** Kamers
+- **Status:** Klaar — zie [D-086](../design/decision-log.md#d-086--hd-228229230-home-paginapolish-na-de-live-kamerchip-vergelijking-3-kolommen-entiteitsiconen-oproepbare-aandachtbanner) voor de volledige analyse en besluiten.
+- **Prioriteit:** P1
+- **Omvang:** S
+- **Eigenaar:** Rooms-agent
+- **Afhankelijkheden:** geen
+
+**Doel**
+
+De eigenaar: "ik mis ook nog de aparte iconen waardoor lichten makkelijk identificeerbaar zijn... Deze iconen die nu op het overview dashboard gebruikt worden zouden dus het standaard icoon moeten zijn van die lichten." Bevestigd via het entity-register dat de betrokken lichten geen icoon-override hebben — het onderscheid komt uit Home Assistant se eigen, client-side iconberekening, niet uit opgeslagen data.
+
+**Scope**
+
+1. **Quick-action-chips delegeren naar `<ha-state-icon>`** (Home Assistant se eigen, globaal geregistreerde icoonelement, net als het al gebruikte `<ha-icon>`) i.p.v. zelf een vast icoon per kind te tonen. Dat element berekent zelf groepsicoon/device_class/registry-override.
+2. De generieke per-kind iconen blijven enkel de fallback wanneer een entiteit geen live state heeft.
+3. `update()` ververst `.stateObj` bij elke hass-wijziging, zodat statusafhankelijke iconen (bv. lamp aan/uit) live meebewegen.
+4. Sandboxprototype-harnas krijgt een minimale stub voor `ha-state-icon` (niet beschikbaar buiten een echte Home Assistant-frontend).
+
+**Acceptatiecriteria**
+
+- Chips tonen het icoon dat Home Assistant zelf voor die entiteit zou tonen, niet langer één identiek icoon per kind.
+- Icoon blijft live meebewegen met statuswijzigingen.
+- Bundelbudget-check (222 kB, D-075) — gemeten binnen budget zonder verhoging nodig.
+
+**Validatie**
+
+`pnpm test`, `pnpm run test:browser`, `git diff --check`, bundlebudget-check. Het werkelijke groepsicoon-/device_class-gedrag kan enkel tegen een echte Home Assistant-instantie visueel bevestigd worden.
+
+**Openstaand:** live Home Assistant-acceptatie blijft een afzonderlijke menselijke gate.
+
+---
+
+### HD-230 — Aandachtbanner op Home wordt oproepbaar via de kopbalk-pil, geen permanente gele balk meer
+
+- **Epic:** Kamers
+- **Status:** Klaar — zie [D-086](../design/decision-log.md#d-086--hd-228229230-home-paginapolish-na-de-live-kamerchip-vergelijking-3-kolommen-entiteitsiconen-oproepbare-aandachtbanner) voor de volledige analyse en besluiten.
+- **Prioriteit:** P1
+- **Omvang:** S
+- **Eigenaar:** Rooms-agent
+- **Afhankelijkheden:** HD-226 (de per-kamer aandachtchip blijft ongewijzigd; dit ticket gaat over de paginabrede banner)
+
+**Doel**
+
+De eigenaar: "dat is op zich goed dat ze enkel tonen bij aandacht nodig. Kunnen we er wel voor zorgen dat... De grote gele balk die altijd verschijnt die is niet nodig, dat moet pas komen als er op de aandachtspunten chip in de header wordt geklikt."
+
+**Scope**
+
+De aandacht-pil in de kopbalk (toonde al het aantal aandachtspunten) wordt een echte, klikbare knop (`aria-expanded`, `aria-controls`) die de banner toont/verbergt. De banner (`.attention-banner`) is niet langer onvoorwaardelijk zichtbaar zodra er aandachtspunten zijn; ze verschijnt pas na een klik op de pil, en verdwijnt weer bij een volgende klik of zodra er geen aandachtspunten meer zijn (automatische reset).
+
+**Acceptatiecriteria**
+
+- De banner blijft verborgen tot de aandacht-pil wordt aangeklikt, ook wanneer er aandachtspunten zijn.
+- Een klik op de pil toont de banner; een volgende klik verbergt ze weer.
+- Zodra er geen aandachtspunten meer zijn, sluit de banner automatisch (geen vastgeklikte lege staat).
+- Bundelbudget-check (222 kB, D-075) — gemeten binnen budget zonder verhoging nodig.
+
+**Validatie**
+
+`pnpm test`, `pnpm run test:browser`, `git diff --check`, bundlebudget-check.
+
+**Openstaand:** live Home Assistant-acceptatie blijft een afzonderlijke menselijke gate.

@@ -134,6 +134,17 @@ function icon(name: string): HTMLElement {
   const element = document.createElement("ha-icon") as HTMLElement & { icon: string };
   element.icon = name; element.setAttribute("aria-hidden", "true"); return element;
 }
+/** HD-228: delegate to Home Assistant's own `ha-state-icon` (globally registered by HA's
+ * frontend, same as `ha-icon`) so a quick-action chip shows the entity's actual icon -- a
+ * light-group's group icon, a platform-specific default, or a registry override -- instead of
+ * one fixed icon per kind that makes same-kind chips in a room indistinguishable. Falls back to
+ * the generic per-kind icon only when the entity has no live state to compute from. */
+function stateIcon(hass: Hass | undefined, state: State | undefined, fallback: string): HTMLElement {
+  if (!state) return icon(fallback);
+  const element = document.createElement("ha-state-icon") as HTMLElement & { stateObj?: State | undefined; hass?: Hass | undefined };
+  element.stateObj = state; element.hass = hass; element.setAttribute("aria-hidden", "true");
+  return element;
+}
 function stateLabel(state?: State): string {
   if (!state) return "Niet gevonden";
   const text: Record<string, string> = { on: "Aan", off: "Uit", open: "Open", closed: "Gesloten", opening: "Opent", closing: "Sluit", playing: "Speelt", paused: "Gepauzeerd", idle: "Kies een bron", heat: "Verwarmen", cool: "Koelen", heat_cool: "Auto", auto: "Auto", dry: "Ontvochtigen", fan_only: "Ventileren", unavailable: "Niet beschikbaar", unknown: "Onbekend" };
@@ -242,6 +253,11 @@ export class HomeDashboardRoomControls extends Base {
       const name = shortName(room, state, control.kind);
       const mini = control.button.querySelector(".mini");
       if (mini) mini.textContent = miniValue(control.kind, state);
+      // HD-228: ha-state-icon computes its icon (e.g. on/off bulb, light-group icon) from the
+      // stateObj it was last given -- refresh it every update, not just once at render(), so a
+      // state change (on/off, group membership) is reflected like the rest of the chip.
+      const stateIconElement = control.button.querySelector("ha-state-icon") as (HTMLElement & { stateObj?: State | undefined }) | null;
+      if (stateIconElement) stateIconElement.stateObj = state;
       control.button.classList.toggle("active", isActive(control.kind, state));
       control.button.setAttribute("aria-pressed", String(isActive(control.kind, state)));
       control.button.disabled = this.pending.has(control.key);
@@ -320,7 +336,7 @@ export class HomeDashboardRoomControls extends Base {
       const key = `${index}:${entity}`;
       const button = document.createElement("button"); button.type = "button"; button.className = `control kind-${kind}`;
       const mini = document.createElement("span"); mini.className = "mini";
-      button.append(icon(String(this.currentHass?.states?.[entity]?.attributes?.icon ?? icons[kind])), mini); controls.append(button);
+      button.append(stateIcon(this.currentHass, this.currentHass?.states?.[entity], icons[kind]), mini); controls.append(button);
       const strip = document.createElement("div"); strip.className = "strip"; strip.hidden = true; strip.id = `control-${index}`;
       const notice = document.createElement("span"); notice.className = "notice"; notice.setAttribute("role", "status");
       const control: OrderedControl = { key, entity, kind, button, notice };

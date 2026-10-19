@@ -75,6 +75,9 @@ De kolom **Volgorde** vertaalt afhankelijkheden naar de aanbevolen uitvoering: f
 | [HD-225 Geen gecombineerde chips meer; chiprij naast de kamernaam, zo compact mogelijk](tickets.md#hd-225--geen-gecombineerde-chips-meer-chiprij-naast-de-kamernaam-zo-compact-mogelijk) | P1 | Kamers | D-083 (nog geen release-PR) |
 | [HD-226 "Aandacht nodig" wordt een oproepbare chip, geen permanente waarschuwingstekst](tickets.md#hd-226--aandacht-nodig-wordt-een-oproepbare-chip-geen-permanente-waarschuwingstekst) | P1 | Kamers | D-084 (nog geen release-PR) |
 | [HD-227 Geen harde limiet meer op het aantal favoriete kamers op Home](tickets.md#hd-227--geen-harde-limiet-meer-op-het-aantal-favoriete-kamers-op-home) | P1 | Kamers | D-085 (nog geen release-PR) |
+| [HD-228 Home: kamerraster toont 3 kolommen i.p.v. 2](tickets.md#hd-228--home-kamerraster-toont-3-kolommen-ipv-2) | P2 | Kamers | D-086 (nog geen release-PR) |
+| [HD-229 Kamerchips gebruiken Home Assistant se eigen entiteitsicoon i.p.v. één vast icoon per type](tickets.md#hd-229--kamerchips-gebruiken-home-assistant-se-eigen-entiteitsicoon-ipv-één-vast-icoon-per-type) | P1 | Kamers | D-086 (nog geen release-PR) |
+| [HD-230 Aandachtbanner op Home wordt oproepbaar via de kopbalk-pil, geen permanente gele balk meer](tickets.md#hd-230--aandachtbanner-op-home-wordt-oproepbaar-via-de-kopbalk-pil-geen-permanente-gele-balk-meer) | P1 | Kamers | D-086 (nog geen release-PR) |
 
 ## Geblokkeerd
 
