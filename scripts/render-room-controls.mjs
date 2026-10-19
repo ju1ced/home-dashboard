@@ -125,6 +125,36 @@ try {
   assert.equal(await coverChip.getAttribute('aria-expanded'),'false');
   assert.equal(await openCommand.isVisible(),false);
   assert.equal(await coverChip.evaluate(el=>el.getRootNode().activeElement===el),true);
+  // HD-229/HD-233: every fixture room is auto-derived (no explicit control_entities), so the
+  // home overview mounts each room-controls card via setConfig() (render() with no hass yet)
+  // immediately followed by assigning .hass in the same tick -- exactly the sequence that used
+  // to leave a chip stuck on its generic per-kind icon forever, because the old code only
+  // refreshed an icon it could already find via querySelector('ha-state-icon'). The badge
+  // pattern re-evaluates which element belongs inside it on every update(), so by the time the
+  // page has finished its normal mount sequence every chip has already upgraded.
+  currentCase='home/icon-badge/normal/1440x1100';
+  await open();
+  const livingLightBadge=page.getByRole('button',{name:/Woonkamer · Lichten/}).locator('.icon-badge');
+  assert.equal(await livingLightBadge.locator('ha-state-icon').count(),1,'het chip-icoon is na de normale mountvolgorde al opgewaardeerd naar ha-state-icon, niet blijven steken op de generieke fallback');
+  assert.equal(await livingLightBadge.evaluate(el=>getComputedStyle(el).borderRadius),'50%','het icoonbadge blijft de ronde kleurcirkel tonen, ongeacht wat erin rendert');
+  const activeBadgeBackground=await livingLightBadge.evaluate(el=>getComputedStyle(el).backgroundColor);
+  assert.notEqual(activeBadgeBackground,'rgba(0, 0, 0, 0)','een actieve chip kleurt zijn badge-achtergrond in (nooit transparant), ook nu het icoon zelf in ha-state-icon rendert');
+  // HD-231: a shutter-class cover chip's icon follows the live open/closed state (matching the
+  // old dashboard's own per-state icon, confirmed against Home Assistant's own cover icon
+  // defaults), and the opening/closing "alert" look the old dashboard used (HA's own default
+  // uses plain directional arrows there instead) is preserved via an explicit override.
+  const livingCoverBadge=page.getByRole('button',{name:/Woonkamer · Rolluik/}).locator('.icon-badge');
+  assert.equal(await livingCoverBadge.locator('[data-icon]').first().getAttribute('data-icon'),'mdi:window-shutter-open','open rolluik toont het open-icoon');
+  await page.evaluate(()=>{const f=roomFixture;f.hass.states[f.config.rooms[0].control_cover_entity].state='closed';f.home.hass={...f.hass};});
+  assert.equal(await livingCoverBadge.locator('[data-icon]').first().getAttribute('data-icon'),'mdi:window-shutter','gesloten rolluik toont het gesloten-icoon');
+  await page.evaluate(()=>{const f=roomFixture;f.hass.states[f.config.rooms[0].control_cover_entity].state='opening';f.home.hass={...f.hass};});
+  assert.equal(await livingCoverBadge.locator('[data-icon]').first().getAttribute('data-icon'),'mdi:window-shutter-alert','bewegend rolluik behoudt het oude dashboard se alert-icoon, niet HA se eigen pijl-icoon');
+  await page.evaluate(()=>{const f=roomFixture;f.hass.states[f.config.rooms[0].control_cover_entity].state='open';f.home.hass={...f.hass};});
+  const livingAwningBadge=page.getByRole('button',{name:/Woonkamer · Luifel/}).locator('.icon-badge');
+  assert.equal(await livingAwningBadge.locator('[data-icon]').first().getAttribute('data-icon'),'mdi:awning','gesloten luifel toont het luifel-icoon dat HA zelf niet heeft, dus hier expliciet behouden');
+  await page.evaluate(()=>{const f=roomFixture;f.hass.states[f.config.rooms[0].control_awning_entity].state='open';f.home.hass={...f.hass};});
+  assert.equal(await livingAwningBadge.locator('[data-icon]').first().getAttribute('data-icon'),'mdi:awning-outline','open luifel toont het open-luifel-icoon');
+  await page.evaluate(()=>{const f=roomFixture;f.hass.states[f.config.rooms[0].control_awning_entity].state='closed';f.home.hass={...f.hass};});
   // HD-224: a motion-sensor chip only ever appears when `motion_entities` is explicitly
   // configured for that room -- Woonkamer has one, Bureau deliberately has none.
   currentCase='home/motion-chip/normal/1440x1100';
@@ -160,6 +190,13 @@ try {
   assert.equal(await page.evaluate(()=>window.lastDetails),await page.evaluate(()=>roomFixture.config.rooms[0].safety_entities[0]),'opent de details van precies de sensor die aandacht vraagt');
   await page.evaluate(()=>{const f=roomFixture;f.hass.states[f.config.rooms[0].safety_entities[0]].state='off';f.home.hass={...f.hass};});
   assert.equal(await attentionChip.isVisible(),false,'verdwijnt weer zodra de sensor niet langer aandacht vraagt');
+  // HD-232: the attention chip's icon reflects the actual sensor that needs attention (an open
+  // window shows its own open-window icon) instead of one fixed mdi:alert for every sensor type
+  // -- the red colouring comes from the badge's own CSS regardless of which icon renders inside.
+  await page.evaluate(()=>{const f=roomFixture;f.hass.states[f.config.rooms[0].safety_entities[0]]={state:'open',attributes:{friendly_name:'Raam eetkamer',device_class:'window'}};f.home.hass={...f.hass};});
+  const attentionBadge=attentionChip.locator('.icon-badge');
+  assert.equal(await attentionBadge.locator('[data-icon]').first().getAttribute('data-icon'),'mdi:window-open','een open raamsensor toont een open-raam-icoon, geen generiek uitroepteken');
+  await page.evaluate(()=>{const f=roomFixture;f.hass.states[f.config.rooms[0].safety_entities[0]].state='off';f.home.hass={...f.hass};});
   currentCase='home/service-error/normal/1440x1100';
   await open();
   await page.evaluate(()=>window.fixtureReject=true);

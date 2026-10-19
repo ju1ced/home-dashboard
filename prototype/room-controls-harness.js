@@ -1,6 +1,7 @@
 // All identifiers are assembled from fictional logical keys; no installation data.
 class FixtureIcon extends HTMLElement {
   set icon(value) {
+    this.setAttribute('data-icon', value ?? '');
     const paths = {
       bulb:'M9 18h6M10 21h4M8 14a6 6 0 1 1 8 0l-1 3H9zM12 1v2M2 10h2M20 10h2',
       cover:'M4 3h16v18H4zM4 7h16M4 11h16M4 15h16M4 19h16',
@@ -18,15 +19,29 @@ class FixtureIcon extends HTMLElement {
   }
 }
 customElements.define('ha-icon',FixtureIcon);
-// HD-228: a minimal stand-in for Home Assistant's own ha-state-icon (not available outside a
-// real HA frontend) -- respects an explicit attributes.icon override like the real element
-// would, otherwise falls back to the same generic glyph FixtureIcon uses. The real
-// domain/group/registry icon computation only exists inside an actual Home Assistant instance.
+// HD-229/HD-233: a minimal stand-in for Home Assistant's own ha-state-icon (not available
+// outside a real HA frontend). Renders into its own shadow root -- like the real element -- so a
+// CSS rule that tries to reach inside it by tag selector (e.g. `.control>ha-icon`) fails the same
+// way it would against the real element, instead of accidentally appearing to work here. Picks a
+// device_class/state-aware icon for the device classes this fixture set actually exercises
+// (window/door/smoke/shutter); anything else falls back to a generic glyph, same as
+// FixtureIcon's own unrecognised-icon fallback. The real domain/group/registry icon computation
+// only exists inside an actual Home Assistant instance.
 class FixtureStateIcon extends HTMLElement {
+  constructor(){ super(); this.attachShadow({ mode: 'open' }); }
   set stateObj(state){
+    const deviceClass = state?.attributes?.device_class;
+    const s = state?.state;
+    const chosen = state?.attributes?.icon
+      ?? (deviceClass === 'window' ? (s === 'on' || s === 'open' ? 'mdi:window-open' : 'mdi:window-closed')
+      : deviceClass === 'door' ? (s === 'on' || s === 'open' ? 'mdi:door-open' : 'mdi:door-closed')
+      : deviceClass === 'smoke' ? (s === 'on' ? 'mdi:smoke-detector-variant-alert' : 'mdi:smoke-detector-variant')
+      : deviceClass === 'shutter' ? (s === 'open' ? 'mdi:window-shutter-open' : 'mdi:window-shutter')
+      : 'mdi:help-circle-outline');
+    this.setAttribute('data-icon', chosen);
     const el=document.createElement('ha-icon');
-    el.icon=state?.attributes?.icon ?? 'mdi:help-circle-outline';
-    this.replaceChildren(el);
+    el.icon=chosen;
+    this.shadowRoot.replaceChildren(el);
   }
 }
 customElements.define('ha-state-icon',FixtureStateIcon);

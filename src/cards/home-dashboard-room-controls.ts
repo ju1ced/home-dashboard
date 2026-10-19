@@ -134,16 +134,49 @@ function icon(name: string): HTMLElement {
   const element = document.createElement("ha-icon") as HTMLElement & { icon: string };
   element.icon = name; element.setAttribute("aria-hidden", "true"); return element;
 }
-/** HD-228: delegate to Home Assistant's own `ha-state-icon` (globally registered by HA's
- * frontend, same as `ha-icon`) so a quick-action chip shows the entity's actual icon -- a
- * light-group's group icon, a platform-specific default, or a registry override -- instead of
- * one fixed icon per kind that makes same-kind chips in a room indistinguishable. Falls back to
- * the generic per-kind icon only when the entity has no live state to compute from. */
-function stateIcon(hass: Hass | undefined, state: State | undefined, fallback: string): HTMLElement {
-  if (!state) return icon(fallback);
-  const element = document.createElement("ha-state-icon") as HTMLElement & { stateObj?: State | undefined; hass?: Hass | undefined };
-  element.stateObj = state; element.hass = hass; element.setAttribute("aria-hidden", "true");
-  return element;
+/** HD-229: a cover/awning chip's entity icon often needs to differ from Home Assistant's own
+ * default: HA has no built-in "awning" cover icon at all, and its "shutter" default uses plain
+ * directional arrows while opening/closing -- the old dashboard used one "alert" icon for both
+ * directions instead. Returns `undefined` when HA's own computed icon (via ha-state-icon)
+ * already matches, which is true for plain open/closed shutter states. */
+function coverIcon(kind: Kind, state: State | undefined): string | undefined {
+  if (kind !== "cover" && kind !== "awning") return undefined;
+  const s = state?.state;
+  if (kind === "awning") {
+    if (s === "closed") return "mdi:awning";
+    if (s === "open" || s === "opening" || s === "closing") return "mdi:awning-outline";
+    return undefined;
+  }
+  const deviceClass = state?.attributes?.device_class;
+  if (deviceClass === "shutter" && (s === "opening" || s === "closing")) return "mdi:window-shutter-alert";
+  return undefined;
+}
+/** HD-229/HD-233: a chip's icon badge is an element this component owns and styles directly
+ * (`.icon-badge`), so the circular colour styling always applies regardless of what renders
+ * inside it -- a plain `ha-icon`, or Home Assistant's own `ha-state-icon` (globally registered
+ * by HA's frontend, same as `ha-icon`), which computes the entity's actual icon (a light-group's
+ * group icon, a platform-specific default, a registry override, or a live-state-dependent icon
+ * like an open window) instead of one fixed icon per kind. `color` and `--mdc-icon-size` still
+ * reach the icon inside ha-state-icon's own internals, since custom properties and `color`
+ * inherit across a shadow boundary even though selectors cannot cross it.
+ *
+ * Called on every render() AND update(): re-evaluates which of the three modes applies (an
+ * explicit override name, a live state to delegate to ha-state-icon, or the generic per-kind
+ * fallback) and only replaces the badge's child when the mode itself changes -- so a chip whose
+ * state arrives after an initial state-less render() still upgrades to ha-state-icon on the next
+ * update(), instead of being stuck on the fallback forever. */
+function setChipIcon(badge: HTMLElement, hass: Hass | undefined, state: State | undefined, override: string | undefined, fallback: string): void {
+  const mode = override ? "override" : state ? "state" : "fallback";
+  if (badge.dataset.iconMode !== mode) {
+    badge.dataset.iconMode = mode;
+    const element = mode === "state" ? document.createElement("ha-state-icon") : document.createElement("ha-icon");
+    element.setAttribute("aria-hidden", "true");
+    (element as HTMLElement).style.width = "100%"; (element as HTMLElement).style.height = "100%";
+    badge.replaceChildren(element);
+  }
+  const current = badge.firstElementChild as HTMLElement & { icon?: string; stateObj?: State | undefined; hass?: Hass | undefined };
+  if (mode === "state") { current.stateObj = state; current.hass = hass; }
+  else current.icon = override ?? fallback;
 }
 function stateLabel(state?: State): string {
   if (!state) return "Niet gevonden";
@@ -247,17 +280,23 @@ export class HomeDashboardRoomControls extends Base {
       const name = this.attentionEntity ? String(this.currentHass?.states?.[this.attentionEntity]?.attributes?.friendly_name ?? "Sensor") : "";
       this.attentionButton.title = `${room.name} · Aandacht nodig`;
       this.attentionButton.setAttribute("aria-label", `${room.name} · Aandacht nodig: ${name}. Open details.`);
+      // HD-232: the chip shows whichever sensor's own icon currently needs attention (an open
+      // window shows an open-window icon, a smoke sensor its own alert icon) -- never a single
+      // generic exclamation mark -- while the red colouring stays constant via the badge's own
+      // CSS, independent of which icon renders inside it.
+      const attentionBadge = this.attentionButton.querySelector(".icon-badge") as HTMLElement | null;
+      if (attentionBadge) setChipIcon(attentionBadge, this.currentHass, this.attentionEntity ? this.currentHass?.states?.[this.attentionEntity] : undefined, undefined, "mdi:alert");
     }
     this.orderedControls.forEach(control => {
       const state = this.currentHass?.states?.[control.entity];
       const name = shortName(room, state, control.kind);
       const mini = control.button.querySelector(".mini");
       if (mini) mini.textContent = miniValue(control.kind, state);
-      // HD-228: ha-state-icon computes its icon (e.g. on/off bulb, light-group icon) from the
-      // stateObj it was last given -- refresh it every update, not just once at render(), so a
-      // state change (on/off, group membership) is reflected like the rest of the chip.
-      const stateIconElement = control.button.querySelector("ha-state-icon") as (HTMLElement & { stateObj?: State | undefined }) | null;
-      if (stateIconElement) stateIconElement.stateObj = state;
+      // HD-229/HD-233: re-evaluate every update, not just once at render(), so a state change
+      // (on/off, group membership, cover position) is reflected like the rest of the chip, and a
+      // chip whose state only arrived after render() upgrades from the fallback icon here.
+      const badge = control.button.querySelector(".icon-badge") as HTMLElement | null;
+      if (badge) setChipIcon(badge, this.currentHass, state, coverIcon(control.kind, state), icons[control.kind]);
       control.button.classList.toggle("active", isActive(control.kind, state));
       control.button.setAttribute("aria-pressed", String(isActive(control.kind, state)));
       control.button.disabled = this.pending.has(control.key);
@@ -307,10 +346,10 @@ export class HomeDashboardRoomControls extends Base {
       .control{--control-accent:var(--primary-color,#0784c1);display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:44px;min-height:44px;padding:0 10px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:999px;background:var(--hd-surface-raised,var(--secondary-background-color,#f5f7f9));color:inherit;cursor:pointer}
       .control.kind-light{--control-accent:var(--state-light-active-color,#b66b00)}.control.kind-climate{--control-accent:var(--state-climate-heat-color,#c95832)}.control.kind-media{--control-accent:var(--state-media-player-active-color,#7155a8)}.control.kind-cover,.control.kind-awning{--control-accent:var(--state-cover-active-color,#087da8)}
       .control.status-motion,.control.status-camera{--control-accent:var(--hd-active,#087da8)}.control.status-motion.tone-critical,.control.status-camera.tone-critical{--control-accent:var(--hd-critical,#c53b32)}.control.status-motion.tone-unavailable,.control.status-camera.tone-unavailable{--control-accent:var(--hd-unavailable,#686d78)}
-      .control.status-attention{--control-accent:var(--hd-critical,#c53b32);background:color-mix(in srgb,var(--control-accent) 16%,var(--hd-surface,var(--card-background-color,#fff)));border-color:var(--control-accent)}.control.status-attention>ha-icon{background:var(--control-accent);color:#fff}
+      .control.status-attention{--control-accent:var(--hd-critical,#c53b32);background:color-mix(in srgb,var(--control-accent) 16%,var(--hd-surface,var(--card-background-color,#fff)));border-color:var(--control-accent)}.control.status-attention .icon-badge{background:var(--control-accent);color:#fff}
       .control .mini{font-size:11px;font-weight:700;color:var(--control-accent)}.control .mini:empty{display:none}
-      .control:hover{border-color:var(--control-accent)}.control>ha-icon{width:24px;height:24px;padding:3px;border-radius:50%;background:color-mix(in srgb,var(--control-accent) 13%,transparent);color:var(--control-accent);flex-shrink:0}
-      .control.active{background:color-mix(in srgb,var(--control-accent) 22%,var(--hd-surface,var(--card-background-color,#fff)));border:2px solid var(--control-accent)}.control.active>ha-icon{background:var(--control-accent);color:#fff}
+      .control:hover{border-color:var(--control-accent)}.icon-badge{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;padding:3px;border-radius:50%;background:color-mix(in srgb,var(--control-accent) 13%,transparent);color:var(--control-accent);flex-shrink:0;--mdc-icon-size:18px}
+      .control.active{background:color-mix(in srgb,var(--control-accent) 22%,var(--hd-surface,var(--card-background-color,#fff)));border:2px solid var(--control-accent)}.control.active .icon-badge{background:var(--control-accent);color:#fff}
       ha-icon{width:23px;height:23px;flex-shrink:0}
       button{font:inherit}button:disabled{opacity:.5;cursor:default}button:focus-visible,a:focus-visible{outline:2px solid var(--primary-color,#0088cc);outline-offset:2px}.strip{margin-top:8px;padding:11px;border:1px solid color-mix(in srgb,var(--primary-color,#0088cc) 25%,var(--hd-border,var(--divider-color,#dce2e8)));border-radius:14px;background:color-mix(in srgb,var(--primary-color,#0088cc) 5%,var(--hd-surface,var(--card-background-color,#fff)))}.strip-label{font-size:12px;display:block;margin-bottom:8px}.commands{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px}.commands button{min-height:44px;min-width:0;padding:8px 10px;border:1px solid var(--hd-border,var(--divider-color,#dce2e8));border-radius:10px;background:var(--hd-surface,var(--card-background-color,#fff));color:inherit;cursor:pointer;font-size:12px}.commands button:hover{border-color:var(--primary-color,#0088cc)}.notice{display:block;font-size:12px;line-height:1.4;margin-top:6px}.notice:empty{display:none}@media(max-width:450px){.commands{grid-template-columns:1fr}}
     `;
@@ -326,7 +365,9 @@ export class HomeDashboardRoomControls extends Base {
       // HD-226: hidden by default, toggled on/off per update() -- only ever visible while a
       // safety entity genuinely needs attention, never a continuously-shown warning line.
       const attentionButton = document.createElement("button"); attentionButton.type = "button"; attentionButton.className = "control status-attention"; attentionButton.hidden = true;
-      attentionButton.append(icon("mdi:alert")); controls.append(attentionButton);
+      const attentionBadge = document.createElement("span"); attentionBadge.className = "icon-badge";
+      setChipIcon(attentionBadge, this.currentHass, undefined, undefined, "mdi:alert");
+      attentionButton.append(attentionBadge); controls.append(attentionButton);
       attentionButton.addEventListener("click", () => { if (this.attentionEntity) this.moreInfo(this.attentionEntity); });
       this.attentionButton = attentionButton;
     }
@@ -335,8 +376,11 @@ export class HomeDashboardRoomControls extends Base {
     if (this.config.show_controls !== false) resolveQuickEntities(room, this.currentHass).forEach(({ entity, kind }, index) => {
       const key = `${index}:${entity}`;
       const button = document.createElement("button"); button.type = "button"; button.className = `control kind-${kind}`;
+      const badge = document.createElement("span"); badge.className = "icon-badge";
+      const initialState = this.currentHass?.states?.[entity];
+      setChipIcon(badge, this.currentHass, initialState, coverIcon(kind, initialState), icons[kind]);
       const mini = document.createElement("span"); mini.className = "mini";
-      button.append(stateIcon(this.currentHass, this.currentHass?.states?.[entity], icons[kind]), mini); controls.append(button);
+      button.append(badge, mini); controls.append(button);
       const strip = document.createElement("div"); strip.className = "strip"; strip.hidden = true; strip.id = `control-${index}`;
       const notice = document.createElement("span"); notice.className = "notice"; notice.setAttribute("role", "status");
       const control: OrderedControl = { key, entity, kind, button, notice };
