@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8.13 — 2026-10-19
+
+Drie tickets sinds `v0.8.12` (HD-231, HD-232, HD-233), waaronder een echte regressiefix voor `v0.8.12`.
+
+- **Fix (P0, regressie sinds v0.8.12):** de ronde, gekleurde icoon-badge van elke chip was stilletjes kapot sinds HD-229 — de CSS-regels verwachtten een `ha-icon` als directe kind, maar elke entiteit met een live state kreeg sindsdien een `ha-state-icon`, die die regels nooit matchten. Elke chip krijgt nu een eigen, zelf-gestylede icoon-badge, onafhankelijk van wat erbinnen rendert. Loste meteen ook een onafhankelijk ontdekte bug op: een chip wiens state pas ná de allereerste render beschikbaar kwam, bleef voorheen voorgoed op het generieke fallback-icoon hangen.
+- **Fix: rolluik-/luifelchips volgen de live staat zoals het oude dashboard.** Open/gesloten matchten Home Assistant se eigen standaard al exact; enkel het bewegend-icoon (het oude dashboard toont één "alert"-icoon in beide richtingen, HA toont pijl-iconen) en het luifel-icoon (HA heeft er geen ingebouwd) zijn nu expliciet behouden.
+- **Fix: de aandachtchip toont het icoon van de sensor zelf** (een open raam toont een open-raam-icoon) i.p.v. altijd een generiek uitroepteken, met behoud van de rode kleur.
+- Hoofdbundel ongewijzigd t.o.v. budget (222 kB), gemeten 217.569 bytes.
+- Zie [D-087](docs/design/decision-log.md) voor de volledige analyse. [Testchecklist en rollback](docs/releases/testing-v0.8.13.md).
+
 ## 0.8.12 — 2026-10-19
 
 Drie tickets sinds `v0.8.11` (HD-228, HD-229, HD-230), Home-paginapolish na de live kamerchip-vergelijking met het oude dashboard.
