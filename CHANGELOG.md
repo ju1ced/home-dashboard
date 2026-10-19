@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8.12 — 2026-10-19
+
+Drie tickets sinds `v0.8.11` (HD-228, HD-229, HD-230), Home-paginapolish na de live kamerchip-vergelijking met het oude dashboard.
+
+- **HD-228:** het favorietenraster op Home toont nu 3 kolommen in plaats van 2, met een nieuw tussenliggend 2-koloms-breakpoint vóór het bestaande mobiele 1-koloms-breakpoint.
+- **HD-229:** quick-action-chips tonen voortaan het icoon dat Home Assistant zelf voor die entiteit zou tonen (via het globaal geregistreerde `ha-state-icon`-element), in plaats van één vast icoon per type. Bevestigd via het entity-register dat de betrokken lichten geen icoon-override hebben — het onderscheid komt uit Home Assistant se eigen clientside iconberekening (bv. een apart groepsicoon), niet uit opgeslagen data.
+- **HD-230:** de altijd-zichtbare gele aandachtbanner op Home is nu oproepbaar via de bestaande aandacht-pil in de kopbalk (nu een echte knop), in plaats van onvoorwaardelijk te verschijnen zodra er iets aandacht vraagt. Sluit zichzelf automatisch wanneer er niets meer is. De per-kamer aandachtchip blijft ongewijzigd.
+- Hoofdbundel ongewijzigd t.o.v. budget (222 kB), gemeten 216.574 bytes.
+- Zie [D-086](docs/design/decision-log.md) voor de volledige analyse. [Testchecklist en rollback](docs/releases/testing-v0.8.12.md).
+
 ## 0.8.11 — 2026-10-16
 
 Twee tickets sinds `v0.8.10` (HD-226, HD-227), beide directe vervolgcorrecties van de eigenaar op de kamerkaarten.
