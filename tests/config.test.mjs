@@ -507,7 +507,10 @@ test("strategy maakt vijf echte views en behoudt veilige foutpreviews", async ()
 
 test("editorbundle bevat ordering, focus- en live-feedbackcontracten", async () => {
   const bundle = await readFile(new URL("../dist/home-dashboard-editor.js", import.meta.url), "utf8");
-  for (const marker of ["data-room-move", "data-view-move", "data-section-nav", "data-section-step", "data-go-section", "Privacybediening is optioneel", "Laat Privacyactie op Geen", "risico:", "role=\"tabpanel\"", "queueMicrotask", "aria-live", "config-changed", "home-dashboard-strategy-editor"]) assert.match(bundle, new RegExp(marker));
+  // HD-234: the per-section Vorige/Volgende footer (data-section-step) was removed -- the nav
+  // tablist is the only way to switch sections now, redundant with it and with the dialog's own
+  // Save/Cancel footer directly beneath it.
+  for (const marker of ["data-room-move", "data-view-move", "data-section-nav", "data-go-section", "Privacybediening is optioneel", "Laat Privacyactie op Geen", "risico:", "role=\"tabpanel\"", "queueMicrotask", "aria-live", "config-changed", "home-dashboard-strategy-editor"]) assert.match(bundle, new RegExp(marker));
 });
 
 test("editornavigatie en open itemtokens overleven HA-configroundtrips", () => {

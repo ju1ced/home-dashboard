@@ -2162,3 +2162,45 @@ Tijdens onderzoek naar HD-231/232 ontdekt: sinds HD-229 (`v0.8.12`) is de ronde,
 `pnpm test`, `pnpm run test:browser`, `git diff --check`, bundlebudget-check.
 
 **Openstaand:** live Home Assistant-acceptatie blijft een afzonderlijke menselijke gate — met name het werkelijke `ha-state-icon`-gedrag (groepsicoon, device_class-afgeleide iconen) en de badge-styling kunnen enkel tegen een echte Home Assistant-instantie definitief visueel bevestigd worden.
+
+---
+
+### HD-234 — Editor-shell-polish: redundante chrome weg, iconen en één statuspil toegevoegd
+
+- **Epic:** Editor/GUI-configuratie
+- **Status:** Klaar — zie [D-088](../design/decision-log.md#d-088--hd-234-editor-shell-polish--redundante-chrome-weg-iconen-en-één-statuspil-toegevoegd) voor de volledige analyse en besluiten.
+- **Prioriteit:** P1
+- **Omvang:** M
+- **Eigenaar:** Editor-agent
+- **Afhankelijkheden:** geen
+
+**Doel**
+
+De eigenaar: "hoofdpagina ziet er design en gebruiksgewijs goed uit voor nu. Ik wil terug focussen op de instellingen, want dat vind ik nog steeds niet goed genoeg" — met vier bevestigde klachten (design, structuur/navigatie, te veel klikken, ontbrekende functionaliteit) en de expliciete keuze om eerst het algemene overzicht/structuur aan te pakken.
+
+**Scope**
+
+Onderzocht via de echte Home Assistant-broncode en een live screenshot van de eigenaar: de editor rendert binnen HA se eigen dialoog (titelbalk, "⋮"-menu, Opslaan/Annuleren-voettekst). De eigen kop, werkbalk en paginavoettekst stonden daar letterlijk bovenop/naast.
+
+1. Eigen `<h2>`-titel verwijderd (dialoog toont de titel al).
+2. Export/Import/Herstel verplaatst van een permanente kop-werkbalk naar een nieuw "Back-up & herstel"-blok in de Diagnostiek-sectie.
+3. De "← Vorige / X van Y / Volgende →"-voettekst volledig verwijderd (concurreerde met HA se eigen voettekst, overbodig naast het al-aanwezige navigatietablad).
+4. "Onderdeel X van Y" verwijderd.
+5. Eén statuspil i.p.v. twee losse statuszinnen.
+6. Icoontegel per navigatie-item (`SECTION_ICONS`).
+
+**Niet in scope (vervolgticket op de Kamers-sectie):** bulk-acties op kamers (bv. meerdere tegelijk favoriet maken), duidelijkere per-veld-validatie.
+
+**Acceptatiecriteria**
+
+- Geen dubbele titel, geen permanente backup-werkbalk, geen eigen paginavoettekst meer.
+- Eén statuspil toont de actuele fout-/waarschuwingstelling; een transiënte boodschap (bv. importresultaat) verschijnt ernaast enkel wanneer relevant.
+- Elk navigatie-item toont een icoon naast de titel.
+- Export/Import/Herstel blijven volledig functioneel, nu binnen Diagnostiek.
+- Editorbundelbudget (160 kB, D-055) — gemeten binnen budget zonder verhoging nodig.
+
+**Validatie**
+
+`pnpm test`, `pnpm run test:browser` (inclusief het echte-browser-scenario tegen `editor.html`), `git diff --check`, editorbundelbudget-check.
+
+**Openstaand:** live Home Assistant-acceptatie blijft een afzonderlijke menselijke gate — met name hoe de editor er daadwerkelijk uitziet binnen de echte dialoogchrome. Bulk-acties op kamers en duidelijkere per-veld-validatie blijven open voor een vervolgticket.

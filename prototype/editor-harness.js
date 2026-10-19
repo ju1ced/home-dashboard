@@ -17,6 +17,18 @@ class HaSelectorFixture extends HTMLElement {
 }
 
 customElements.define("ha-selector", HaSelectorFixture);
+// HD-234: a minimal stand-in for Home Assistant's globally registered ha-icon (not available
+// outside a real HA frontend), just enough so the nav rail's section icons are visible in the
+// sandboxed prototype instead of silently collapsing to nothing.
+class HaIconFixture extends HTMLElement {
+  static get observedAttributes() { return ["icon"]; }
+  // Real ha-icon is a LitElement whose `icon` property reflects to/from the HTML attribute, so
+  // `<ha-icon icon="mdi:...">` works as plain markup there -- this fixture mirrors that via
+  // attributeChangedCallback instead of only a JS property setter.
+  attributeChangedCallback(name, _old, value) { if (name === "icon") this.icon = value; }
+  set icon(value) { this.style.cssText = "display:inline-flex;align-items:center;justify-content:center;width:1em;height:1em"; this.innerHTML = `<svg viewBox="0 0 24 24" width="100%" height="100%" fill="currentColor"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>`; this.title = value ?? ""; }
+}
+customElements.define("ha-icon", HaIconFixture);
 
 const { createDefaultConfig, HomeDashboardStrategy } = await import("/dist/home-dashboard.js");
 // HD-210: ga via dezelfde lazy-load als de echte Home Assistant-configflow

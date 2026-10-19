@@ -240,7 +240,10 @@ test("roominteracties hebben touch-, focus- en mobiele contracts", async () => {
   assert.match(cameras, /prefers-reduced-motion: reduce/);
   assert.match(editor, /\.toolbar label,\.toolbar button\{[^}]*min-height:44px/);
   assert.match(editor, /\.item button\{[^}]*min-width:44px;min-height:44px/);
-  assert.match(editor, /\.section-footer button\{[^}]*min-height:44px/);
+  // HD-234: the per-section Vorige/Volgende footer (its own 44px touch targets) was removed --
+  // the nav tablist is the sole way to switch sections now, and it already carries the same
+  // 44px minimum.
+  assert.match(editor, /\.section-tab\{[^}]*min-height:44px/);
   assert.match(source, /button:focus-visible/);
   assert.match(source, /button:disabled\{[^}]*opacity:/);
   assert.match(source, /min-height:44px/);

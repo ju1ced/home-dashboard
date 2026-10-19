@@ -10,7 +10,7 @@ import { renderActions } from "./sections/actions";
 import { renderPersons } from "./sections/persons";
 import { renderCameras, renderSecurityGuidance } from "./sections/cameras";
 import { addRoomNestedItem, bindRoomEvents, moveRoomControlDraft, removeRoomNestedItem, renderRooms, updateRoomNestedItem, type RoomNestedCollection } from "./sections/rooms";
-import { EDITOR_SECTION_KEYS, escapeHtml, getEditorItemToken, getEditorSectionForKey, mergeEditorIssues, renderSelector, SECTION_TITLES } from "./shared";
+import { EDITOR_SECTION_KEYS, escapeHtml, getEditorItemToken, getEditorSectionForKey, mergeEditorIssues, renderSelector, SECTION_ICONS, SECTION_TITLES } from "./shared";
 
 export { EDITOR_SECTION_KEYS, getEditorItemToken, getEditorSectionForKey, mergeEditorIssues } from "./shared";
 
@@ -321,12 +321,6 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
         this.render();
       });
     });
-    this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-section-step]").forEach((controlButton) => controlButton.addEventListener("click", () => {
-      const current = EDITOR_SECTION_KEYS.indexOf(this.activeSection);
-      const direction = controlButton.dataset.sectionStep === "previous" ? -1 : 1;
-      this.activeSection = EDITOR_SECTION_KEYS[Math.max(0, Math.min(EDITOR_SECTION_KEYS.length - 1, current + direction))] ?? "general";
-      this.render();
-    }));
     this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-go-section]").forEach((controlButton) => controlButton.addEventListener("click", () => {
       const section = controlButton.dataset.goSection;
       if (!section || !EDITOR_SECTION_KEYS.includes(section)) return;
@@ -378,9 +372,13 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
     const issues = mergeEditorIssues(validateConfigSchema(this._config), validateConfig(this._config));
     const summary = `${this._config.rooms.length} kamers · ${this._config.persons.length} personen · ${this._config.security.cameras.length} camera's · ${this._config.actions.length} acties`;
     if (!EDITOR_SECTION_KEYS.includes(this.activeSection)) this.activeSection = "general";
-    const sectionIndex = EDITOR_SECTION_KEYS.indexOf(this.activeSection);
     const sectionForIssue = (path: string) => EDITOR_SECTION_KEYS.find((key) => path === key || path.startsWith(`${key}.`) || path.startsWith(`${key}[`)) ?? "general";
     const sectionIssues = issues.filter((candidate) => sectionForIssue(candidate.path) === this.activeSection);
+    // HD-234: export/import/reset used to sit in a permanent header toolbar, competing for space
+    // with the dialog's own title bar on every single section. They're rare, utility actions, so
+    // they now live inside Diagnostiek instead -- freeing the header down to just the live summary
+    // and one status line, and giving every other section its full width back.
+    const backupBlock = `<div class="backup"><h4>Back-up &amp; herstel</h4><div class="toolbar"><button id="export" type="button" ${this.blocked ? "disabled" : ""}>Exporteer privé-back-up</button><label>Importeer JSON<input id="import" type="file" accept="application/json"></label><button id="reset" type="button" ${this.blocked ? "disabled" : ""}>Herstel standaard</button></div></div>`;
     const sectionBodies: Record<string, { body: string; extra?: string }> = {
       general: { body: "" },
       today: { body: "" },
@@ -391,7 +389,7 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
       actions: { body: `<div class="items">${renderActions(this._config, this.expandedItems)}</div>`, extra: `<button class="add" type="button" data-add="actions">Actie toevoegen</button>` },
       specialists: { body: `<div class="items">${renderSpecialists(this._config)}</div>` },
       layout: { body: `<div><strong>Viewvolgorde</strong><small>De vijf stabiele paden blijven aanwezig en kunnen worden herschikt.</small>${renderViewOrder(this._config)}</div>` },
-      diagnostics: { body: "" }
+      diagnostics: { body: backupBlock }
     };
     const sectionContent = sectionBodies[this.activeSection] ?? sectionBodies.general!;
     const navigation = EDITOR_SECTION_KEYS.map((key) => {
@@ -399,32 +397,41 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
       const errors = scoped.filter((candidate) => candidate.severity === "error").length;
       const warnings = scoped.length - errors;
       const status = errors ? `<span class="nav-state error" aria-label="${errors} fouten">${errors}</span>` : warnings ? `<span class="nav-state warning" aria-label="${warnings} waarschuwingen">${warnings}</span>` : `<span class="nav-state valid" aria-label="Geldig">✓</span>`;
-      return `<button type="button" role="tab" id="section-tab-${key}" aria-controls="section-panel" aria-selected="${key === this.activeSection}" tabindex="${key === this.activeSection ? "0" : "-1"}" class="section-tab" data-section-nav="${key}"><span>${SECTION_TITLES[key]}</span>${status}</button>`;
+      return `<button type="button" role="tab" id="section-tab-${key}" aria-controls="section-panel" aria-selected="${key === this.activeSection}" tabindex="${key === this.activeSection ? "0" : "-1"}" class="section-tab" data-section-nav="${key}"><ha-icon class="section-icon" icon="${SECTION_ICONS[key]}" aria-hidden="true"></ha-icon><span class="section-label">${SECTION_TITLES[key]}</span>${status}</button>`;
     }).join("");
-    const issueSummary = issues.length
-      ? `${issues.filter((candidate) => candidate.severity === "error").length} fouten · ${issues.filter((candidate) => candidate.severity === "warning").length} waarschuwingen. De badges tonen waar aandacht nodig is.`
-      : "Schema v1 is geldig.";
+    // HD-234: one compact status pill instead of two separate status lines (the live-region
+    // message and a static issue count) stacked in the header of every section. The pill always
+    // shows the current error/warning tally (what the nav badges already summarise); this.message
+    // -- a transient event like an import result -- appends next to it only when there's one.
+    const errorCount = issues.filter((candidate) => candidate.severity === "error").length;
+    const warningCount = issues.length - errorCount;
+    const statusTone = this.blocked || errorCount ? "error" : warningCount ? "warning" : "valid";
+    const pillText = errorCount ? `${errorCount} fout${errorCount === 1 ? "" : "en"} · ${warningCount} waarschuwing${warningCount === 1 ? "" : "en"}`
+      : warningCount ? `${warningCount} waarschuwing${warningCount === 1 ? "" : "en"}`
+      : "Geldig";
+    const transientMessage = this.message && this.message !== "Configuratie is geldig." ? this.message : "";
     this.shadowRoot.innerHTML = `<style>
       :host{display:block;color:var(--primary-text-color);font-family:var(--paper-font-body1_-_font-family,system-ui);--accent:var(--primary-color,#276b5b)}
       *{box-sizing:border-box}header{display:grid;gap:12px;padding:16px;border:1px solid var(--divider-color);border-radius:16px;background:var(--card-background-color)}
-      h2,p{margin:0}.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:end}.toolbar label,.toolbar button{min-height:44px;border:1px solid var(--divider-color);border-radius:10px;padding:9px 12px;background:var(--secondary-background-color);color:inherit;cursor:pointer}.toolbar label{display:grid;gap:5px}.toolbar input[type=file]{max-width:240px;padding:4px}
-      .editor-layout{display:grid;grid-template-columns:minmax(170px,220px) minmax(0,1fr);gap:12px;margin-top:12px}.section-nav{display:grid;gap:6px;align-self:start;position:sticky;top:8px}.section-tab{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--divider-color);border-radius:10px;background:var(--card-background-color);color:inherit;text-align:left;cursor:pointer}.section-tab[aria-selected=true]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--card-background-color));font-weight:700}.nav-state{display:grid;place-items:center;min-width:24px;height:24px;padding:0 6px;border-radius:999px;background:var(--secondary-background-color);font-size:.78rem}.nav-state.valid{color:var(--success-color,#27824a)}
+      h2,h3,p{margin:0}.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:end}.toolbar label,.toolbar button{min-height:44px;border:1px solid var(--divider-color);border-radius:10px;padding:9px 12px;background:var(--secondary-background-color);color:inherit;cursor:pointer}.toolbar label{display:grid;gap:5px}.toolbar input[type=file]{max-width:240px;padding:4px}
+      .status-line{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:.92rem}.status-pill{display:inline-flex;align-items:center;padding:3px 11px;border-radius:999px;font-weight:700;font-size:.78rem;background:var(--secondary-background-color);white-space:nowrap}.status-line.valid .status-pill{background:color-mix(in srgb,var(--success-color,#27824a) 16%,var(--card-background-color));color:var(--success-color,#27824a)}.status-line.warning .status-pill{background:color-mix(in srgb,var(--warning-color,#b26a00) 16%,var(--card-background-color));color:var(--warning-color,#b26a00)}.status-line.error .status-pill{background:color-mix(in srgb,var(--error-color) 16%,var(--card-background-color));color:var(--error-color)}
+      .backup{display:grid;gap:10px}.backup h4{font-size:1rem}
+      .editor-layout{display:grid;grid-template-columns:minmax(170px,220px) minmax(0,1fr);gap:12px;margin-top:12px}.section-nav{display:grid;gap:6px;align-self:start;position:sticky;top:8px}.section-tab{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:9px 12px;border:1px solid var(--divider-color);border-radius:10px;background:var(--card-background-color);color:inherit;text-align:left;cursor:pointer}.section-label{flex:1;min-width:0;overflow-wrap:break-word}.section-tab[aria-selected=true]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--card-background-color));font-weight:700}.section-icon{--mdc-icon-size:20px;width:20px;height:20px;flex-shrink:0;color:var(--secondary-text-color)}.section-tab[aria-selected=true] .section-icon{color:var(--accent)}.nav-state{display:grid;place-items:center;min-width:24px;height:24px;padding:0 6px;border-radius:999px;background:var(--secondary-background-color);font-size:.78rem}.nav-state.valid{color:var(--success-color,#27824a)}
       .section-panel{min-width:0;border:1px solid var(--divider-color);border-radius:14px;background:var(--card-background-color);overflow:hidden}.section-heading{padding:16px;border-bottom:1px solid var(--divider-color)}.section-heading h3{margin:0;font-size:1.25rem}.section{display:grid;gap:12px;padding:14px}
       .field,label{display:grid;gap:5px}.field{grid-template-columns:minmax(180px,1fr) minmax(220px,1fr);align-items:center;padding:9px 0;border-top:1px solid var(--divider-color)}small{display:block;color:var(--secondary-text-color);margin-top:3px}
       input,select,textarea{width:100%;min-height:44px;padding:10px;border:1px solid var(--divider-color);border-radius:8px;background:var(--secondary-background-color);color:inherit}textarea{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;resize:vertical}input[type=checkbox]{width:22px;height:22px;min-height:22px}.check{display:flex;align-items:center;min-height:44px;gap:8px}
       .items{display:grid;gap:10px}.item{margin:0;border:1px solid var(--divider-color);border-radius:12px;background:var(--secondary-background-color);overflow:hidden}.item summary{min-height:44px;padding:12px;font-weight:700;cursor:pointer}.item-body{display:grid;gap:10px;padding:0 12px 12px}.item-toolbar{display:flex;justify-content:flex-end;align-items:center;gap:8px}.item-toolbar strong{margin-right:auto}.item-actions,.order-actions{display:flex;gap:8px}.item button{color:var(--error-color);background:transparent;border:0;min-width:44px;min-height:44px;cursor:pointer}.item button[disabled]{opacity:.35;cursor:not-allowed}.nested-collection{display:grid;gap:8px;padding:10px;border:1px solid var(--divider-color);border-radius:10px}.nested-collection h5{margin:0}.nested-item{display:grid;gap:8px;padding:10px;border:1px solid var(--divider-color);border-radius:9px;background:var(--card-background-color)}.nested-item h6{margin:4px 0 -4px;font-size:.78rem;text-transform:uppercase;letter-spacing:.03em;color:var(--secondary-text-color)}.nested-collection>button{justify-self:start;min-height:44px;padding:8px 12px;border:1px solid var(--accent);border-radius:9px;background:var(--card-background-color);color:var(--accent)}.order-actions button{border:1px solid var(--divider-color);border-radius:8px;background:var(--secondary-background-color);color:inherit}.order-actions button:hover:not([disabled]){border-color:var(--accent);color:var(--accent)}code{display:block;overflow-wrap:anywhere;color:var(--secondary-text-color)}
       fieldset.config{border:0;margin:0;padding:0;min-width:0}.config[disabled]{pointer-events:none;opacity:.72}.order{display:grid;gap:6px}.order>div{display:grid;grid-template-columns:30px minmax(0,1fr) auto;align-items:center;gap:9px;padding:7px 9px;border:1px solid var(--divider-color);border-radius:9px;background:var(--card-background-color)}.order-index{display:grid;place-items:center;width:28px;height:28px;border-radius:8px;background:color-mix(in srgb,var(--accent) 13%,var(--card-background-color));color:var(--accent);font-weight:750}.order code{min-width:0}.order-save{display:flex;align-items:center;justify-content:space-between;gap:10px}.order-save button{min-height:44px;padding:8px 12px;border:1px solid var(--divider-color);border-radius:9px;background:var(--card-background-color);color:inherit}.order-save button.pending{border-color:var(--accent);background:var(--accent);color:#fff;font-weight:700}.fatal{color:var(--error-color);font-weight:700}
-      .add{justify-self:start;min-height:44px;padding:9px 12px;border:0;border-radius:9px;background:var(--accent);color:var(--text-primary-color,#fff);cursor:pointer}.guidance{display:grid;gap:8px;padding:12px;border:1px solid color-mix(in srgb,var(--accent) 35%,var(--divider-color));border-radius:12px;background:color-mix(in srgb,var(--accent) 8%,var(--card-background-color))}.guidance button{justify-self:start;min-height:44px;padding:8px 12px;border:1px solid var(--accent);border-radius:9px;background:var(--card-background-color);color:var(--accent);font-weight:700;cursor:pointer}.issues{margin:0;padding-left:20px}.error{color:var(--error-color)}.warning{color:var(--warning-color,#b26a00)}.section-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;border-top:1px solid var(--divider-color)}.section-footer button{min-height:44px;padding:8px 14px;border:1px solid var(--divider-color);border-radius:9px;background:var(--secondary-background-color);color:inherit}.section-footer button[disabled]{opacity:.45}
+      .add{justify-self:start;min-height:44px;padding:9px 12px;border:0;border-radius:9px;background:var(--accent);color:var(--text-primary-color,#fff);cursor:pointer}.guidance{display:grid;gap:8px;padding:12px;border:1px solid color-mix(in srgb,var(--accent) 35%,var(--divider-color));border-radius:12px;background:color-mix(in srgb,var(--accent) 8%,var(--card-background-color))}.guidance button{justify-self:start;min-height:44px;padding:8px 12px;border:1px solid var(--accent);border-radius:9px;background:var(--card-background-color);color:var(--accent);font-weight:700;cursor:pointer}.issues{margin:0;padding-left:20px}.error{color:var(--error-color)}.warning{color:var(--warning-color,#b26a00)}
       @media(max-width:800px){.editor-layout{grid-template-columns:1fr}.section-nav{display:flex;overflow-x:auto;position:sticky;top:0;z-index:2;padding:6px;background:var(--primary-background-color);scrollbar-width:thin}.section-tab{flex:0 0 auto;width:auto}.field{grid-template-columns:1fr}.section{padding-inline:10px}header{padding:12px}.toolbar{align-items:stretch}.toolbar>*{flex:1 1 180px}}
     </style>
-    <header><div><h2>Home Dashboard configuratie</h2><p>${escapeHtml(summary)}</p></div><div class="toolbar"><button id="export" type="button" ${this.blocked ? "disabled" : ""}>Exporteer privé-back-up</button><label>Importeer JSON<input id="import" type="file" accept="application/json"></label><button id="reset" type="button" ${this.blocked ? "disabled" : ""}>Herstel standaard</button></div><p role="status" aria-live="polite" class="${this.blocked ? "fatal" : ""}">${escapeHtml(this.message)}</p>${this.blocked ? "" : `<p>${escapeHtml(issueSummary)}</p>`}</header>
+    <header><p>${escapeHtml(summary)}</p><p role="status" aria-live="polite" class="status-line ${this.blocked ? "fatal" : statusTone}">${this.blocked ? escapeHtml(this.message) : `<span class="status-pill">${escapeHtml(pillText)}</span>${transientMessage ? escapeHtml(transientMessage) : ""}`}</p></header>
     <fieldset class="config" ${this.blocked ? "disabled" : ""}>
       <div class="editor-layout"><nav class="section-nav" role="tablist" aria-label="Configuratieonderdelen">${navigation}</nav>
       <section class="section-panel" id="section-panel" role="tabpanel" aria-labelledby="section-tab-${this.activeSection}">
-        <div class="section-heading"><h3>${SECTION_TITLES[this.activeSection]}</h3><small>Onderdeel ${sectionIndex + 1} van ${EDITOR_SECTION_KEYS.length}</small></div>
+        <div class="section-heading"><h3>${SECTION_TITLES[this.activeSection]}</h3></div>
         ${sectionIssues.length ? `<div role="alert" class="section"><ul class="issues">${sectionIssues.map((candidate) => `<li class="${candidate.severity}"><strong>${escapeHtml(candidate.path)}</strong>: ${escapeHtml(candidate.message)}</li>`).join("")}</ul></div>` : ""}
         <div class="section">${FIELD_DEFINITIONS.filter((field) => field.section === this.activeSection).map((field) => renderField(field, this._config)).join("")}${sectionContent.body}${sectionContent.extra ?? ""}</div>
-        <div class="section-footer"><button type="button" data-section-step="previous" ${sectionIndex === 0 ? "disabled" : ""}>← Vorige</button><span>${sectionIndex + 1} / ${EDITOR_SECTION_KEYS.length}</span><button type="button" data-section-step="next" ${sectionIndex === EDITOR_SECTION_KEYS.length - 1 ? "disabled" : ""}>Volgende →</button></div>
       </section></div>
     </fieldset>`;
     this.configureSelectors();

@@ -81,6 +81,7 @@ De kolom **Volgorde** vertaalt afhankelijkheden naar de aanbevolen uitvoering: f
 | [HD-231 Cover-/luifelchips volgen de live staat zoals het oude dashboard](tickets.md#hd-231--cover-luifelchips-volgen-de-live-staat-zoals-het-oude-dashboard) | P1 | Kamers | D-087 (nog geen release-PR) |
 | [HD-232 Aandachtchip toont het icoon van de sensor zelf, niet langer een generiek uitroepteken](tickets.md#hd-232--aandachtchip-toont-het-icoon-van-de-sensor-zelf-niet-langer-een-generiek-uitroepteken) | P1 | Kamers | D-087 (nog geen release-PR) |
 | [HD-233 v0.8.12-regressie: icoon-badge-styling kapot sinds HD-229, plus stale-icoon-bug gefixt](tickets.md#hd-233--v0812-regressie-icoon-badge-styling-kapot-sinds-hd-229-plus-stale-icoon-bug-gefixt) | P0 | Kamers | D-087 (nog geen release-PR) |
+| [HD-234 Editor-shell-polish: redundante chrome weg, iconen en één statuspil toegevoegd](tickets.md#hd-234--editor-shell-polish-redundante-chrome-weg-iconen-en-één-statuspil-toegevoegd) | P1 | Editor/GUI-configuratie | D-088 (nog geen release-PR) |
 
 ## Geblokkeerd
 
