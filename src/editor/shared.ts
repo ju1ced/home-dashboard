@@ -13,6 +13,20 @@ export const SECTION_TITLES: Record<string, string> = {
   diagnostics: "Diagnostiek"
 };
 export const EDITOR_SECTION_KEYS = Object.keys(SECTION_TITLES);
+// HD-234: one icon tile per nav item -- the plain text-only list gave every section equal,
+// unlabelled visual weight, with no relationship to the rest of the dashboard's visual language.
+export const SECTION_ICONS: Record<string, string> = {
+  general: "mdi:cog-outline",
+  today: "mdi:weather-partly-cloudy",
+  persons: "mdi:account-group-outline",
+  security: "mdi:shield-home-outline",
+  rooms: "mdi:floor-plan",
+  energy: "mdi:lightning-bolt-outline",
+  actions: "mdi:gesture-tap-button",
+  specialists: "mdi:puzzle-outline",
+  layout: "mdi:view-dashboard-outline",
+  diagnostics: "mdi:stethoscope"
+};
 
 export function getEditorItemToken(collection: string, item: object, index: number): string {
   const key = (item as { key?: unknown }).key;
