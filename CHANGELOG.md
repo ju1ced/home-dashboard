@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.8.15 — 2026-10-20
+
+Eerste deel van HD-235 (PR #120), een herbouw van de Kamers-sectie van de instellingen-editor na live feedback van de eigenaar dat de huidige, platte lijst "absoluut niet handig en duidelijk" was.
+
+- **Verbetering: master-detail-layout in plaats van één lange lijst.** De Kamers-sectie toont nu een doorzoekbare kamerlijst links, gegroepeerd per verdieping, met rechts een echte pagina per geselecteerde kamer — in plaats van elke kamer als een uitklappende lijst van ±30 velden onder elkaar.
+- **Verbetering: vijf sub-tabs per kamer** (Basis, Snelkoppelingen, Bronmappings, Energie, Klimaat) i.p.v. alles in één scroll. Elk veld behoudt exact zijn huidige betekenis, validatie en opslagvorm.
+- **Fix: het zoekveld matcht nu overal hetzelfde.** De live zoekfilter (per toetsaanslag) matchte voorheen enkel de getoonde naam en nooit de area, ondanks de placeholdertekst die dat beloofde; beide zoekpaden gebruiken nu dezelfde matchfunctie, nu ook uitgebreid met verdieping.
+- **Fix: lokale kanban-/tickets-symlinks braken CI.** Deze waren per ongeluk gecommit als devbox-lokale symlinks (werkten niet op CI of een andere checkout); teruggezet naar gewone, getrackte bestanden.
+- Editorbundel ongewijzigd t.o.v. budget (160 kB), gemeten 106.754 bytes.
+- **Bewust niet in scope:** het hergebruiken van één apparaat (bv. een smart plug) als zowel favoriet-chip als verbruiksbron zonder het twee keer te moeten koppelen, en HD-217's live UI-klik-door-acceptatie — apart vervolg binnen hetzelfde ticket.
+- Zie [D-089](docs/design/decision-log.md) en [D-090](docs/design/decision-log.md) voor de volledige analyse. [Testchecklist en rollback](docs/releases/testing-v0.8.15.md).
+
 ## 0.8.14 — 2026-10-19
 
 Eén ticket sinds `v0.8.13` (HD-234), een opfrisbeurt van de instellingen-editor se algemene structuur.
