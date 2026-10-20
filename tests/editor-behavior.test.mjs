@@ -29,6 +29,9 @@ class FakeShadowRoot {
     this.sectionLinks = [];
     this.items = [];
     this.selectors = [];
+    this.floorHeadings = [];
+    this.roomTabs = [];
+    this.roomSearchInput = null;
     this._innerHTML = "";
   }
 
@@ -47,10 +50,16 @@ class FakeShadowRoot {
     }));
     this.items = Array.from(value.matchAll(/<details\b([^>]*)data-item-token="([^"]+)"([^>]*)>/g), (match) => {
       const attributes = `${match[1]}${match[3]}`;
-      return new FakeElement(this, {
+      const element = new FakeElement(this, {
         open: /(?:^|\s)open(?:\s|$)/.test(attributes),
-        dataset: { itemToken: match[2] }
+        dataset: {
+          itemToken: match[2],
+          roomIndex: attributes.match(/\bdata-room-index="([^"]*)"/)?.[1] ?? "",
+          floor: attributes.match(/\bdata-floor="([^"]*)"/)?.[1] ?? ""
+        }
       });
+      element.hidden = /(?:^|\s)hidden(?:\s|$)/.test(attributes);
+      return element;
     });
     this.selectors = Array.from(value.matchAll(/<ha-selector\b([^>]*)><\/ha-selector>/g), (match) => {
       const attributes = match[1];
@@ -62,6 +71,32 @@ class FakeShadowRoot {
         }
       });
     });
+    // HD-235: floor-group headings above the master-detail room list.
+    this.floorHeadings = Array.from(value.matchAll(/<h5\b([^>]*)data-floor-heading="([^"]*)"([^>]*)>/g), (match) => {
+      const attributes = `${match[1]}${match[3]}`;
+      const element = new FakeElement(this, { dataset: { floorHeading: match[2] } });
+      element.hidden = /(?:^|\s)hidden(?:\s|$)/.test(attributes);
+      return element;
+    });
+    // HD-235: a room's Basis/Snelkoppelingen/Bronmappings/Energie/Klimaat sub-tab nav buttons.
+    this.roomTabs = Array.from(value.matchAll(/<button\b([^>]*)data-room-tab-nav="([^"]+)"([^>]*)>/g), (match) => {
+      const attributes = `${match[1]}${match[3]}`;
+      return new FakeElement(this, {
+        ariaSelected: attributes.match(/\baria-selected="([^"]+)"/)?.[1] ?? "false",
+        dataset: {
+          roomTabNav: match[2],
+          roomTab: attributes.match(/\bdata-room-tab="([^"]*)"/)?.[1] ?? ""
+        }
+      });
+    });
+    const searchMatch = value.match(/<input\b([^>]*)id="room-search"([^>]*)>/);
+    if (searchMatch) {
+      const attributes = `${searchMatch[1]}${searchMatch[2]}`;
+      this.roomSearchInput = new FakeElement(this, { id: "room-search" });
+      this.roomSearchInput.value = attributes.match(/\bvalue="([^"]*)"/)?.[1] ?? "";
+    } else {
+      this.roomSearchInput = null;
+    }
   }
 
   get innerHTML() {
@@ -74,11 +109,15 @@ class FakeShadowRoot {
     if (selector === "ha-selector") return this.selectors;
     if (selector === "[data-go-section]") return this.sectionLinks;
     if (selector === "details[data-item-token]") return this.items;
+    if (selector === 'details[data-item-token^="rooms:"]') return this.items.filter((item) => item.dataset.itemToken.startsWith("rooms:"));
+    if (selector === "[data-floor-heading]") return this.floorHeadings;
+    if (selector === "[data-room-tab-nav]") return this.roomTabs;
     return [];
   }
 
   querySelector(selector) {
     if (selector === "[data-section-nav][aria-selected=true]") return this.navigation.find((element) => element.ariaSelected === "true") ?? null;
+    if (selector === "#room-search") return this.roomSearchInput;
     return null;
   }
 }
@@ -129,9 +168,9 @@ test("editorbundle registreert het editor-element afzonderlijk", () => {
   assert.equal(registry.get("home-dashboard-strategy-editor"), HomeDashboardStrategyEditor);
 });
 
-function room(key) {
+function room(key, floorId = "") {
   return {
-    key, name: key, icon: "mdi:sofa", floor_id: "", area_id: "living_area", device_ids: [], capabilities: [], quick_actions: [],
+    key, name: key, icon: "mdi:sofa", floor_id: floorId, area_id: "living_area", device_ids: [], capabilities: [], quick_actions: [],
     light_entities: [], cover_entities: [], media_entities: [], safety_entities: [], camera_entities: [], motion_entities: [], power_entities: [], history_entities: [],
     hvac: { entity: "", comfort_entities: [], history_entities: [], modes: [], presets: [], fan_modes: [], swing_modes: [] }
   };
@@ -369,4 +408,84 @@ test("HD-209: kamereditor rendert een media-uploadselector naast image_entity en
   editor.updateCollection("rooms", 0, "image_entity", "image.living_room_photo");
   assert.equal(editor._config.rooms[0].image_entity, "image.living_room_photo");
   assert.deepEqual(editor._config.rooms[0].image_upload, upload);
+});
+
+test("HD-235: kamers worden gegroepeerd per verdieping met een kopje per groep", () => {
+  const config = createDefaultConfig();
+  config.rooms.push(room("attic_room", "first_floor"), room("ground_room", "ground_floor"), room("no_floor_room"));
+  const editor = new HomeDashboardStrategyEditor();
+  editor.connectedCallback();
+  editor.setConfig(config);
+  findTab(editor, "rooms").emit("click");
+
+  const headingKeys = editor.shadowRoot.floorHeadings.map((heading) => heading.dataset.floorHeading);
+  assert.deepEqual(headingKeys, ["first_floor", "ground_floor", ""], "verdiepingen groeperen in volgorde van eerste voorkomen, geen verdieping laatst");
+  assert.equal(editor.shadowRoot.floorHeadings.every((heading) => !heading.hidden), true, "elke verdieping heeft minstens één zichtbare kamer zonder zoekopdracht");
+
+  const atticItem = editor.shadowRoot.items.find((item) => item.dataset.itemToken === "rooms:attic_room");
+  assert.equal(atticItem.dataset.floor, "first_floor", "elke kamer draagt haar eigen verdieping, zodat de live-filter per groep kan verbergen");
+});
+
+test("HD-235: zoekveld filtert live op naam, sleutel, verdieping en area, en verbergt een leeg verdiepingskopje", () => {
+  const config = createDefaultConfig();
+  config.rooms.push(room("attic_room", "first_floor"), room("ground_room", "ground_floor"));
+  const editor = new HomeDashboardStrategyEditor();
+  editor.connectedCallback();
+  editor.setConfig(config);
+  findTab(editor, "rooms").emit("click");
+
+  const searchInput = editor.shadowRoot.querySelector("#room-search");
+  assert.ok(searchInput, "zoekveld moet aanwezig zijn");
+
+  searchInput.value = "attic";
+  searchInput.emit("input", { target: searchInput });
+
+  assert.equal(editor.shadowRoot.items.find((item) => item.dataset.itemToken === "rooms:attic_room").hidden, false);
+  assert.equal(editor.shadowRoot.items.find((item) => item.dataset.itemToken === "rooms:ground_room").hidden, true);
+  const firstFloorHeading = editor.shadowRoot.floorHeadings.find((heading) => heading.dataset.floorHeading === "first_floor");
+  const groundFloorHeading = editor.shadowRoot.floorHeadings.find((heading) => heading.dataset.floorHeading === "ground_floor");
+  assert.equal(firstFloorHeading.hidden, false);
+  assert.equal(groundFloorHeading.hidden, true, "een verdieping zonder zichtbare kamers verbergt ook haar eigen kopje");
+  // Zoeken wijzigt nooit de echte configuratie, alleen de weergave.
+  assert.equal(editor._config.rooms.length, 2);
+
+  // HD-235 fixt de inconsistentie: zoeken op verdieping werkte voorheen alleen bij het eerste
+  // render, niet via dit live #room-search-pad.
+  searchInput.value = "ground_floor";
+  searchInput.emit("input", { target: searchInput });
+  assert.equal(editor.shadowRoot.items.find((item) => item.dataset.itemToken === "rooms:ground_room").hidden, false);
+  assert.equal(editor.shadowRoot.items.find((item) => item.dataset.itemToken === "rooms:attic_room").hidden, true);
+});
+
+test("HD-235: kamersubtabs mounten enkel de velden (en ha-selectors) van de actieve tab", () => {
+  const config = createDefaultConfig();
+  config.rooms.push(room("living_room"));
+  const editor = new HomeDashboardStrategyEditor();
+  editor.connectedCallback();
+  editor.setConfig(config);
+  findTab(editor, "rooms").emit("click");
+
+  const livingRoom = editor.shadowRoot.items.find((item) => item.dataset.itemToken === "rooms:living_room");
+  livingRoom.open = true;
+  livingRoom.emit("toggle");
+
+  // Basis is de standaardtab: toont o.a. de kamerafbeelding, geen Bronmappings- of Klimaatvelden.
+  assert.match(editor.shadowRoot.innerHTML, /data-field="image_entity"/);
+  assert.doesNotMatch(editor.shadowRoot.innerHTML, /data-field="light_entities"/);
+  assert.doesNotMatch(editor.shadowRoot.innerHTML, /data-field="hvac\.entity"/);
+
+  const bronmappingsTab = editor.shadowRoot.roomTabs.find((tab) => tab.dataset.roomTabNav === "rooms:living_room" && tab.dataset.roomTab === "bronmappings");
+  assert.ok(bronmappingsTab, "Bronmappings-subtab moet aanwezig zijn voor een open kamer");
+  bronmappingsTab.emit("click");
+
+  // Wisselen van subtab her-rendert: Basis's velden (en hun ha-selectors) demonteren, Bronmappings
+  // mount in de plaats -- de kamer blijft de hele tijd open.
+  assert.doesNotMatch(editor.shadowRoot.innerHTML, /data-field="image_entity"/);
+  assert.match(editor.shadowRoot.innerHTML, /data-field="light_entities"/);
+  assert.equal(editor.shadowRoot.items.find((item) => item.dataset.itemToken === "rooms:living_room").open, true);
+
+  const klimaatTab = editor.shadowRoot.roomTabs.find((tab) => tab.dataset.roomTabNav === "rooms:living_room" && tab.dataset.roomTab === "klimaat");
+  klimaatTab.emit("click");
+  assert.match(editor.shadowRoot.innerHTML, /data-field="hvac\.entity"/);
+  assert.doesNotMatch(editor.shadowRoot.innerHTML, /data-field="light_entities"/);
 });

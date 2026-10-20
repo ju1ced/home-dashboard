@@ -546,6 +546,19 @@ test("HD-216: matchesRoomSearch filtert op naam, sleutel en area", () => {
   assert.equal(matchesRoomSearch(livingRoom, "garage"), false);
 });
 
+// HD-235: the live, per-keystroke #room-search filter and the master-detail list's initial render
+// both call this exact function now (previously the live path re-implemented a summary-text-only
+// match and never matched area_id at all, despite its own placeholder promising it). This proves
+// floor_id -- new in HD-235's grouped list -- is matched too, same as the already-covered area_id.
+test("HD-235: matchesRoomSearch matcht ook op verdieping", () => {
+  const atticRoom = { key: "attic_room", name: "Zolder", area_id: "zolder_area", floor_id: "first_floor" };
+  assert.equal(matchesRoomSearch(atticRoom, "first_floor"), true);
+  assert.equal(matchesRoomSearch(atticRoom, "FIRST"), true);
+  assert.equal(matchesRoomSearch(atticRoom, "ground_floor"), false);
+  const noFloorRoom = { key: "cellar_room", name: "Kelder", area_id: "", floor_id: "" };
+  assert.equal(matchesRoomSearch(noFloorRoom, "first_floor"), false);
+});
+
 test("HD-216: suggestSmartPlugPairs herkent switch+sensor-stammen in power_entities, vermogen is verplicht", () => {
   const powerEntities = [
     ref("switch", "example_frigo"),

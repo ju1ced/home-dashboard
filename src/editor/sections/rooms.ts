@@ -1,6 +1,6 @@
 import { ROOM_CAPABILITIES, type HomeDashboardConfigV1, type RoomConfig } from "../../config/types";
 import { lookupPeriodSensors, type HomeAssistantWithLookup } from "../period-sensor-lookup";
-import { escapeHtml, getEditorItemToken, renderSelector } from "../shared";
+import { escapeHtml, getEditorItemToken, getRoomTabForKey, renderSelector, ROOM_TAB_ICONS, ROOM_TAB_KEYS, ROOM_TAB_TITLES } from "../shared";
 
 export type RoomNestedCollection = "light_groups" | "cover_controls" | "smart_plugs";
 
@@ -9,6 +9,13 @@ export interface SmartPlugSuggestion {
   powerEntity: string;
   energyEntity?: string;
   voltageEntity?: string;
+}
+
+// HD-235: floor grouping/labels reuse the same `hass.floors` shape the room-overview card already
+// reads (see lookupFloorName in src/cards/home-dashboard-room-cards.ts) -- duplicated locally
+// rather than imported, since this PR stays editor-only and src/cards/ is out of scope.
+export interface HomeAssistantWithFloors extends HomeAssistantWithLookup {
+  floors?: Array<{ floor_id?: string; id?: string; name?: string }> | Record<string, { name?: string }>;
 }
 
 const SMART_PLUG_SUFFIXES: Record<"power" | "energy" | "voltage", readonly string[]> = {
@@ -79,9 +86,17 @@ function renderPeriodOptions(value: "running" | "completed" | undefined): string
   return `<option value="" ${value ? "" : "selected"}>Niet gemapt</option><option value="running" ${value === "running" ? "selected" : ""}>Lopend</option><option value="completed" ${value === "completed" ? "selected" : ""}>Afgesloten</option>`;
 }
 
-function renderRoomControlDeck(room: RoomConfig, roomIndex: number): string {
+function renderLightGroupsBlock(room: RoomConfig, roomIndex: number): string {
   const lightGroups = (room.light_groups ?? []).map((item, itemIndex) => `<article class="nested-item"><div class="item-toolbar"><strong>${escapeHtml(item.name || item.key)}</strong><button type="button" data-room-nested-remove="light_groups" data-room-index="${roomIndex}" data-item-index="${itemIndex}">Verwijder</button></div><label>Sleutel<input data-room-nested-collection="light_groups" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="key" value="${escapeHtml(item.key)}"></label><label>Naam<input data-room-nested-collection="light_groups" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="name" value="${escapeHtml(item.name)}"></label><label>Actiedoel${renderRoomNestedSelector(roomIndex, "light_groups", itemIndex, "control_entity", item.control_entity, { entity: { domain: "light" } })}</label><label>Expliciete leden${renderRoomNestedSelector(roomIndex, "light_groups", itemIndex, "member_entities", item.member_entities, { entity: { domain: "light", multiple: true } })}</label></article>`).join("");
+  return `<div class="nested-collection"><h5>Lichtgroepen</h5>${lightGroups}<button type="button" data-room-nested-add="light_groups" data-room-index="${roomIndex}">Lichtgroep toevoegen</button></div>`;
+}
+
+function renderCoverControlsBlock(room: RoomConfig, roomIndex: number): string {
   const covers = (room.cover_controls ?? []).map((item, itemIndex) => `<article class="nested-item"><div class="item-toolbar"><strong>${escapeHtml(item.name || item.key)}</strong><button type="button" data-room-nested-remove="cover_controls" data-room-index="${roomIndex}" data-item-index="${itemIndex}">Verwijder</button></div><label>Sleutel<input data-room-nested-collection="cover_controls" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="key" value="${escapeHtml(item.key)}"></label><label>Naam<input data-room-nested-collection="cover_controls" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="name" value="${escapeHtml(item.name)}"></label><label>Cover${renderRoomNestedSelector(roomIndex, "cover_controls", itemIndex, "entity", item.entity, { entity: { domain: "cover" } })}</label><label>Type<select data-room-nested-collection="cover_controls" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="kind">${["shutter", "screen", "awning"].map((value) => `<option value="${value}" ${item.kind === value ? "selected" : ""}>${value}</option>`).join("")}</select></label><label>Bevestiging<select data-room-nested-collection="cover_controls" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="confirmation"><option value="movement" ${item.confirmation === "movement" ? "selected" : ""}>Bij beweging</option><option value="none" ${item.confirmation === "none" ? "selected" : ""}>Geen</option></select></label></article>`).join("");
+  return `<div class="nested-collection"><h5>Getypeerde openingen</h5>${covers}<button type="button" data-room-nested-add="cover_controls" data-room-index="${roomIndex}">Opening toevoegen</button></div>`;
+}
+
+function renderSmartPlugsAndEnergyBlock(room: RoomConfig, roomIndex: number): string {
   const plugs = (room.smart_plugs ?? []).map((item, itemIndex) => `<article class="nested-item"><div class="item-toolbar"><strong>${escapeHtml(item.name || item.key)}</strong><button type="button" data-room-nested-remove="smart_plugs" data-room-index="${roomIndex}" data-item-index="${itemIndex}">Verwijder</button></div><h6>Basis</h6><label>Sleutel<input data-room-nested-collection="smart_plugs" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="key" value="${escapeHtml(item.key)}"></label><label>Naam<input data-room-nested-collection="smart_plugs" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="name" value="${escapeHtml(item.name)}"></label><label>Schakelaar${renderRoomNestedSelector(roomIndex, "smart_plugs", itemIndex, "switch_entity", item.switch_entity, { entity: { domain: "switch" } })}</label><label>Actueel vermogen${renderRoomNestedSelector(roomIndex, "smart_plugs", itemIndex, "power_entity", item.power_entity, { entity: { domain: "sensor" } })}</label><label class="check"><input type="checkbox" data-room-nested-collection="smart_plugs" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="protected" ${item.protected ? "checked" : ""}>Beveiligd, niet schakelbaar</label><label>Uitleg<input data-room-nested-collection="smart_plugs" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="protection_reason" value="${escapeHtml(item.protection_reason ?? "")}"></label><h6>Energieperiodes</h6><label>Energie totaal${renderRoomNestedSelector(roomIndex, "smart_plugs", itemIndex, "energy_entity", item.energy_entity, { entity: { domain: "sensor" } })}</label><label>Spanning${renderRoomNestedSelector(roomIndex, "smart_plugs", itemIndex, "voltage_entity", item.voltage_entity, { entity: { domain: "sensor" } })}</label><label>Dag${renderRoomNestedSelector(roomIndex, "smart_plugs", itemIndex, "energy_day_entity", item.energy_day_entity ?? "", { entity: { domain: "sensor" } })}</label><label>Dagperiode<select data-room-nested-collection="smart_plugs" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="energy_day_period">${renderPeriodOptions(item.energy_day_period)}</select></label><label>Maand${renderRoomNestedSelector(roomIndex, "smart_plugs", itemIndex, "energy_month_entity", item.energy_month_entity ?? "", { entity: { domain: "sensor" } })}</label><label>Maandperiode<select data-room-nested-collection="smart_plugs" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="energy_month_period">${renderPeriodOptions(item.energy_month_period)}</select></label><label>Jaar${renderRoomNestedSelector(roomIndex, "smart_plugs", itemIndex, "energy_year_entity", item.energy_year_entity ?? "", { entity: { domain: "sensor" } })}</label><label>Jaarperiode<select data-room-nested-collection="smart_plugs" data-room-index="${roomIndex}" data-item-index="${itemIndex}" data-field="energy_year_period">${renderPeriodOptions(item.energy_year_period)}</select></label><div class="period-lookup"><button type="button" data-room-plug-period-lookup="${roomIndex}" data-item-index="${itemIndex}" ${item.energy_entity ? "" : "disabled"}>Dag/maand/jaar opzoeken</button><div data-room-plug-period-result="${roomIndex}:${itemIndex}"></div></div></article>`).join("");
   const roomEnergy = room.room_energy ?? { power_entity: "", day_entity: "", month_entity: "", year_entity: "" };
   const suggestions = suggestSmartPlugPairs(room.power_entities);
@@ -89,15 +104,11 @@ function renderRoomControlDeck(room: RoomConfig, roomIndex: number): string {
     const parts = [suggestion.switchEntity, suggestion.powerEntity, suggestion.energyEntity, suggestion.voltageEntity].filter(Boolean) as string[];
     return `<button type="button" data-room-plug-suggestion="${roomIndex}" data-switch-entity="${escapeHtml(suggestion.switchEntity)}" data-power-entity="${escapeHtml(suggestion.powerEntity)}" data-energy-entity="${escapeHtml(suggestion.energyEntity ?? "")}" data-voltage-entity="${escapeHtml(suggestion.voltageEntity ?? "")}">Koppel als smart plug (haalt ${parts.map((entity) => escapeHtml(entity)).join(", ")} uit Apparaten en power)</button>`;
   }).join("")}</div>` : "";
-  return `<h4>Control Deck</h4><label>Privacyveilige kamerafbeelding${renderSelector("rooms", roomIndex, "image_entity", room.image_entity ?? "", { entity: { domain: "image" } })}</label><label>Kamerfoto uploaden<small>Upload een foto rechtstreeks, zonder eerst een Image-hulpmiddel aan te maken via HA Instellingen. Zijn zowel een kamerafbeelding als een upload ingesteld, dan krijgt de upload voorrang.</small>${renderSelector("rooms", roomIndex, "image_upload", room.image_upload ?? null, { media: { accept: ["image/*"], image_upload: true } })}</label><div class="nested-collection"><h5>Lichtgroepen</h5>${lightGroups}<button type="button" data-room-nested-add="light_groups" data-room-index="${roomIndex}">Lichtgroep toevoegen</button></div><div class="nested-collection"><h5>Getypeerde openingen</h5>${covers}<button type="button" data-room-nested-add="cover_controls" data-room-index="${roomIndex}">Opening toevoegen</button></div><div class="nested-collection"><h5>Smart plugs</h5><small>Voor apparaten die je hier volledig wil volgen: vermogen, dag/maand/jaar-verbruik, vergrendeling. Zwaarder dan de simpele lijst hierboven, met een eigen interactieve kaart.</small>${suggestionsMarkup}${plugs}<button type="button" data-room-nested-add="smart_plugs" data-room-index="${roomIndex}">Smart plug toevoegen</button></div><h5>Kamerenergie</h5><label>Actueel vermogen${renderSelector("rooms", roomIndex, "room_energy.power_entity", roomEnergy.power_entity, { entity: { domain: "sensor" } })}</label><label>Vandaag${renderSelector("rooms", roomIndex, "room_energy.day_entity", roomEnergy.day_entity, { entity: { domain: "sensor" } })}</label><label>Dagperiode<select data-path="rooms.${roomIndex}.room_energy.day_period">${renderPeriodOptions(roomEnergy.day_period)}</select></label><label>Maand${renderSelector("rooms", roomIndex, "room_energy.month_entity", roomEnergy.month_entity, { entity: { domain: "sensor" } })}</label><label>Maandperiode<select data-path="rooms.${roomIndex}.room_energy.month_period">${renderPeriodOptions(roomEnergy.month_period)}</select></label><label>Jaar${renderSelector("rooms", roomIndex, "room_energy.year_entity", roomEnergy.year_entity, { entity: { domain: "sensor" } })}</label><label>Jaarperiode<select data-path="rooms.${roomIndex}.room_energy.year_period">${renderPeriodOptions(roomEnergy.year_period)}</select></label>`;
+  return `<div class="nested-collection"><h5>Smart plugs</h5><small>Voor apparaten die je hier volledig wil volgen: vermogen, dag/maand/jaar-verbruik, vergrendeling. Zwaarder dan de simpele lijst hierboven, met een eigen interactieve kaart.</small>${suggestionsMarkup}${plugs}<button type="button" data-room-nested-add="smart_plugs" data-room-index="${roomIndex}">Smart plug toevoegen</button></div><h5>Kamerenergie</h5><label>Actueel vermogen${renderSelector("rooms", roomIndex, "room_energy.power_entity", roomEnergy.power_entity, { entity: { domain: "sensor" } })}</label><label>Vandaag${renderSelector("rooms", roomIndex, "room_energy.day_entity", roomEnergy.day_entity, { entity: { domain: "sensor" } })}</label><label>Dagperiode<select data-path="rooms.${roomIndex}.room_energy.day_period">${renderPeriodOptions(roomEnergy.day_period)}</select></label><label>Maand${renderSelector("rooms", roomIndex, "room_energy.month_entity", roomEnergy.month_entity, { entity: { domain: "sensor" } })}</label><label>Maandperiode<select data-path="rooms.${roomIndex}.room_energy.month_period">${renderPeriodOptions(roomEnergy.month_period)}</select></label><label>Jaar${renderSelector("rooms", roomIndex, "room_energy.year_entity", roomEnergy.year_entity, { entity: { domain: "sensor" } })}</label><label>Jaarperiode<select data-path="rooms.${roomIndex}.room_energy.year_period">${renderPeriodOptions(roomEnergy.year_period)}</select></label>`;
 }
 
-function renderRoomBody(config: HomeDashboardConfigV1, roomConfig: RoomConfig, index: number): string {
-  const controls = visibleRoomControls(roomConfig);
-  const controlOrder = controls.length ? `<div class="order" data-control-order="${index}" aria-label="Volgorde quick actions">${renderControlOrderRows(controls, index)}</div><div class="order-save"><small>De pijlen reageren direct. Pas de volgorde één keer toe wanneer ze goed staat.</small><button type="button" data-room-control-apply="${index}">Volgorde toepassen</button></div>` : `<small>Geen quick actions gekozen.</small>`;
-  return `<div class="item-body">
-    <div class="item-toolbar"><span class="item-actions"><button type="button" aria-label="Verplaats ${escapeHtml(roomConfig.name || roomConfig.key || `kamer ${index + 1}`)} omhoog" data-room-move="up" data-index="${index}" ${index === 0 ? "disabled" : ""}>↑</button><button type="button" aria-label="Verplaats ${escapeHtml(roomConfig.name || roomConfig.key || `kamer ${index + 1}`)} omlaag" data-room-move="down" data-index="${index}" ${index === config.rooms.length - 1 ? "disabled" : ""}>↓</button><button type="button" aria-label="Verwijder kamer ${escapeHtml(roomConfig.name || roomConfig.key || index + 1)}" data-remove="rooms" data-index="${index}">Verwijder</button></span></div>
-    <label>Logische sleutel<input data-collection="rooms" data-index="${index}" data-field="key" value="${escapeHtml(roomConfig.key)}"></label>
+function renderRoomBasisTab(roomConfig: RoomConfig, index: number): string {
+  return `<label>Logische sleutel<input data-collection="rooms" data-index="${index}" data-field="key" value="${escapeHtml(roomConfig.key)}"></label>
     <label>Naam<input data-collection="rooms" data-index="${index}" data-field="name" value="${escapeHtml(roomConfig.name)}"></label>
     <label>Icoon${renderSelector("rooms", index, "icon", roomConfig.icon, { icon: {} })}</label>
     <label>Verdieping${renderSelector("rooms", index, "floor_id", roomConfig.floor_id, { floor: {} })}</label>
@@ -105,56 +116,140 @@ function renderRoomBody(config: HomeDashboardConfigV1, roomConfig: RoomConfig, i
     <label>Extra devices${renderSelector("rooms", index, "device_ids", roomConfig.device_ids, { device: { multiple: true } })}</label>
     <label>Functies<select multiple data-collection="rooms" data-index="${index}" data-field="capabilities">${ROOM_CAPABILITIES.map((value) => `<option value="${value}" ${roomConfig.capabilities.includes(value) ? "selected" : ""}>${value}</option>`).join("")}</select></label>
     <label><input type="checkbox" data-collection="rooms" data-index="${index}" data-field="home_favorite" ${roomConfig.home_favorite ? "checked" : ""}>Favoriet op Home (volgorde via pijlen)</label>
-    <h4>Quick actions</h4>
-    <label>Knoppen op Home${renderSelector("rooms", index, "control_entities", controls, { entity: { domain: ["light", "switch", "cover", "media_player", "climate"], multiple: true } })}</label>
+    <label>Privacyveilige kamerafbeelding${renderSelector("rooms", index, "image_entity", roomConfig.image_entity ?? "", { entity: { domain: "image" } })}</label>
+    <label>Kamerfoto uploaden<small>Upload een foto rechtstreeks, zonder eerst een Image-hulpmiddel aan te maken via HA Instellingen. Zijn zowel een kamerafbeelding als een upload ingesteld, dan krijgt de upload voorrang.</small>${renderSelector("rooms", index, "image_upload", roomConfig.image_upload ?? null, { media: { accept: ["image/*"], image_upload: true } })}</label>`;
+}
+
+function renderRoomSnelkoppelingenTab(config: HomeDashboardConfigV1, roomConfig: RoomConfig, index: number): string {
+  const controls = visibleRoomControls(roomConfig);
+  const controlOrder = controls.length ? `<div class="order" data-control-order="${index}" aria-label="Volgorde quick actions">${renderControlOrderRows(controls, index)}</div><div class="order-save"><small>De pijlen reageren direct. Pas de volgorde één keer toe wanneer ze goed staat.</small><button type="button" data-room-control-apply="${index}">Volgorde toepassen</button></div>` : `<small>Geen quick actions gekozen.</small>`;
+  return `<label>Knoppen op Home${renderSelector("rooms", index, "control_entities", controls, { entity: { domain: ["light", "switch", "cover", "media_player", "climate"], multiple: true } })}</label>
     <small>Kies nul tot zestien; orden zonder telkens het dashboard opnieuw te laden.</small>
     ${controlOrder}
     <label><input type="checkbox" data-collection="rooms" data-index="${index}" data-field="controls_enabled" ${roomConfig.controls_enabled ? "checked" : ""}>Directe bediening toestaan voor gekozen licht-, cover- en mediaknoppen</label>
     <p>Zonder toestemming openen de knoppen alleen Home Assistant-details. Klimaat opent altijd het native detailvenster. Luifelbeveiliging blijft in Home Assistant.</p>
-    <label>Scripts (bewaard, max. 2)<select multiple data-collection="rooms" data-index="${index}" data-field="quick_actions">${config.actions.map((action) => `<option value="${escapeHtml(action.key)}" ${roomConfig.quick_actions.includes(action.key) ? "selected" : ""}>${escapeHtml(action.label || action.key)}</option>`).join("")}</select></label>
-    <h4>Bronmappings</h4>
-    <label>Lampen${renderSelector("rooms", index, "light_entities", roomConfig.light_entities, { entity: { domain: "light", multiple: true } })}</label>
+    <label>Scripts (bewaard, max. 2)<select multiple data-collection="rooms" data-index="${index}" data-field="quick_actions">${config.actions.map((action) => `<option value="${escapeHtml(action.key)}" ${roomConfig.quick_actions.includes(action.key) ? "selected" : ""}>${escapeHtml(action.label || action.key)}</option>`).join("")}</select></label>`;
+}
+
+function renderRoomBronmappingsTab(roomConfig: RoomConfig, index: number): string {
+  return `<label>Lampen${renderSelector("rooms", index, "light_entities", roomConfig.light_entities, { entity: { domain: "light", multiple: true } })}</label>
     <label>Verlichtingsschakelaars${renderSelector("rooms", index, "light_switch_entities", roomConfig.light_switch_entities, { entity: { domain: "switch", multiple: true } })}</label>
+    ${renderLightGroupsBlock(roomConfig, index)}
     <label>Covers en openingen${renderSelector("rooms", index, "cover_entities", roomConfig.cover_entities, { entity: { multiple: true } })}</label>
+    ${renderCoverControlsBlock(roomConfig, index)}
     <label>Media${renderSelector("rooms", index, "media_entities", roomConfig.media_entities, { entity: { domain: "media_player", multiple: true } })}</label>
     <label>Safety${renderSelector("rooms", index, "safety_entities", roomConfig.safety_entities, { entity: { multiple: true } })}</label>
     <label>Camera's${renderSelector("rooms", index, "camera_entities", roomConfig.camera_entities, { entity: { domain: "camera", multiple: true } })}</label>
     <label>Bewegingssensoren<small>Alleen deze toont een losse bewegingschip op Home -- de algemene Safety-lijst hierboven blijft voor de kamerbrede "Aandacht nodig"-waarschuwing.</small>${renderSelector("rooms", index, "motion_entities", roomConfig.motion_entities, { entity: { domain: "binary_sensor", multiple: true } })}</label>
     <label>Apparaten en power<small>Telt mee in het huidige vermogen van de kamer. Geen dag/maand/jaartotalen tenzij hetzelfde apparaat ook als Smart plug is ingesteld.</small>${renderSelector("rooms", index, "power_entities", roomConfig.power_entities, { entity: { multiple: true } })}</label>
-    <label>Overige historie${renderSelector("rooms", index, "history_entities", roomConfig.history_entities, { entity: { multiple: true } })}</label>
-    ${renderRoomControlDeck(roomConfig, index)}
-    <h4>Klimaatdetail</h4>
-    <label>Klimaatbron${renderSelector("rooms", index, "hvac.entity", roomConfig.hvac.entity, { entity: { domain: "climate" } })}</label>
+    <label>Overige historie${renderSelector("rooms", index, "history_entities", roomConfig.history_entities, { entity: { multiple: true } })}</label>`;
+}
+
+function renderRoomEnergieTab(roomConfig: RoomConfig, index: number): string {
+  return `<h4>Energie</h4>${renderSmartPlugsAndEnergyBlock(roomConfig, index)}`;
+}
+
+function renderRoomKlimaatTab(roomConfig: RoomConfig, index: number): string {
+  return `<label>Klimaatbron${renderSelector("rooms", index, "hvac.entity", roomConfig.hvac.entity, { entity: { domain: "climate" } })}</label>
     <label>Comfort en luchtkwaliteit${renderSelector("rooms", index, "hvac.comfort_entities", roomConfig.hvac.comfort_entities, { entity: { multiple: true } })}</label>
     <label>Klimaathistorie${renderSelector("rooms", index, "hvac.history_entities", roomConfig.hvac.history_entities, { entity: { multiple: true } })}</label>
     <label>Toegestane modes<input data-collection="rooms" data-index="${index}" data-field="hvac.modes" value="${escapeHtml(roomConfig.hvac.modes.join(", "))}"></label>
     <label>Presets<input data-collection="rooms" data-index="${index}" data-field="hvac.presets" value="${escapeHtml(roomConfig.hvac.presets.join(", "))}"></label>
     <label>Fan modes<input data-collection="rooms" data-index="${index}" data-field="hvac.fan_modes" value="${escapeHtml(roomConfig.hvac.fan_modes.join(", "))}"></label>
-    <label>Swing modes<input data-collection="rooms" data-index="${index}" data-field="hvac.swing_modes" value="${escapeHtml(roomConfig.hvac.swing_modes.join(", "))}"></label>
+    <label>Swing modes<input data-collection="rooms" data-index="${index}" data-field="hvac.swing_modes" value="${escapeHtml(roomConfig.hvac.swing_modes.join(", "))}"></label>`;
+}
+
+function renderRoomTabNav(token: string, activeTab: string): string {
+  const safeToken = escapeHtml(token);
+  const panelId = `room-tabpanel-${safeToken}`;
+  return `<nav class="room-tab-nav" role="tablist" aria-label="Kameronderdelen">${ROOM_TAB_KEYS.map((tabKey) => `<button type="button" role="tab" id="room-tab-${safeToken}-${tabKey}" aria-controls="${panelId}" aria-selected="${tabKey === activeTab}" tabindex="${tabKey === activeTab ? "0" : "-1"}" class="room-tab" data-room-tab-nav="${safeToken}" data-room-tab="${tabKey}"><ha-icon class="room-tab-icon" icon="${ROOM_TAB_ICONS[tabKey]}" aria-hidden="true"></ha-icon><span class="room-tab-label">${ROOM_TAB_TITLES[tabKey]}</span></button>`).join("")}</nav>`;
+}
+
+/**
+ * HD-235: the single ~30-field scroll is replaced by five labeled sub-tabs (Basis,
+ * Snelkoppelingen, Bronmappings, Energie, Klimaat). Only the active sub-tab's fields -- and
+ * therefore only its <ha-selector>s -- are mounted, which is a strict tightening of HD-216's
+ * lazy-mount contract: an open room used to mount every field at once, now it mounts roughly a
+ * fifth of them, re-mounting the rest only when that sub-tab is actually selected.
+ */
+function renderRoomBody(config: HomeDashboardConfigV1, roomConfig: RoomConfig, index: number, activeTab: string, token: string): string {
+  const safeTab = ROOM_TAB_KEYS.includes(activeTab) ? activeTab : "basis";
+  const tabContent: Record<string, () => string> = {
+    basis: () => renderRoomBasisTab(roomConfig, index),
+    snelkoppelingen: () => renderRoomSnelkoppelingenTab(config, roomConfig, index),
+    bronmappings: () => renderRoomBronmappingsTab(roomConfig, index),
+    energie: () => renderRoomEnergieTab(roomConfig, index),
+    klimaat: () => renderRoomKlimaatTab(roomConfig, index)
+  };
+  const safeToken = escapeHtml(token);
+  return `<div class="item-body">
+    <div class="item-toolbar"><span class="item-actions"><button type="button" aria-label="Verplaats ${escapeHtml(roomConfig.name || roomConfig.key || `kamer ${index + 1}`)} omhoog" data-room-move="up" data-index="${index}" ${index === 0 ? "disabled" : ""}>↑</button><button type="button" aria-label="Verplaats ${escapeHtml(roomConfig.name || roomConfig.key || `kamer ${index + 1}`)} omlaag" data-room-move="down" data-index="${index}" ${index === config.rooms.length - 1 ? "disabled" : ""}>↓</button><button type="button" aria-label="Verwijder kamer ${escapeHtml(roomConfig.name || roomConfig.key || index + 1)}" data-remove="rooms" data-index="${index}">Verwijder</button></span></div>
+    ${renderRoomTabNav(token, safeTab)}
+    <div class="room-tabpanel" id="room-tabpanel-${safeToken}" role="tabpanel" aria-labelledby="room-tab-${safeToken}-${safeTab}">${tabContent[safeTab]!()}</div>
   </div>`;
 }
 
+/**
+ * HD-235: one filter function, used both for the initial render (below) and for #room-search's
+ * live, per-keystroke DOM patch in home-dashboard-editor.ts -- the two previously disagreed (the
+ * live path matched only the rendered summary text and never area_id, even though its own
+ * placeholder promised area). Floor is new: the master-detail list groups by floor, so the search
+ * box has to be able to jump straight to a floor too.
+ */
 export function matchesRoomSearch(roomConfig: RoomConfig, query: string): boolean {
   const needle = query.trim().toLowerCase();
   if (!needle) return true;
   return (roomConfig.name || "").toLowerCase().includes(needle)
     || (roomConfig.key || "").toLowerCase().includes(needle)
+    || (roomConfig.floor_id || "").toLowerCase().includes(needle)
     || (roomConfig.area_id || "").toLowerCase().includes(needle);
 }
 
-export function renderRooms(config: HomeDashboardConfigV1, expandedItems: Set<string>, searchQuery = ""): string {
-  return config.rooms.map((roomConfig, index) => {
-    const token = getEditorItemToken("rooms", roomConfig, index);
-    const isOpen = expandedItems.has(token);
-    const label = escapeHtml(roomConfig.name || roomConfig.key || `Kamer ${index + 1}`);
-    const hidden = matchesRoomSearch(roomConfig, searchQuery) ? "" : " hidden";
-    // Lazy-mount (HD-216): a closed room renders only its <summary>, with no fields and no
-    // <ha-selector> mounted. At 20 rooms, always mounting every room's full field set (every
-    // ha-selector) regardless of open/closed state was the measured cause of editor slowness.
-    // Full fields are (re)generated only once this room's <details> actually opens -- see the
-    // "rooms:"-token branch of the toggle listener in home-dashboard-editor.ts's bindEvents().
-    return `<details class="item" data-item-token="${escapeHtml(token)}" ${isOpen ? "open" : ""}${hidden}>
-    <summary>${label}</summary>${isOpen ? renderRoomBody(config, roomConfig, index) : ""}</details>`;
+function resolveFloorLabel(hass: HomeAssistantWithFloors | undefined, floorId: string, fallbackIndex: number): string {
+  if (!floorId) return "Overige kamers";
+  const floors = hass?.floors;
+  const name = Array.isArray(floors)
+    ? floors.find((candidate) => candidate.floor_id === floorId || candidate.id === floorId)?.name
+    : floors?.[floorId]?.name;
+  return name ?? `Verdieping ${fallbackIndex + 1}`;
+}
+
+/**
+ * HD-235: master-detail layout -- rooms are grouped by floor (first-seen order, same convention
+ * the room-overview card already uses), each floor as a heading followed by its rooms' flat
+ * <details> items. The CSS owns the visual split (list column vs. detail column): every item still
+ * renders here exactly like before (lazy-mounted body only when open), so HD-216's mount/unmount
+ * contract and the existing toggle-event wiring are untouched -- only the grouping and per-room
+ * sub-tab state are new.
+ */
+export function renderRooms(config: HomeDashboardConfigV1, expandedItems: Set<string>, searchQuery = "", roomActiveTabs: Map<string, string> = new Map(), hass?: HomeAssistantWithFloors): string {
+  const floorOrder: string[] = [];
+  for (const roomConfig of config.rooms) {
+    const floorKey = roomConfig.floor_id || "";
+    if (!floorOrder.includes(floorKey)) floorOrder.push(floorKey);
+  }
+  return floorOrder.map((floorKey, floorIndex) => {
+    const members = config.rooms
+      .map((roomConfig, index) => ({ roomConfig, index }))
+      .filter(({ roomConfig }) => (roomConfig.floor_id || "") === floorKey);
+    const anyVisible = members.some(({ roomConfig }) => matchesRoomSearch(roomConfig, searchQuery));
+    const heading = `<h5 class="floor-heading" data-floor-heading="${escapeHtml(floorKey)}"${anyVisible ? "" : " hidden"}>${escapeHtml(resolveFloorLabel(hass, floorKey, floorIndex))}</h5>`;
+    const items = members.map(({ roomConfig, index }) => {
+      const token = getEditorItemToken("rooms", roomConfig, index);
+      const isOpen = expandedItems.has(token);
+      const label = escapeHtml(roomConfig.name || roomConfig.key || `Kamer ${index + 1}`);
+      const hidden = matchesRoomSearch(roomConfig, searchQuery) ? "" : " hidden";
+      const activeTab = roomActiveTabs.get(token) ?? "basis";
+      // Lazy-mount (HD-216): a closed room renders only its <summary>, with no fields and no
+      // <ha-selector> mounted. Full fields are (re)generated only once this room's <details>
+      // actually opens -- see the "rooms:"-token branch of the toggle listener in
+      // home-dashboard-editor.ts's bindEvents(). `name="rooms-panel"` makes same-named <details>
+      // mutually exclusive in browsers that support it (an HTML living-standard feature), giving
+      // the master-detail pane true single-room-open behaviour with no extra JS.
+      return `<details class="item" name="rooms-panel" data-item-token="${escapeHtml(token)}" data-room-index="${index}" data-floor="${escapeHtml(floorKey)}" ${isOpen ? "open" : ""}${hidden}>
+    <summary>${label}</summary>${isOpen ? renderRoomBody(config, roomConfig, index, activeTab, token) : ""}</details>`;
+    }).join("");
+    return `${heading}${items}`;
   }).join("");
 }
 
@@ -213,7 +308,7 @@ export function bindControlOrderEvents(scopeRoot: ParentNode, shadowRoot: Parent
  * every flat-collection section shares -- so unlike persons/cameras/actions, this section does need
  * its own event binder.
  */
-export function bindRoomEvents(shadowRoot: ShadowRoot, config: HomeDashboardConfigV1, handlers: { commit: () => void; moveItem: (items: unknown[], index: number, direction: "up" | "down") => void; hass?: HomeAssistantWithLookup }): void {
+export function bindRoomEvents(shadowRoot: ShadowRoot, config: HomeDashboardConfigV1, handlers: { commit: () => void; moveItem: (items: unknown[], index: number, direction: "up" | "down") => void; setRoomTab: (token: string, tabKey: string) => void; hass?: HomeAssistantWithLookup }): void {
   shadowRoot.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-room-nested-collection]").forEach((element) => {
     if (element.tagName.toLowerCase() === "ha-selector") return;
     element.addEventListener("change", () => {
@@ -234,6 +329,20 @@ export function bindRoomEvents(shadowRoot: ShadowRoot, config: HomeDashboardConf
   shadowRoot.querySelectorAll<HTMLButtonElement>("[data-room-move]").forEach((controlButton) => controlButton.addEventListener("click", () => handlers.moveItem(config.rooms, Number(controlButton.dataset.index), controlButton.dataset.roomMove as "up" | "down")));
   bindControlOrderEvents(shadowRoot, shadowRoot, config);
   shadowRoot.querySelectorAll<HTMLButtonElement>("[data-room-control-apply]").forEach((controlButton) => controlButton.addEventListener("click", () => handlers.commit()));
+  // HD-235: a room's sub-tabs mount only the active tab's fields (see renderRoomBody), so
+  // switching tabs re-renders -- same mechanism as HD-216's open/close toggle, just one level
+  // deeper. Arrow/Home/End keys mirror the top-level section-tab keyboard contract.
+  shadowRoot.querySelectorAll<HTMLButtonElement>("[data-room-tab-nav]").forEach((controlButton) => {
+    controlButton.addEventListener("click", () => handlers.setRoomTab(controlButton.dataset.roomTabNav ?? "", controlButton.dataset.roomTab ?? "basis"));
+    controlButton.addEventListener("keydown", (event) => {
+      const keyboardEvent = event as KeyboardEvent;
+      if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(keyboardEvent.key)) return;
+      event.preventDefault();
+      const token = controlButton.dataset.roomTabNav ?? "";
+      const current = controlButton.dataset.roomTab ?? "basis";
+      handlers.setRoomTab(token, getRoomTabForKey(current, keyboardEvent.key));
+    });
+  });
   shadowRoot.querySelectorAll<HTMLButtonElement>("[data-room-plug-suggestion]").forEach((controlButton) => controlButton.addEventListener("click", () => {
     const energyEntity = controlButton.dataset.energyEntity || undefined;
     const voltageEntity = controlButton.dataset.voltageEntity || undefined;
