@@ -127,7 +127,7 @@ For each group of entities found, report:
 
 PRIVACY RULES — mandatory:
 - Do NOT include real entity IDs or unique device identifiers in your output
-- Use descriptive role names: "battery state-of-charge sensor" not "sensor.kia_abc123_battery"
+- Use descriptive role names, e.g. "battery state-of-charge sensor" -- never a literal domain-dot-object_id entity reference
 - Do NOT include real person names, addresses, coordinates or device serials
 
 If no entities are found for this domain, set available=false and explain what you searched.

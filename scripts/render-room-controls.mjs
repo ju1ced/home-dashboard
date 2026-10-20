@@ -304,9 +304,15 @@ try {
   await palette.selectOption('quiet_sage');
   assert.equal(await page.evaluate(()=>savedRoomConfig.general.palette),'quiet_sage');
   await page.screenshot({path:`${directory}/palette-selector.png`,fullPage:true});
+  // HD-235: the Kamers editor is now a master-detail layout with five labeled sub-tabs per room
+  // (Basis, Snelkoppelingen, Bronmappings, Energie, Klimaat) instead of one long flat scroll --
+  // every field below now needs its own tab selected before it is in the DOM (HD-216's lazy-mount
+  // contract is stricter now: only the active sub-tab's fields are mounted).
   await page.locator('[data-section-nav="rooms"]').click();
   await page.locator('details[data-item-token]').first().locator('summary').click();
+  // Basis is the default sub-tab on open -- home_favorite lives there, no tab click needed.
   await page.locator('input[data-field="home_favorite"]').check();
+  await page.locator('[data-room-tab-nav][data-room-tab="snelkoppelingen"]').first().click();
   await page.locator('input[data-field="controls_enabled"]').check();
   const selector=page.locator('ha-selector[data-field="control_entities"] input');
   const first=['light','fixture_first'].join('.');const second=['cover','fixture_second'].join('.');const third=['light','fixture_third'].join('.');
@@ -319,6 +325,7 @@ try {
   await page.locator('[data-room-control-apply]').click();
   saved=await page.evaluate(()=>savedRoomConfig.rooms[0]);
   assert.deepEqual(saved.control_entities,[second,first,third]);
+  await page.locator('[data-room-tab-nav][data-room-tab="bronmappings"]').first().click();
   await page.locator('[data-room-nested-add="light_groups"]').click();
   const groupName=page.locator('input[data-room-nested-collection="light_groups"][data-field="name"]');
   await groupName.fill('Fictieve lichtgroep');await groupName.dispatchEvent('change');
@@ -329,6 +336,7 @@ try {
   await groupMembers.fill(groupMember);await groupMembers.dispatchEvent('change');
   saved=await page.evaluate(()=>savedRoomConfig.rooms[0]);
   assert.equal(saved.light_groups[0].name,'Fictieve lichtgroep');assert.equal(saved.light_groups[0].control_entity,groupEntity);assert.deepEqual(saved.light_groups[0].member_entities,[groupMember]);
+  await page.locator('[data-room-tab-nav][data-room-tab="energie"]').first().click();
   await page.locator('[data-room-nested-add="smart_plugs"]').click();
   const protectedPlug=page.locator('input[data-room-nested-collection="smart_plugs"][data-field="protected"]');
   const protectionReason=page.locator('input[data-room-nested-collection="smart_plugs"][data-field="protection_reason"]');
@@ -338,6 +346,7 @@ try {
   await page.locator('[data-room-nested-remove="smart_plugs"]').click();
   saved=await page.evaluate(()=>savedRoomConfig.rooms[0]);assert.deepEqual(saved.smart_plugs,[]);
   await page.screenshot({path:`${directory}/editor-ordering.png`,fullPage:true});
+  await page.locator('[data-room-tab-nav][data-room-tab="snelkoppelingen"]').first().click();
   await page.locator('ha-selector[data-field="control_entities"] input').fill('');await page.locator('ha-selector[data-field="control_entities"] input').dispatchEvent('change');
   saved=await page.evaluate(()=>savedRoomConfig.rooms[0]);assert.deepEqual(saved.control_entities,[]);
   const editorSmall=await page.locator('home-dashboard-strategy-editor').evaluate(editor=>[...editor.shadowRoot.querySelectorAll('button,summary,input,select,textarea,.toolbar label')].filter(element=>{const style=getComputedStyle(element);if(style.display==='none'||style.visibility==='hidden'||element.matches('input[type="checkbox"]'))return false;const rect=element.getBoundingClientRect();return rect.width<44||rect.height<44;}).map(element=>({text:element.textContent.trim(),type:element.getAttribute('type'),width:element.getBoundingClientRect().width,height:element.getBoundingClientRect().height})));

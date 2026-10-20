@@ -33,12 +33,44 @@ export function getEditorItemToken(collection: string, item: object, index: numb
   return `${collection}:${typeof key === "string" && key.trim() ? key.trim() : `#${index}`}`;
 }
 
-export function getEditorSectionForKey(current: string, key: string): string {
-  const currentIndex = Math.max(0, EDITOR_SECTION_KEYS.indexOf(current));
-  if (key === "Home") return EDITOR_SECTION_KEYS[0] ?? "general";
-  if (key === "End") return EDITOR_SECTION_KEYS.at(-1) ?? "general";
+/**
+ * Shared arrow-key/Home/End navigation for any fixed, ordered set of tab-like keys -- the
+ * top-level editor sections (EDITOR_SECTION_KEYS) and HD-235's per-room sub-tabs (ROOM_TAB_KEYS)
+ * both use this instead of duplicating the same wrap-around index math.
+ */
+export function getAdjacentKey(keys: readonly string[], current: string, key: string): string {
+  const currentIndex = Math.max(0, keys.indexOf(current));
+  if (key === "Home") return keys[0] ?? current;
+  if (key === "End") return keys.at(-1) ?? current;
   const direction = ["ArrowLeft", "ArrowUp"].includes(key) ? -1 : ["ArrowRight", "ArrowDown"].includes(key) ? 1 : 0;
-  return EDITOR_SECTION_KEYS[(currentIndex + direction + EDITOR_SECTION_KEYS.length) % EDITOR_SECTION_KEYS.length] ?? "general";
+  return keys[(currentIndex + direction + keys.length) % keys.length] ?? current;
+}
+
+export function getEditorSectionForKey(current: string, key: string): string {
+  return getAdjacentKey(EDITOR_SECTION_KEYS, current, key) ?? "general";
+}
+
+// HD-235: a room's detail pane is split into the same labeled-tab pattern HD-234 introduced at the
+// top editor-section level (icon-tagged nav items, one active underline), instead of inventing a
+// second visual language just for rooms. Every existing room field keeps its current meaning,
+// validation and stored shape -- this only changes which sub-tab a field's markup renders under.
+export const ROOM_TAB_TITLES: Record<string, string> = {
+  basis: "Basis",
+  snelkoppelingen: "Snelkoppelingen",
+  bronmappings: "Bronmappings",
+  energie: "Energie",
+  klimaat: "Klimaat"
+};
+export const ROOM_TAB_KEYS = Object.keys(ROOM_TAB_TITLES);
+export const ROOM_TAB_ICONS: Record<string, string> = {
+  basis: "mdi:information-outline",
+  snelkoppelingen: "mdi:gesture-tap-button",
+  bronmappings: "mdi:swap-horizontal-bold",
+  energie: "mdi:lightning-bolt-outline",
+  klimaat: "mdi:thermostat"
+};
+export function getRoomTabForKey(current: string, key: string): string {
+  return getAdjacentKey(ROOM_TAB_KEYS, current, key) ?? "basis";
 }
 
 export function mergeEditorIssues(schemaIssues: ValidationIssue[], semanticIssues: ValidationIssue[]): ValidationIssue[] {
