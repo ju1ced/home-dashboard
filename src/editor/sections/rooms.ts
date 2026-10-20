@@ -217,10 +217,16 @@ function resolveFloorLabel(hass: HomeAssistantWithFloors | undefined, floorId: s
 /**
  * HD-235: master-detail layout -- rooms are grouped by floor (first-seen order, same convention
  * the room-overview card already uses), each floor as a heading followed by its rooms' flat
- * <details> items. The CSS owns the visual split (list column vs. detail column): every item still
- * renders here exactly like before (lazy-mounted body only when open), so HD-216's mount/unmount
- * contract and the existing toggle-event wiring are untouched -- only the grouping and per-room
- * sub-tab state are new.
+ * <details> items. Every item still renders here exactly like before (lazy-mounted body only
+ * when open), so HD-216's mount/unmount contract and the existing toggle-event wiring are
+ * untouched -- only the grouping and per-room sub-tab state are new.
+ *
+ * The two-column split itself is CSS grid-column placement on every item, but the row placement
+ * is explicit and computed here rather than left to `-1` (the grid has no explicit row tracks,
+ * so a negative row line does not reliably mean "the last row" -- it collapses back to line 1).
+ * Every heading/room gets its own numbered `grid-row`; the one open room overrides its own number
+ * to span row 1 through the very last row, so the detail pane's height tracks the full list
+ * regardless of how many floors/rooms exist.
  */
 export function renderRooms(config: HomeDashboardConfigV1, expandedItems: Set<string>, searchQuery = "", roomActiveTabs: Map<string, string> = new Map(), hass?: HomeAssistantWithFloors): string {
   const floorOrder: string[] = [];
@@ -228,25 +234,30 @@ export function renderRooms(config: HomeDashboardConfigV1, expandedItems: Set<st
     const floorKey = roomConfig.floor_id || "";
     if (!floorOrder.includes(floorKey)) floorOrder.push(floorKey);
   }
+  const totalRows = floorOrder.length + config.rooms.length;
+  let rowCursor = 0;
   return floorOrder.map((floorKey, floorIndex) => {
     const members = config.rooms
       .map((roomConfig, index) => ({ roomConfig, index }))
       .filter(({ roomConfig }) => (roomConfig.floor_id || "") === floorKey);
     const anyVisible = members.some(({ roomConfig }) => matchesRoomSearch(roomConfig, searchQuery));
-    const heading = `<h5 class="floor-heading" data-floor-heading="${escapeHtml(floorKey)}"${anyVisible ? "" : " hidden"}>${escapeHtml(resolveFloorLabel(hass, floorKey, floorIndex))}</h5>`;
+    rowCursor += 1;
+    const heading = `<h5 class="floor-heading" style="grid-row:${rowCursor}" data-floor-heading="${escapeHtml(floorKey)}"${anyVisible ? "" : " hidden"}>${escapeHtml(resolveFloorLabel(hass, floorKey, floorIndex))}</h5>`;
     const items = members.map(({ roomConfig, index }) => {
       const token = getEditorItemToken("rooms", roomConfig, index);
       const isOpen = expandedItems.has(token);
       const label = escapeHtml(roomConfig.name || roomConfig.key || `Kamer ${index + 1}`);
       const hidden = matchesRoomSearch(roomConfig, searchQuery) ? "" : " hidden";
       const activeTab = roomActiveTabs.get(token) ?? "basis";
+      rowCursor += 1;
+      const rowStyle = isOpen ? `grid-row:1 / ${totalRows + 1}` : `grid-row:${rowCursor}`;
       // Lazy-mount (HD-216): a closed room renders only its <summary>, with no fields and no
       // <ha-selector> mounted. Full fields are (re)generated only once this room's <details>
       // actually opens -- see the "rooms:"-token branch of the toggle listener in
       // home-dashboard-editor.ts's bindEvents(). `name="rooms-panel"` makes same-named <details>
       // mutually exclusive in browsers that support it (an HTML living-standard feature), giving
       // the master-detail pane true single-room-open behaviour with no extra JS.
-      return `<details class="item" name="rooms-panel" data-item-token="${escapeHtml(token)}" data-room-index="${index}" data-floor="${escapeHtml(floorKey)}" ${isOpen ? "open" : ""}${hidden}>
+      return `<details class="item" name="rooms-panel" style="${rowStyle}" data-item-token="${escapeHtml(token)}" data-room-index="${index}" data-floor="${escapeHtml(floorKey)}" ${isOpen ? "open" : ""}${hidden}>
     <summary>${label}</summary>${isOpen ? renderRoomBody(config, roomConfig, index, activeTab, token) : ""}</details>`;
     }).join("");
     return `${heading}${items}`;
@@ -308,7 +319,7 @@ export function bindControlOrderEvents(scopeRoot: ParentNode, shadowRoot: Parent
  * every flat-collection section shares -- so unlike persons/cameras/actions, this section does need
  * its own event binder.
  */
-export function bindRoomEvents(shadowRoot: ShadowRoot, config: HomeDashboardConfigV1, handlers: { commit: () => void; moveItem: (items: unknown[], index: number, direction: "up" | "down") => void; setRoomTab: (token: string, tabKey: string) => void; hass?: HomeAssistantWithLookup }): void {
+export function bindRoomEvents(shadowRoot: ShadowRoot, config: HomeDashboardConfigV1, handlers: { commit: () => void; moveItem: (items: unknown[], index: number, direction: "up" | "down") => void; setRoomTab: (token: string, tabKey: string, options?: { focus?: boolean }) => void; hass?: HomeAssistantWithLookup }): void {
   shadowRoot.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-room-nested-collection]").forEach((element) => {
     if (element.tagName.toLowerCase() === "ha-selector") return;
     element.addEventListener("change", () => {
@@ -340,7 +351,7 @@ export function bindRoomEvents(shadowRoot: ShadowRoot, config: HomeDashboardConf
       event.preventDefault();
       const token = controlButton.dataset.roomTabNav ?? "";
       const current = controlButton.dataset.roomTab ?? "basis";
-      handlers.setRoomTab(token, getRoomTabForKey(current, keyboardEvent.key));
+      handlers.setRoomTab(token, getRoomTabForKey(current, keyboardEvent.key), { focus: true });
     });
   });
   shadowRoot.querySelectorAll<HTMLButtonElement>("[data-room-plug-suggestion]").forEach((controlButton) => controlButton.addEventListener("click", () => {

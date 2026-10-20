@@ -100,6 +100,7 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
   // Klimaat) is active, keyed by the room's editor-item token -- persists across re-renders the
   // same way `expandedItems` does, independent per room.
   private roomActiveTab = new Map<string, string>();
+  private focusRoomTab: { token: string; tabKey: string } | undefined = undefined;
 
   public get configBlocked(): boolean {
     return this.blocked;
@@ -231,9 +232,13 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
 
   // HD-235: switching a room's sub-tab only (re)mounts that tab's own <ha-selector>s -- the same
   // lazy-mount tightening the body comment on renderRoomBody() explains -- so this always
-  // re-renders, exactly like the open/close toggle does.
-  private setRoomTab(token: string, tabKey: string): void {
+  // re-renders, exactly like the open/close toggle does. On a keyboard-driven switch (arrow keys),
+  // the old tab button render()'s generic focus-restore would refocus has tabindex="-1" after the
+  // re-render, so the newly active tab's button needs an explicit focus request -- the same
+  // problem `focusActiveSection` already solves for the top-level section tabs.
+  private setRoomTab(token: string, tabKey: string, options?: { focus?: boolean }): void {
     this.roomActiveTab.set(token, tabKey);
+    if (options?.focus) this.focusRoomTab = { token, tabKey };
     this.render();
   }
 
@@ -311,7 +316,7 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
     });
     this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-add]").forEach((controlButton) => controlButton.addEventListener("click", () => this.addItem(controlButton.dataset.add ?? "")));
     this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-remove]").forEach((controlButton) => controlButton.addEventListener("click", () => this.removeItem(controlButton.dataset.remove ?? "", Number(controlButton.dataset.index))));
-    bindRoomEvents(this.shadowRoot, this._config, { commit: () => this.commit(), moveItem: (items, index, direction) => this.moveItem(items, index, direction), setRoomTab: (token, tabKey) => this.setRoomTab(token, tabKey), ...(this._hass ? { hass: this._hass } : {}) });
+    bindRoomEvents(this.shadowRoot, this._config, { commit: () => this.commit(), moveItem: (items, index, direction) => this.moveItem(items, index, direction), setRoomTab: (token, tabKey, options) => this.setRoomTab(token, tabKey, options), ...(this._hass ? { hass: this._hass } : {}) });
     this.shadowRoot.querySelectorAll<HTMLButtonElement>("[data-view-move]").forEach((controlButton) => controlButton.addEventListener("click", () => this.moveItem(this._config.layout.view_order, Number(controlButton.dataset.index), controlButton.dataset.viewMove as "up" | "down")));
     this.shadowRoot.querySelectorAll<HTMLDetailsElement>("details[data-item-token]").forEach((details) => {
       const token = details.dataset.itemToken;
@@ -456,21 +461,26 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
       .items{display:grid;gap:10px}.item{margin:0;border:1px solid var(--divider-color);border-radius:12px;background:var(--secondary-background-color);overflow:hidden}.item summary{min-height:44px;padding:12px;font-weight:700;cursor:pointer}.item-body{display:grid;gap:10px;padding:0 12px 12px}.item-toolbar{display:flex;justify-content:flex-end;align-items:center;gap:8px}.item-toolbar strong{margin-right:auto}.item-actions,.order-actions{display:flex;gap:8px}.item button{color:var(--error-color);background:transparent;border:0;min-width:44px;min-height:44px;cursor:pointer}.item button[disabled]{opacity:.35;cursor:not-allowed}.nested-collection{display:grid;gap:8px;padding:10px;border:1px solid var(--divider-color);border-radius:10px}.nested-collection h5{margin:0}.nested-item{display:grid;gap:8px;padding:10px;border:1px solid var(--divider-color);border-radius:9px;background:var(--card-background-color)}.nested-item h6{margin:4px 0 -4px;font-size:.78rem;text-transform:uppercase;letter-spacing:.03em;color:var(--secondary-text-color)}.nested-collection>button{justify-self:start;min-height:44px;padding:8px 12px;border:1px solid var(--accent);border-radius:9px;background:var(--card-background-color);color:var(--accent)}.order-actions button{border:1px solid var(--divider-color);border-radius:8px;background:var(--secondary-background-color);color:inherit}.order-actions button:hover:not([disabled]){border-color:var(--accent);color:var(--accent)}code{display:block;overflow-wrap:anywhere;color:var(--secondary-text-color)}
       /* HD-235: master-detail Kamers layout. Every room stays a flat <details> sibling (so the
          lazy-mount/toggle contract in sections/rooms.ts stays untouched); CSS alone moves the
-         currently open one into a second "detail" column that spans the full row height, while
-         every closed room (and the floor headings) stay stacked in the first "list" column. */
+         currently open one into a second "detail" column. Row placement is explicit (an inline
+         style per item, computed in renderRooms()) rather than grid-row:1/-1 -- this grid defines
+         no explicit row tracks, so a negative line does not reliably reach "the last row".
+         Scoping the tab rules under .item (not a bare .room-tab selector) is required: .item is
+         the room's own <details>, and .item button (below) already claims a higher specificity
+         on a plain .room-tab selector, which would otherwise paint every sub-tab like a delete
+         button. */
       .room-search-bar{margin-bottom:10px}
       .room-master-detail{display:grid;grid-template-columns:minmax(200px,260px) minmax(0,1fr);gap:12px;align-items:start}
       .room-master-detail .floor-heading{grid-column:1;margin:10px 0 0;font-size:.85rem;text-transform:uppercase;letter-spacing:.04em;color:var(--secondary-text-color)}
       .room-master-detail .floor-heading:first-child{margin-top:0}
       .room-master-detail>details.item{grid-column:1}
-      .room-master-detail>details.item[open]{grid-column:2;grid-row:1/-1}
-      .room-tab-nav{display:flex;flex-wrap:wrap;gap:6px;padding:4px 0 8px;border-bottom:1px solid var(--divider-color)}
-      .room-tab{display:flex;align-items:center;gap:6px;min-height:40px;padding:7px 10px;border:1px solid var(--divider-color);border-radius:9px;background:var(--card-background-color);color:inherit;cursor:pointer;font-size:.86rem}
-      .room-tab[aria-selected=true]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--card-background-color));font-weight:700}
+      .room-master-detail>details.item[open]{grid-column:2}
+      .item .room-tab-nav{display:flex;flex-wrap:wrap;gap:6px;padding:4px 0 8px;border-bottom:1px solid var(--divider-color)}
+      .item .room-tab{display:flex;align-items:center;gap:6px;min-height:44px;padding:7px 10px;border:1px solid var(--divider-color);border-radius:9px;background:var(--card-background-color);color:inherit;cursor:pointer;font-size:.86rem}
+      .item .room-tab[aria-selected=true]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--card-background-color));font-weight:700}
       .room-tab-icon{--mdc-icon-size:18px;width:18px;height:18px;flex-shrink:0;color:var(--secondary-text-color)}
-      .room-tab[aria-selected=true] .room-tab-icon{color:var(--accent)}
+      .item .room-tab[aria-selected=true] .room-tab-icon{color:var(--accent)}
       .room-tabpanel{display:grid;gap:10px;padding-top:10px}
-      @media(max-width:760px){.room-master-detail{grid-template-columns:1fr}.room-master-detail>details.item[open]{grid-column:1;grid-row:auto}}
+      @media(max-width:760px){.room-master-detail{grid-template-columns:1fr}.room-master-detail>details.item{grid-row:auto!important;grid-column:1!important}.room-master-detail .floor-heading{grid-row:auto!important}}
       fieldset.config{border:0;margin:0;padding:0;min-width:0}.config[disabled]{pointer-events:none;opacity:.72}.order{display:grid;gap:6px}.order>div{display:grid;grid-template-columns:30px minmax(0,1fr) auto;align-items:center;gap:9px;padding:7px 9px;border:1px solid var(--divider-color);border-radius:9px;background:var(--card-background-color)}.order-index{display:grid;place-items:center;width:28px;height:28px;border-radius:8px;background:color-mix(in srgb,var(--accent) 13%,var(--card-background-color));color:var(--accent);font-weight:750}.order code{min-width:0}.order-save{display:flex;align-items:center;justify-content:space-between;gap:10px}.order-save button{min-height:44px;padding:8px 12px;border:1px solid var(--divider-color);border-radius:9px;background:var(--card-background-color);color:inherit}.order-save button.pending{border-color:var(--accent);background:var(--accent);color:#fff;font-weight:700}.fatal{color:var(--error-color);font-weight:700}
       .add{justify-self:start;min-height:44px;padding:9px 12px;border:0;border-radius:9px;background:var(--accent);color:var(--text-primary-color,#fff);cursor:pointer}.guidance{display:grid;gap:8px;padding:12px;border:1px solid color-mix(in srgb,var(--accent) 35%,var(--divider-color));border-radius:12px;background:color-mix(in srgb,var(--accent) 8%,var(--card-background-color))}.guidance button{justify-self:start;min-height:44px;padding:8px 12px;border:1px solid var(--accent);border-radius:9px;background:var(--card-background-color);color:var(--accent);font-weight:700;cursor:pointer}.issues{margin:0;padding-left:20px}.error{color:var(--error-color)}.warning{color:var(--warning-color,#b26a00)}
       @media(max-width:800px){.editor-layout{grid-template-columns:1fr}.section-nav{display:flex;overflow-x:auto;position:sticky;top:0;z-index:2;padding:6px;background:var(--primary-background-color);scrollbar-width:thin}.section-tab{flex:0 0 auto;width:auto}.field{grid-template-columns:1fr}.section{padding-inline:10px}header{padding:12px}.toolbar{align-items:stretch}.toolbar>*{flex:1 1 180px}}
@@ -490,6 +500,12 @@ export class HomeDashboardStrategyEditor extends HTMLElementBase {
       const selected = this.shadowRoot.querySelector<HTMLButtonElement>("[data-section-nav][aria-selected=true]");
       queueMicrotask(() => selected?.focus());
       this.focusActiveSection = false;
+    } else if (this.focusRoomTab) {
+      const { token, tabKey } = this.focusRoomTab;
+      const escapedToken = typeof CSS !== "undefined" ? CSS.escape(token) : token;
+      const selected = this.shadowRoot.querySelector<HTMLButtonElement>(`[data-room-tab-nav="${escapedToken}"][data-room-tab="${tabKey}"]`);
+      queueMicrotask(() => selected?.focus());
+      this.focusRoomTab = undefined;
     } else if (focusData) {
       const candidates = Array.from(this.shadowRoot.querySelectorAll<HTMLElement>("input,select,button,ha-selector"));
       const target = candidates.find((candidate) => Object.entries(focusData).every(([key, value]) => key === "id" ? !value || candidate.id === value : candidate.dataset[key] === value));
