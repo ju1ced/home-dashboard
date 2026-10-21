@@ -10,13 +10,14 @@ De kolom **Volgorde** vertaalt afhankelijkheden naar de aanbevolen uitvoering: f
 |---|---|---|---|---|
 | [HD-112 Runtimebevindingen oplossen](tickets.md#hd-112--runtimebevindingen-oplossen) | P1 | Runtimeacceptatie | 1d · Voorwaardelijk | Live gevonden bevindingen oplossen in kleine, geïsoleerde regressieslices |
 | [HD-192 v1-documentatie en release readiness afronden](tickets.md#hd-192--v1-documentatie-en-release-readiness-afronden) | P1 | Release engineering | 6c | Documentatie laten overeenkomen met de werkelijk bewezen v1-scope |
+| [HD-236 Instellingenpopup: overige secties herzien](tickets.md#hd-236--instellingenpopup-overige-secties-herzien-zelfde-schaalprobleem-als-kamers-plus-dubbele-invoer-fixes-tussen-secties) | P1 | Editor/GUI-configuratie | — | Zie D-091: zelfde schaalprobleem als Kamers in Personen/Security/Acties, plus dubbele-invoer tussen Energie/Vandaag/Security/Acties/specialisten/Layout. Mockups voor Personen/Security/Acties eerst |
 
 
 ## In uitvoering
 
 | Ticket | Prioriteit | Categorie | Volgorde | Toelichting |
 |---|---|---|---|---|
-| [HD-235 Kamereditor: bruikbaarheid en duidelijkheid herzien](tickets.md#hd-235--kamereditor-bruikbaarheid-en-duidelijkheid-herzien) | P1 | Editor/GUI-configuratie | — | Layout-herstructurering (master-detail + sub-tabs) lokaal klaar en getest, branch `codex/hd-235-kamerpagina-layout`, niet gepusht (D-090). Entiteit-hergebruik-laag en HD-217's UI-acceptatie volgen als vervolg |
+| [HD-235 Kamereditor: bruikbaarheid en duidelijkheid herzien](tickets.md#hd-235--kamereditor-bruikbaarheid-en-duidelijkheid-herzien) | P1 | Editor/GUI-configuratie | — | Layout-herstructurering (master-detail + sub-tabs) live sinds v0.8.15 (D-090). Entiteit-hergebruik-laag en HD-217's UI-acceptatie volgen als vervolg |
 
 ## Review/validatie
 
