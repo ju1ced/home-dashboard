@@ -1677,6 +1677,49 @@ De eigenaar verduidelijkte nadien dat "dubbel moeten ingeven" niet over kruis-ka
 
 ---
 
+### HD-236 — Instellingenpopup: overige secties herzien (zelfde schaalprobleem als Kamers, plus dubbele-invoer-fixes tussen secties)
+
+- **Epic:** Editor/GUI-configuratie
+- **Status:** Backlog — scope bevestigd (D-091), mockups voor Personen/Security/Acties nog te maken vóór implementatie
+- **Prioriteit:** P1
+- **Omvang:** L (drie secties herstructureren + vier gerichte dedup-fixes)
+- **Eigenaar:** Lead / integrator
+- **Afhankelijkheden:** geen; bouwt voort op HD-235's Kamers-herziening als precedent (zelfde "nooit stil overnemen"-discipline, zelfde visuele taal uit HD-234)
+
+**Doel**
+
+Na de v0.8.15-release (HD-235 deel 1) meldde de eigenaar dat er "letterlijk niks veranderd" was aan de instellingenpopup. Onderzoek (zie D-091) weerlegde dat als releaseprobleem — de Kamers-herziening rendert wel degelijk live — maar de eigenaar stelde daarna scherp: de oorspronkelijke klacht ("niet handig en duidelijk") ging over de **volledige instellingenpopup**, niet enkel Kamers. HD-235 had de scope dus te smal genomen.
+
+**Achtergrond**
+
+Een volledige audit van de overige secties (`src/editor/sections/*.ts`, zie D-091) vond twee aparte probleemtypes:
+
+1. **Zelfde schaal-/duidelijkheidsprobleem als Kamers vóór HD-235** — een platte `<details>`-lijst per item, elk item mount al zijn velden/`ha-selector`'s eager (geen lazy-mount zoals HD-216 voor kamers invoerde): **Personen** (7 velden/persoon), **Security/Camera's** (8 velden/camera, teststeekproef van 6), **Acties** (7 velden/actie, inclusief een sequence-selector — groeit vermoedelijk het snelst van de drie).
+2. **Hetzelfde "dubbel ingeven"-probleem als D-089's smart-plug-bevinding, nu tussen secties i.p.v. binnen één kamer:** `energy.capacity_peak_entity` vs. `today.monthly_capacity_peak_entity` (dezelfde capaciteitspiek); `energy.solar_entities` vs. `today.solar_power_entity` (dezelfde zonnebron); Security se privacy-actiekoppeling vs. de risicoklasse op de Actie zelf; specialisten se `mapping_keys` (komma-lijst) vs. de geavanceerde `entities`-JSON; `layout.show_security` vs. `security.enabled`.
+
+Algemeen, Layout (op de genoemde schakelaar na) en Diagnostiek zijn klein en vermoedelijk prima zoals ze zijn — niet in scope tenzij de mockups iets anders uitwijzen.
+
+**Scope**
+
+1. **Mockups voor Personen, Security/Camera's en Acties** (Design-canvas, zelfde aanpak als D-089's Concept A/B voor Kamers) — vóór implementatie, expliciete goedkeuring van de richting vereist.
+2. **Herstructurering** van de gekozen richting voor deze drie secties, met HD-216/HD-235's lazy-mount-discipline (enkel het geopende item se velden mounten).
+3. **Vier gerichte dedup-fixes** (apart van de layoutherziening, kunnen onafhankelijk landen): Energie↔Vandaag (capaciteitspiek, zonnebron), Security↔Acties (privacy-actie/risicoklasse), specialisten (`mapping_keys` vs. `entities`-JSON), Layout↔Security (`show_security` vs. `enabled`) — telkens één bron van waarheid, geen schemabreuk zonder migratiepad.
+4. **Geen schemawijziging zonder expliciete afweging** — zelfde discipline als D-089's datamodelkeuze voor Kamers: eerst overwegen of een editor-laag (suggesties/kruisacties) volstaat vóór een schemawijziging in overweging genomen wordt.
+
+**Acceptatiecriteria**
+
+- Eigenaar bevestigt expliciet, per sectie, dat de herziening duidelijker is dan de huidige vorm.
+- Personen/Security/Acties schalen zonder dat elk item al zijn velden eager mount.
+- De vier genoemde dubbele-invoer-gevallen zijn opgelost of expliciet, beargumenteerd uitgesteld.
+- Geen regressie op bestaande editor-functionaliteit.
+- `pnpm test`, `pnpm run test:browser`, `git diff --check` slagen.
+
+**Validatie**
+
+`pnpm test`, `pnpm run test:browser`, bundle-sizecheck. Live Home Assistant-/browseracceptatie door de eigenaar vóór "Klaar", zoals elke UI-wijziging in dit project.
+
+---
+
 ### HD-219 — Verbruik-tab: één gecombineerde dag-/maand-/jaargrafiek en een "Grootste verbruikers"-ranglijst
 
 - **Epic:** Kamers
