@@ -10,7 +10,7 @@ Start vanuit de repositoryroot:
     pnpm run browser:install
     pnpm run test:browser
 
-Playwright 1.63.0 staat exact vast in de lockfile; `browser:install` installeert de bijbehorende Chromium-binary. De runner kiest een eigen lokale poort, start altijd de prototypeserver uit de huidige checkout, verifieert die via een eenmalige identiteitstoken, voert alle checks serieel uit en wacht op servercleanup. `HD_BROWSER_CHANNEL` kan desgewenst een ander lokaal beschikbaar Chromium-kanaal kiezen.
+Playwright staat exact gepind in `package.json` en de lockfile; `browser:install` installeert de bijbehorende Chromium-binary. De runner kiest een eigen lokale poort, start altijd de prototypeserver uit de huidige checkout, verifieert die via een eenmalige identiteitstoken, voert alle checks serieel uit en wacht op servercleanup. `HD_BROWSER_CHANNEL` kan desgewenst een ander lokaal beschikbaar Chromium-kanaal kiezen.
 
 ## Matrix
 

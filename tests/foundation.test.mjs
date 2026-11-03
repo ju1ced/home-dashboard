@@ -102,7 +102,7 @@ test("browser regression matrix has one documented runner", async () => {
 
   assert.equal(packageJson.scripts["test:browser"], "node scripts/check-browser-matrix.mjs");
   assert.equal(packageJson.scripts["browser:install"], "playwright install chromium");
-  assert.equal(packageJson.devDependencies.playwright, "1.63.0");
+  assert.match(packageJson.devDependencies.playwright, /^\d+\.\d+\.\d+$/, "Playwright moet exact gepind zijn, zonder range");
   for (const check of [
     "check-prototype-browser.mjs",
     "check-home-header-row.mjs",
