@@ -73,7 +73,7 @@ Peildatum: 5 oktober 2026. Dit is een **read-only** inventaris van alle globale 
 | robot-vacuum-dashboard | `custom:robot-vacuum-dashboard-card` | alleen `dashboard-test` |
 | dynamic-energy-dashboard | `custom:dynamic-energy-shadow-card` | alleen `dashboard-test` |
 
-Dit is een nuttige, structurele bevestiging: deze twee specialisten zitten exact waar het [implementatieplan](../design/integration-strategy.md) ze verwacht — HD-130/131 (robot) en de bredere dynamic-energy-integratie staan allebei als **Geblokkeerd** in `kanban.md` in afwachting van afzonderlijke bronrepo-/integratiewerk, en worden voorlopig alleen op de admin-only teststaging gebruikt, niet op een echt gezinsdashboard.
+Dit is een nuttige, structurele bevestiging: deze twee specialisten zitten exact waar het [implementatieplan](../design/integration-strategy.md) ze verwacht — HD-130/131 (robot) en de bredere dynamic-energy-integratie staan allebei als **Geblokkeerd** op het [kanbanbord](../planning/kanban.md) in afwachting van afzonderlijke bronrepo-/integratiewerk, en worden voorlopig alleen op de admin-only teststaging gebruikt, niet op een echt gezinsdashboard.
 
 ### Niet bevestigd via deze methode — **blokkeert verwijdering** (acceptatiecriterium: onbekende consumers blokkeren verwijdering)
 

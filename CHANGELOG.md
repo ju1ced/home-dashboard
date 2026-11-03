@@ -153,7 +153,7 @@ Zelfde inhoud als `0.8.0-alpha.30` — geen functionele wijziging. Dit is een re
 **Besluit:** in plaats van de eigenaar te vragen een HACS-instelling (zichtbaarheid van bèta-/prerelease-versies) handmatig om te zetten, kiest de eigenaar ervoor om voortaan "volledige" (niet-prerelease) releasetags te gebruiken — zodat GitHub en HACS ze zonder extra configuratie als een gewone release herkennen. Dit is een bewuste, zichtbare keuze: het project blijft inhoudelijk in dezelfde vroege, nog-niet-productieklare fase als voorheen (zie `AGENTS.md`'s "concept/prototype"-status en de nog geblokkeerde v1-gates in het kanban), alleen het releaseproces verandert.
 
 - Geen codewijziging. Hoofdbundel en editorbundel ongewijzigd t.o.v. `0.8.0-alpha.30` (enkel de versiebanner verschilt).
-- Zie [HD-218](docs/planning/tickets.md#hd-218--hacs-pin-voor-home-dashboard-valt-herhaaldelijk-terug-op-main-tracking) voor de volledige analyse en [D-073](docs/design/decision-log.md) voor het besluit.
+- Zie [HD-218](https://github.com/ju1ced/home-dashboard/issues/176) voor de volledige analyse en [D-073](docs/design/decision-log.md) voor het besluit.
 
 ## 0.8.0-alpha.30 — 2026-10-07
 
