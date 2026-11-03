@@ -40,7 +40,7 @@ V1 bevat geen custom panel en geen extra summary-component. De minimale onderste
 - [Integratiestrategie](docs/design/integration-strategy.md)
 - [Multi-agent implementatieplan](docs/design/implementation-plan.md)
 - [Deliveryroadmap: agents, PR's, GUI, HACS en releases](docs/design/delivery-roadmap.md)
-- [Projectkanban en Jira-achtige tickets](docs/planning/kanban.md)
+- [Projectkanban en tickets (GitHub Issues)](docs/planning/kanban.md)
 - [Geconsolideerde browserregressiematrix](docs/quality/browser-regression-matrix.md)
 - [Energy-paritymanifest](docs/quality/energy-parity-manifest.md)
 - [Zwembadstatuscontract](docs/quality/pool-status-contract.md)
