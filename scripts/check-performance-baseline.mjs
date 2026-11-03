@@ -256,7 +256,7 @@ const results = {
   meta: {
     date: new Date().toISOString(),
     pinnedClock: PIN_DATE,
-    playwright: "1.63.0",
+    playwright: require("playwright/package.json").version,
     repetitions: REPETITIONS,
     irrelevantUpdatesPerSample: IRRELEVANT_UPDATES
   },
